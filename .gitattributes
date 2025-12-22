@@ -1,0 +1,212 @@
+# =====================================================
+# GIX-PORTAL GITATTRIBUTES  
+# Tauri v2 + React + Vite + TypeScript + Rust
+# =====================================================
+
+# =====================================================
+# DEFAULT BEHAVIOR
+# =====================================================
+
+# Auto-detect text files and normalize line endings to LF
+* text=auto eol=lf
+
+# =====================================================
+# SOURCE CODE
+# =====================================================
+
+# JavaScript/TypeScript
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+
+# Rust
+*.rs text eol=lf diff=rust
+
+# Web
+*.html text eol=lf diff=html
+*.css text eol=lf diff=css
+*.scss text eol=lf
+*.sass text eol=lf
+*.less text eol=lf
+
+# =====================================================
+# CONFIGURATION FILES
+# =====================================================
+
+# JSON/YAML/TOML
+*.json text eol=lf
+*.jsonc text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+
+# Config files
+*.config.js text eol=lf
+*.config.ts text eol=lf
+.eslintrc* text eol=lf
+.prettierrc* text eol=lf
+.editorconfig text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+.env* text eol=lf
+
+# Tauri config
+tauri.conf.json text eol=lf
+
+# =====================================================
+# DOCUMENTATION
+# =====================================================
+
+*.md text eol=lf diff=markdown
+*.mdx text eol=lf diff=markdown
+*.txt text eol=lf
+LICENSE text eol=lf
+AUTHORS text eol=lf
+CHANGELOG text eol=lf
+CONTRIBUTING text eol=lf
+README text eol=lf
+
+# =====================================================
+# BUILD & SCRIPTS
+# =====================================================
+
+# Shell scripts (LF for cross-platform compatibility)
+*.sh text eol=lf
+*.bash text eol=lf
+*.zsh text eol=lf
+
+# Windows scripts (CRLF for Windows)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Makefiles
+Makefile text eol=lf
+*.mk text eol=lf
+
+# Rust build
+build.rs text eol=lf
+
+# =====================================================
+# LOCK FILES
+# =====================================================
+
+# Package lock files (don't normalize, preserve as-is)
+package-lock.json text eol=lf -diff
+yarn.lock text eol=lf -diff
+pnpm-lock.yaml text eol=lf -diff
+Cargo.lock text eol=lf -diff
+
+# =====================================================
+# BINARY FILES
+# =====================================================
+
+# Images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.icns binary
+*.bmp binary
+*.tiff binary
+*.tif binary
+
+# Icons (Tauri)
+*.svg text eol=lf
+
+# Fonts
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary
+
+# Audio
+*.mp3 binary
+*.wav binary
+*.ogg binary
+*.flac binary
+*.aac binary
+*.m4a binary
+
+# Video
+*.mp4 binary
+*.webm binary
+*.mkv binary
+*.avi binary
+*.mov binary
+
+# Archives
+*.zip binary
+*.tar binary
+*.gz binary
+*.bz2 binary
+*.xz binary
+*.7z binary
+*.rar binary
+
+# Executables & Libraries
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.a binary
+*.lib binary
+
+# Installers
+*.msi binary
+*.dmg binary
+*.deb binary
+*.rpm binary
+*.AppImage binary
+
+# =====================================================
+# LINGUIST (GitHub Language Stats)
+# =====================================================
+
+# Exclude from language statistics
+docs/* linguist-documentation
+*.md linguist-documentation
+
+# Vendor directories (exclude from stats)
+node_modules/* linguist-vendored
+src-tauri/target/* linguist-vendored
+
+# Mark generated files
+src-tauri/gen/* linguist-generated
+dist/* linguist-generated
+
+# =====================================================
+# DIFF & MERGE STRATEGIES
+# =====================================================
+
+# Use union merge for lock files (combine changes)
+package-lock.json merge=union
+yarn.lock merge=union
+pnpm-lock.yaml merge=union
+
+# Custom diff drivers (if configured)
+*.rs diff=rust
+*.md diff=markdown
+*.html diff=html
+*.css diff=css
+
+# =====================================================
+# EXPORT SETTINGS
+# =====================================================
+
+# Files to exclude from archives (git archive)
+.gitattributes export-ignore
+.gitignore export-ignore
+.github export-ignore
+.vscode export-ignore
+.editorconfig export-ignore
+tests export-ignore
+*.test.ts export-ignore
+*.spec.ts export-ignore

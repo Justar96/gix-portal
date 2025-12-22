@@ -1,0 +1,79 @@
+# P2P Drive Share - Cursor Rules
+
+# Project: P2P Realtime Drive Sharing System
+# Stack: Tauri v2 + React 18 + Rust + Iroh P2P
+
+## Project Structure
+- `src-tauri/src/` - Rust backend code
+- `src/` - React frontend code
+- `docs/p2p-drive/` - Project documentation
+
+## Rust Guidelines
+- Use `anyhow::Result` for error handling in application code
+- Use `thiserror` for library-level custom errors
+- All async functions use `tokio` runtime
+- Prefer `Bytes` and zero-copy patterns for file data
+- Use `#[tauri::command]` for frontend-callable functions
+- Add `#[derive(Clone, Debug, Serialize, Deserialize)]` to data structs
+
+## TypeScript Guidelines
+- Use strict TypeScript with no `any` types
+- Import Tauri APIs from `@tauri-apps/api`
+- Use React 18 concurrent features (useDeferredValue, useTransition)
+- Implement virtual scrolling for large lists
+- Use Zustand for global state management
+
+## Naming Conventions
+- Rust: snake_case files, PascalCase types
+- React: PascalCase components, camelCase hooks
+- Use descriptive names: `SharedDrive` not `SD`
+
+## Performance Requirements
+- UI must maintain 120 FPS
+- Network operations must not block main thread
+- Use zero-copy buffers for file transfers
+- Implement delta sync for large files
+
+## Security Requirements
+- All file content must be E2E encrypted (ChaCha20-Poly1305)
+- Use X25519 for key exchange
+- Verify permissions before every operation
+- Never log sensitive data (keys, tokens)
+
+## Key Dependencies
+- iroh: P2P networking (QUIC, gossip, blobs, docs)
+- chacha20poly1305: Symmetric encryption
+- redb: Embedded database
+- notify: File system watching
+
+## Common Patterns
+
+### Tauri Command
+```rust
+#[tauri::command]
+async fn my_command(
+    param: String,
+    state: State<'_, AppState>,
+) -> Result<MyType, String> {
+    state.service.do_thing(param).await.map_err(|e| e.to_string())
+}
+```
+
+### React Hook
+```typescript
+function useMyData(id: string) {
+  const [data, setData] = useState<MyType | null>(null);
+  useEffect(() => {
+    invoke<MyType>('get_data', { id }).then(setData);
+  }, [id]);
+  return data;
+}
+```
+
+## Documentation
+See `docs/p2p-drive/` for:
+- architecture.md - System design
+- performance.md - 120 FPS architecture
+- security.md - E2E encryption
+- api-reference.md - Tauri commands
+- AI_CONTEXT.md - Full AI context

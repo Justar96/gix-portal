@@ -1,0 +1,250 @@
+# =====================================================
+# GIX-PORTAL GITIGNORE
+# Tauri v2 + React + Vite + TypeScript + Rust
+# =====================================================
+
+# =====================================================
+# DEPENDENCIES
+# =====================================================
+
+# Node.js
+node_modules/
+.pnp/
+.pnp.js
+.pnp.cjs
+.pnp.loader.mjs
+
+# Rust/Cargo
+src-tauri/target/
+**/target/
+
+# =====================================================
+# BUILD OUTPUTS
+# =====================================================
+
+# Vite
+dist/
+dist-ssr/
+*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Tauri build outputs
+src-tauri/gen/schemas/
+
+# =====================================================
+# ENVIRONMENT & CONFIG
+# =====================================================
+
+# Environment variables
+.env
+.env.*
+!.env.example
+!.env.template
+
+# Local Vite config
+vite.config.*.local
+*.config.local.ts
+*.config.local.js
+
+# =====================================================
+# LOGS & DEBUG
+# =====================================================
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Rust logs
+**/*.rs.bk
+
+# =====================================================
+# CACHE & TEMPORARY FILES
+# =====================================================
+
+# npm/yarn/pnpm
+.npm/
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+# Rust incremental compilation
+/incremental/
+
+# Vite cache
+.vite/
+
+# ESLint cache
+.eslintcache
+
+# Prettier
+.prettiercache
+
+# =====================================================
+# TESTING & COVERAGE
+# =====================================================
+
+# Jest/Vitest
+coverage/
+.nyc_output/
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+# Cypress
+/cypress/videos/
+/cypress/screenshots/
+
+# =====================================================
+# IDE & EDITOR
+# =====================================================
+
+# VSCode
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# JetBrains (IntelliJ, WebStorm, RustRover, etc.)
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Vim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+.#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# =====================================================
+# OPERATING SYSTEM
+# =====================================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+*.stackdump
+
+# Linux
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# =====================================================
+# TAURI SPECIFIC
+# =====================================================
+
+# Tauri WiX installer files
+src-tauri/*.msi
+src-tauri/*.exe
+src-tauri/*.app
+src-tauri/*.dmg
+src-tauri/*.deb
+src-tauri/*.AppImage
+src-tauri/*.rpm
+
+# Tauri updater files
+src-tauri/*.sig
+src-tauri/*.bundle/
+
+# Tauri code generation (keep gen/ but ignore generated schemas)
+# Note: gen/android and gen/ios may need to be committed
+src-tauri/gen/schemas/
+
+# =====================================================
+# SECURITY & SECRETS
+# =====================================================
+
+# Private keys
+*.pem
+*.key
+*.p12
+*.pfx
+!*.pub
+
+# Certificates
+*.crt
+*.cer
+*.der
+
+# Secrets
+secrets/
+.secrets/
+*.secret
+*.secrets
+
+# =====================================================
+# DOCUMENTATION BUILD
+# =====================================================
+
+# Docusaurus
+.docusaurus/
+.cache-loader/
+
+# mdBook
+book/
+
+# =====================================================
+# MISCELLANEOUS
+# =====================================================
+
+# Local development overrides
+*.local
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Temp files
+*.tmp
+*.temp
+.temp/
+.tmp/
+
+# Lock files (optional - uncomment if you don't want to track)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+# Cargo.lock
+
+# Report outputs
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Optional: Ignore generated API clients
+# generated/

@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir /s \"D:\\_Project\\_saas\\gix-portal\")",
+      "mcp__morph-mcp__warpgrep_codebase_search",
+      "Bash(dir:*)",
+      "Bash(rustc:*)",
+      "Bash(cargo --version:*)",
+      "Bash(node --version:*)",
+      "Bash(npm --version:*)",
+      "Bash(where pnpm:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.rs)",
+      "WebFetch(domain:v2.tauri.app)",
+      "Bash(pnpm create:*)",
+      "Bash(pnpm install:*)",
+      "Bash(cargo check:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(cargo clean:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}
