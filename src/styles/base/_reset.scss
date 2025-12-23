@@ -21,7 +21,7 @@
 
 // Root configuration
 :root {
-    color-scheme: dark;
+    color-scheme: light;
     font-size: 16px;
     
     @include respond-to('sm') {

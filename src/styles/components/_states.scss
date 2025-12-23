@@ -1,6 +1,6 @@
 // ========================================
 // Component - States (Loading, Empty, Error)
-// Swiss Luxury Minimalist Design
+// Modern Light Theme with Bordered Design
 // ========================================
 
 @use '../abstracts' as *;
@@ -15,8 +15,8 @@
     padding: $space-12 $space-6;
     
     h3 {
-        font-size: $text-md;
-        font-weight: $weight-medium;
+        font-size: $text-lg;
+        font-weight: $weight-semibold;
         color: $text-primary;
         margin-bottom: $space-2;
         letter-spacing: $tracking-tight;
@@ -24,9 +24,9 @@
     
     p {
         font-size: $text-sm;
-        color: $text-muted;
-        margin-bottom: $space-8;
-        max-width: 320px;
+        color: $text-tertiary;
+        margin-bottom: $space-6;
+        max-width: 280px;
         line-height: $leading-relaxed;
     }
     
@@ -39,14 +39,15 @@
     @include flex-center;
     width: 56px;
     height: 56px;
-    background: $bg-tertiary;
-    border: 1px solid $border-primary;
+    background: $bg-card;
+    border: 1px solid $border-card;
     border-radius: $radius-xl;
     color: $text-muted;
-    margin-bottom: $space-6;
+    margin-bottom: $space-4;
+    box-shadow: $shadow-card;
     
     svg {
-        opacity: 0.6;
+        opacity: 0.7;
     }
 }
 
@@ -64,8 +65,8 @@
 .loading-spinner {
     width: 18px;
     height: 18px;
-    border: 2px solid $border-primary;
-    border-top-color: $text-tertiary;
+    border: 2px solid $border-secondary;
+    border-top-color: $text-primary;
     border-radius: $radius-full;
     animation: spin 0.7s linear infinite;
     

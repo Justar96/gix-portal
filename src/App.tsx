@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { FolderOpen, Plus } from "lucide-react";
+import { FolderOpen, Plus, HardDrive } from "lucide-react";
 import { IdentityBadge } from "./components/IdentityBadge";
 import { DriveList } from "./components/DriveList";
 import { CreateDriveModal } from "./components/CreateDriveModal";
@@ -52,16 +52,20 @@ function App() {
     <div className="app">
       <header className="app-header">
         <div className="header-left">
-          <h1>Gix</h1>
-          <span className="subtitle">P2P Drive Share</span>
+          <div className="logo">
+            <HardDrive size={16} />
+          </div>
+          <h1 className="app-title">Gix</h1>
         </div>
-        <IdentityBadge />
+        <div className="header-right">
+          <IdentityBadge />
+        </div>
       </header>
 
       <main className="app-main">
         <aside className="sidebar">
           <div className="sidebar-header">
-            <h2>Drives</h2>
+            <h2>My Drives</h2>
             <button
               className="btn-icon"
               onClick={() => setShowCreateModal(true)}
@@ -92,10 +96,10 @@ function App() {
           ) : (
             <div className="empty-state">
               <div className="empty-icon">
-                <FolderOpen size={32} />
+                <FolderOpen size={28} />
               </div>
-              <h3>No drive selected</h3>
-              <p>Select a drive from the sidebar or create a new one to get started</p>
+              <h3>Welcome to Gix</h3>
+              <p>Create a drive to start sharing files peer-to-peer</p>
               <button
                 className="btn-primary"
                 onClick={() => setShowCreateModal(true)}

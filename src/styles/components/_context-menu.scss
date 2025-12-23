@@ -1,6 +1,6 @@
 // ========================================
 // Component - Context Menu
-// Swiss Luxury Minimalist Design
+// Modern Light Theme with Bordered Design
 // ========================================
 
 @use '../abstracts' as *;
@@ -14,10 +14,10 @@
 .context-menu {
     position: fixed;
     min-width: 160px;
-    background: $bg-elevated;
-    border: 1px solid $border-primary;
+    background: $bg-card;
+    border: 1px solid $border-card;
     border-radius: $radius-lg;
-    box-shadow: $shadow-lg;
+    box-shadow: $shadow-xl;
     z-index: $z-popover;
     overflow: hidden;
     padding: $space-1;

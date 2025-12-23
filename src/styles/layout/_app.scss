@@ -1,6 +1,6 @@
 // ========================================
 // Layout - App Structure
-// Swiss Luxury Minimalist Design
+// Modern Light Theme with Bordered Design
 // ========================================
 
 @use '../abstracts' as *;
@@ -12,7 +12,7 @@
     @include flex-column;
     height: 100vh;
     overflow: hidden;
-    background: $bg-primary;
+    background: $bg-app;
 }
 
 // ----------------------------------------
@@ -21,15 +21,11 @@
 .app-header {
     @include flex-between;
     height: $header-height;
-    padding: 0 $space-6;
-    background: $bg-secondary;
-    border-bottom: 1px solid $border-primary;
+    padding: 0 $space-5;
+    background: $bg-primary;
+    border-bottom: 1px solid $border-secondary;
     flex-shrink: 0;
     z-index: $z-sticky;
-    
-    @include respond-to('lg') {
-        padding: 0 $space-5;
-    }
     
     @include respond-to('md') {
         padding: 0 $space-4;
@@ -39,30 +35,35 @@
 .header-left {
     display: flex;
     align-items: center;
-    gap: $space-4;
+    gap: $space-3;
     
-    h1 {
+    .logo {
+        width: 32px;
+        height: 32px;
+        border-radius: $radius-md;
+        background: $text-primary;
+        @include flex-center;
+        flex-shrink: 0;
+        
+        svg {
+            color: $bg-primary;
+            width: 16px;
+            height: 16px;
+        }
+    }
+    
+    .app-title {
         font-size: $text-lg;
         font-weight: $weight-semibold;
         color: $text-primary;
         letter-spacing: $tracking-tight;
-        
-        @include respond-to('md') {
-            font-size: $text-md;
-        }
     }
-    
-    .subtitle {
-        font-size: $text-sm;
-        color: $text-muted;
-        font-weight: $weight-normal;
-        padding-left: $space-4;
-        border-left: 1px solid $border-primary;
-        
-        @include respond-to('lg') {
-            display: none;
-        }
-    }
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
 }
 
 // ----------------------------------------
@@ -83,7 +84,7 @@
 // ----------------------------------------
 .sidebar {
     width: $sidebar-width;
-    background: $bg-secondary;
+    background: $bg-primary;
     border-right: 1px solid $border-primary;
     @include flex-column;
     flex-shrink: 0;
@@ -107,14 +108,19 @@
 
 .sidebar-header {
     @include flex-between;
-    padding: $space-5 $space-5 $space-4;
+    padding: $space-4 $space-4 $space-3;
+    border-bottom: 1px solid $border-secondary;
     
     @include respond-to('md') {
-        padding: $space-4;
+        padding: $space-3;
     }
     
     h2 {
-        @include text-label;
+        font-size: $text-xs;
+        font-weight: $weight-semibold;
+        color: $text-tertiary;
+        text-transform: uppercase;
+        letter-spacing: $tracking-wider;
     }
 }
 
@@ -130,5 +136,92 @@
     @include respond-to('md') {
         min-height: 0;
         flex: 1;
+    }
+}
+
+// ----------------------------------------
+// Hero Section - Bordered typography style
+// ----------------------------------------
+.hero-section {
+    @include flex-column-center;
+    flex: 1;
+    padding: $space-12 $space-6;
+    text-align: center;
+    
+    @include respond-to('md') {
+        padding: $space-8 $space-4;
+    }
+}
+
+.hero-headline {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    margin-bottom: $space-8;
+    
+    @include respond-to('md') {
+        margin-bottom: $space-6;
+    }
+}
+
+.hero-word {
+    font-size: 3.5rem;
+    font-weight: $weight-medium;
+    font-style: italic;
+    color: $text-primary;
+    padding: $space-4 $space-6;
+    border: 1px solid $border-primary;
+    line-height: 1;
+    
+    &:not(:first-child) {
+        margin-left: -1px;
+    }
+    
+    &.highlight {
+        background: $accent;
+        border-color: $accent;
+        border-radius: $radius-full;
+        color: $text-primary;
+    }
+    
+    &.row-start {
+        margin-left: 0;
+    }
+    
+    @include respond-to('lg') {
+        font-size: 2.5rem;
+        padding: $space-3 $space-5;
+    }
+    
+    @include respond-to('md') {
+        font-size: 2rem;
+        padding: $space-2-5 $space-4;
+    }
+    
+    @include respond-to('sm') {
+        font-size: 1.5rem;
+        padding: $space-2 $space-3;
+    }
+}
+
+.hero-row {
+    display: flex;
+    justify-content: center;
+    
+    .hero-word:first-child {
+        margin-left: 0;
+    }
+}
+
+.hero-subtitle {
+    font-size: $text-lg;
+    color: $text-secondary;
+    max-width: 560px;
+    line-height: $leading-relaxed;
+    
+    @include respond-to('md') {
+        font-size: $text-base;
     }
 }

@@ -1,6 +1,6 @@
 // ========================================
 // Component - Drive List
-// Swiss Luxury Minimalist Design
+// Modern Light Theme with Bordered Design
 // ========================================
 
 @use '../abstracts' as *;
@@ -40,11 +40,12 @@
     display: flex;
     align-items: center;
     gap: $space-3;
-    padding: $space-3 $space-3;
-    margin-bottom: $space-1;
+    padding: $space-3;
+    margin-bottom: $space-2;
     border-radius: $radius-lg;
     cursor: pointer;
     transition: all $transition-base;
+    background: $bg-card;
     border: 1px solid transparent;
     
     @include respond-to('md') {
@@ -52,16 +53,23 @@
     }
     
     &:hover {
-        background: $bg-hover;
+        background: $bg-card;
+        border-color: $border-primary;
+        box-shadow: $shadow-card;
     }
     
     &.selected {
-        background: $bg-elevated;
-        border-color: $border-primary;
+        background: $bg-card;
+        border-color: $border-hover;
+        box-shadow: $shadow-card-hover;
         
         .drive-icon {
-            background: $bg-active;
-            color: $text-primary;
+            background: $text-primary;
+            color: $bg-primary;
+        }
+        
+        .drive-name {
+            font-weight: $weight-semibold;
         }
     }
     
@@ -75,11 +83,10 @@
 // ----------------------------------------
 .drive-icon {
     @include flex-center;
-    width: 36px;
-    height: 36px;
-    background: $bg-tertiary;
-    border: 1px solid $border-secondary;
-    border-radius: $radius-lg;
+    width: 32px;
+    height: 32px;
+    background: $bg-hover;
+    border-radius: $radius-md;
     color: $text-tertiary;
     flex-shrink: 0;
     transition: all $transition-base;

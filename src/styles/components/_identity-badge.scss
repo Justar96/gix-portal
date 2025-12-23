@@ -1,6 +1,6 @@
 // ========================================
 // Component - Identity Badge
-// Swiss Luxury Minimalist Design
+// Modern Light Theme with Pill Shape and Subtle Background
 // ========================================
 
 @use '../abstracts' as *;
@@ -8,25 +8,26 @@
 .identity-badge {
     display: flex;
     align-items: center;
-    gap: $space-4;
-    padding: $space-2 $space-4;
-    background: $bg-tertiary;
-    border: 1px solid $border-primary;
-    border-radius: $radius-lg;
+    gap: $space-3;
+    padding: $space-1-5 $space-3;
+    background: $bg-card;
+    border: 1px solid $border-card;
+    border-radius: $radius-full;
+    box-shadow: $shadow-sm;
     
     @include respond-to('lg') {
-        padding: $space-2 $space-3;
-        gap: $space-3;
+        padding: $space-1-5 $space-2-5;
+        gap: $space-2;
     }
     
     @include respond-to('md') {
-        padding: $space-1-5 $space-2-5;
+        padding: $space-1 $space-2;
     }
     
     &.loading,
     &.error {
         color: $text-muted;
-        font-size: $text-sm;
+        font-size: $text-xs;
     }
 }
 
@@ -34,12 +35,14 @@
     display: flex;
     align-items: center;
     gap: $space-2;
-    font-size: $text-sm;
+    font-size: $text-xs;
+    font-weight: $weight-medium;
+    text-transform: uppercase;
+    letter-spacing: $tracking-wider;
     color: $text-secondary;
     
     &.online .status-dot {
         background: $success;
-        box-shadow: 0 0 6px rgba($success, 0.4);
     }
     
     &.offline .status-dot {
@@ -64,7 +67,7 @@
 .node-id {
     font-family: $font-mono;
     font-size: $text-xs;
-    color: $text-muted;
+    color: $text-tertiary;
     letter-spacing: $tracking-wide;
     
     @include respond-to('lg') {

@@ -1,6 +1,6 @@
 // ========================================
 // Component - File Browser
-// Swiss Luxury Minimalist Design
+// Modern Light Theme with Bordered Design
 // ========================================
 
 @use '../abstracts' as *;
@@ -12,7 +12,7 @@
     @include flex-column;
     height: 100%;
     outline: none;
-    background: $bg-primary;
+    background: $bg-card;
 }
 
 // ----------------------------------------
@@ -23,7 +23,7 @@
     align-items: center;
     gap: $space-3;
     padding: $space-3 $space-5;
-    background: $bg-secondary;
+    background: $bg-primary;
     border-bottom: 1px solid $border-primary;
     flex-shrink: 0;
     min-height: 48px;
@@ -119,7 +119,72 @@
     }
 }
 
-// File table
+// File table header (virtualized)
+.file-table-header {
+    display: flex;
+    padding: $space-3 $space-5;
+    background: $bg-secondary;
+    border-bottom: 1px solid $border-primary;
+    font-size: $text-xs;
+    font-weight: $weight-medium;
+    text-transform: uppercase;
+    letter-spacing: $tracking-wider;
+    color: $text-tertiary;
+    
+    @include respond-to('lg') {
+        padding: $space-3 $space-4;
+    }
+    
+    @include respond-to('sm') {
+        padding: $space-2 $space-3;
+    }
+}
+
+.file-table-body {
+    flex: 1;
+    overflow-y: auto;
+    @include custom-scrollbar;
+}
+
+// File row (virtualized)
+.file-row {
+    display: flex;
+    align-items: center;
+    padding: $space-3 $space-5;
+    border-bottom: 1px solid $border-secondary;
+    cursor: pointer;
+    transition: background $transition-base;
+    
+    @include respond-to('lg') {
+        padding: $space-3 $space-4;
+    }
+    
+    @include respond-to('sm') {
+        padding: $space-2 $space-3;
+    }
+    
+    &:hover {
+        background: $bg-tertiary;
+    }
+    
+    &.selected {
+        background: $bg-hover;
+    }
+    
+    &.locked-other {
+        background: $warning-soft;
+    }
+    
+    &.locked-mine {
+        background: $accent-subtle;
+    }
+    
+    &.directory .file-name {
+        font-weight: $weight-medium;
+    }
+}
+
+// File table (legacy support)
 .file-table {
     width: 100%;
     border-collapse: collapse;
@@ -324,10 +389,10 @@
     top: calc(100% + 4px);
     right: 0;
     z-index: $z-dropdown;
-    background: $bg-elevated;
-    border: 1px solid $border-primary;
+    background: $bg-card;
+    border: 1px solid $border-card;
     border-radius: $radius-lg;
-    box-shadow: $shadow-lg;
+    box-shadow: $shadow-xl;
     overflow: hidden;
     min-width: 150px;
     animation: slideUp $duration-fast $ease-out;

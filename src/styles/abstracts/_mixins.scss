@@ -207,12 +207,44 @@
     }
 }
 
+// Card style for items that need to stand out
+@mixin card {
+    background: $bg-card;
+    border: 1px solid $border-card;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-card;
+    transition: all $transition-base;
+}
+
+@mixin card-hover {
+    &:hover {
+        border-color: $border-hover;
+        box-shadow: $shadow-card-hover;
+    }
+}
+
+@mixin card-interactive {
+    @include card;
+    cursor: pointer;
+    
+    &:hover {
+        border-color: $border-hover;
+        box-shadow: $shadow-card-hover;
+        transform: translateY(-1px);
+    }
+    
+    &:active {
+        transform: translateY(0);
+        box-shadow: $shadow-card;
+    }
+}
+
 // ----------------------------------------
 // Scrollbar Styling
 // ----------------------------------------
 @mixin custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: $border-primary transparent;
+    scrollbar-color: $text-disabled transparent;
     
     &::-webkit-scrollbar {
         width: 6px;
@@ -224,11 +256,11 @@
     }
     
     &::-webkit-scrollbar-thumb {
-        background: $border-primary;
+        background: $text-disabled;
         border-radius: $radius-full;
         
         &:hover {
-            background: $border-hover;
+            background: $text-muted;
         }
     }
 }

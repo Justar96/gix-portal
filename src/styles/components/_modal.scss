@@ -1,6 +1,6 @@
 // ========================================
 // Component - Modal
-// Swiss Luxury Minimalist Design
+// Modern Light Theme with Bordered Design
 // ========================================
 
 @use '../abstracts' as *;
@@ -8,8 +8,8 @@
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(4px);
+    background: rgba(248, 250, 252, 0.85);
+    backdrop-filter: blur(12px);
     @include flex-center;
     z-index: $z-modal;
     padding: $space-6;
@@ -21,8 +21,9 @@
 }
 
 .modal {
-    @include surface-elevated;
-    border-radius: $radius-2xl;
+    background: $bg-card;
+    border: 1px solid $border-card;
+    border-radius: $radius-xl;
     width: 100%;
     max-width: 440px;
     box-shadow: $shadow-xl;
@@ -30,7 +31,6 @@
     
     @include respond-to('sm') {
         max-width: 100%;
-        border-radius: $radius-xl;
     }
 }
 

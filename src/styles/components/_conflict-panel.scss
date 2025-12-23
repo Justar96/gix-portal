@@ -1,6 +1,6 @@
 // ========================================
 // Component - Conflict Panel
-// Swiss Luxury Minimalist Design
+// Modern Light Theme with Bordered Design
 // ========================================
 
 @use '../abstracts' as *;
@@ -9,11 +9,12 @@
 // Main Panel
 // ----------------------------------------
 .conflict-panel {
-    background: $bg-secondary;
+    background: $bg-card;
     border: 1px solid $warning-border;
     border-radius: $radius-lg;
     margin: $space-4;
     overflow: hidden;
+    box-shadow: $shadow-card;
 }
 
 // ----------------------------------------
@@ -137,8 +138,9 @@
 .version {
     padding: $space-4;
     border-radius: $radius-lg;
-    background: $bg-secondary;
-    border: 1px solid $border-primary;
+    background: $bg-card;
+    border: 1px solid $border-card;
+    box-shadow: $shadow-sm;
     
     &.local {
         border-color: $info-border;

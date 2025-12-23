@@ -1,32 +1,34 @@
 // ========================================
-// Design Tokens - Swiss Luxury Minimalist
-// Premium, refined, elegant
+// Design Tokens - Modern Light Theme
+// Clean, bordered, event-style design
 // ========================================
 
 // ----------------------------------------
-// Color Palette - Sophisticated Neutrals
+// Color Palette - Clean Light Mode
 // ----------------------------------------
 
-// Backgrounds - Deep, rich blacks with subtle warmth
-$bg-primary: #09090b;
-$bg-secondary: #0f0f12;
-$bg-tertiary: #16161a;
-$bg-elevated: #1c1c21;
-$bg-hover: #232329;
-$bg-active: #2a2a32;
+// Backgrounds - Clean whites with contrast
+$bg-primary: #ffffff;
+$bg-secondary: #f8fafc;  // Slightly blue-tinted for depth
+$bg-tertiary: #f1f5f9;   // Cards stand out from white
+$bg-elevated: #ffffff;
+$bg-hover: #e2e8f0;      // More visible hover
+$bg-active: #cbd5e1;     // Clear active state
+$bg-card: #ffffff;       // Pure white cards on tinted bg
+$bg-app: #f8fafc;        // App background (not pure white)
 
-// Text Hierarchy - Carefully calibrated for readability
-$text-primary: #fafafa;
-$text-secondary: #a1a1aa;
-$text-tertiary: #71717a;
-$text-muted: #52525b;
-$text-disabled: #3f3f46;
+// Text Hierarchy - Dark text on light background
+$text-primary: #0a0a0a;
+$text-secondary: #404040;
+$text-tertiary: #737373;
+$text-muted: #a3a3a3;
+$text-disabled: #d4d4d4;
 
-// Accent - Subtle, sophisticated
-$accent: #ffffff;
-$accent-soft: rgba(255, 255, 255, 0.9);
-$accent-muted: rgba(255, 255, 255, 0.6);
-$accent-subtle: rgba(255, 255, 255, 0.1);
+// Accent - Vibrant pink/magenta highlight
+$accent: #ff69f5;
+$accent-soft: rgba(255, 105, 245, 0.15);
+$accent-muted: rgba(255, 105, 245, 0.6);
+$accent-subtle: rgba(255, 105, 245, 0.08);
 
 // Semantic Colors - Muted, professional
 $success: #4ade80;
@@ -46,24 +48,29 @@ $info-soft: rgba(96, 165, 250, 0.15);
 $info-border: rgba(96, 165, 250, 0.3);
 
 // ----------------------------------------
-// Borders & Dividers
+// Borders & Dividers - More visible borders
 // ----------------------------------------
-$border-primary: rgba(255, 255, 255, 0.08);
-$border-secondary: rgba(255, 255, 255, 0.05);
-$border-focus: rgba(255, 255, 255, 0.2);
-$border-hover: rgba(255, 255, 255, 0.12);
+$border-primary: #e2e8f0;   // Slightly more visible
+$border-secondary: #f1f5f9;
+$border-focus: #0a0a0a;
+$border-hover: #cbd5e1;     // Clearer hover border
+$border-card: #e2e8f0;      // Card borders
 
 // ----------------------------------------
-// Shadows - Subtle depth
+// Shadows - Refined depth for cards
 // ----------------------------------------
-$shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-$shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.4);
-$shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-$shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
-$shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.7);
+$shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+$shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+
+// Card-specific shadow
+$shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+$shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
 
 // Glow effects for focus states
-$glow-focus: 0 0 0 2px rgba(255, 255, 255, 0.1);
+$glow-focus: 0 0 0 2px rgba(255, 105, 245, 0.3);
 
 // ----------------------------------------
 // Spacing Scale (4-point base, 8-point primary)

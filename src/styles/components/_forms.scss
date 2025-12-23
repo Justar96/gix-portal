@@ -1,6 +1,6 @@
 // ========================================
 // Component - Forms
-// Swiss Luxury Minimalist Design
+// Modern Light Theme with Bordered Design
 // ========================================
 
 @use '../abstracts' as *;
@@ -22,6 +22,7 @@
         color: $text-secondary;
         margin-bottom: $space-2;
         letter-spacing: $tracking-wide;
+        text-transform: uppercase;
     }
     
     input[type="text"],
@@ -30,14 +31,15 @@
     input[type="number"] {
         width: 100%;
         padding: $space-2-5 $space-4;
-        background: $bg-primary;
-        border: 1px solid $border-primary;
+        background: $bg-card;
+        border: 1px solid $border-card;
         border-radius: $radius-md;
         color: $text-primary;
         font-size: $text-sm;
         font-family: inherit;
         transition: all $transition-base;
         min-height: 40px;
+        box-shadow: $shadow-xs;
         
         &:hover:not(:focus):not(:disabled) {
             border-color: $border-hover;
@@ -45,7 +47,7 @@
         
         &:focus {
             outline: none;
-            border-color: $border-focus;
+            border-color: $text-primary;
             box-shadow: $glow-focus;
         }
         
@@ -57,14 +59,15 @@
             background: $bg-tertiary;
             color: $text-disabled;
             cursor: not-allowed;
+            box-shadow: none;
         }
     }
     
     select {
         width: 100%;
         padding: $space-2-5 $space-4;
-        background: $bg-primary;
-        border: 1px solid $border-primary;
+        background: $bg-card;
+        border: 1px solid $border-card;
         border-radius: $radius-md;
         color: $text-primary;
         font-size: $text-sm;
@@ -72,6 +75,7 @@
         cursor: pointer;
         min-height: 40px;
         transition: all $transition-base;
+        box-shadow: $shadow-xs;
         
         &:hover:not(:focus) {
             border-color: $border-hover;
@@ -79,7 +83,7 @@
         
         &:focus {
             outline: none;
-            border-color: $border-focus;
+            border-color: $text-primary;
             box-shadow: $glow-focus;
         }
     }
@@ -102,6 +106,7 @@
             font-size: $text-sm;
             font-weight: $weight-normal;
             letter-spacing: $tracking-normal;
+            text-transform: none;
             cursor: pointer;
         }
     }

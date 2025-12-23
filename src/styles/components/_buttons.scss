@@ -1,18 +1,18 @@
 // ========================================
 // Component - Buttons
-// Swiss Luxury Minimalist Design
+// Modern Light Theme with Bordered Design
 // ========================================
 
 @use '../abstracts' as *;
 
 // ----------------------------------------
-// Primary Button - Solid, confident
+// Primary Button - Solid black
 // ----------------------------------------
 .btn-primary {
     @include button-base;
     padding: $space-2-5 $space-5;
     background: $text-primary;
-    border: 1px solid transparent;
+    border: 1px solid $text-primary;
     border-radius: $radius-md;
     color: $bg-primary;
     font-size: $text-sm;
@@ -20,7 +20,8 @@
     min-height: 36px;
     
     &:hover:not(:disabled) {
-        background: $accent-soft;
+        background: $text-secondary;
+        border-color: $text-secondary;
     }
     
     &:active:not(:disabled) {
@@ -34,12 +35,12 @@
 }
 
 // ----------------------------------------
-// Secondary Button - Outlined, subtle
+// Secondary Button - Bordered outline
 // ----------------------------------------
 .btn-secondary {
     @include button-base;
     padding: $space-2-5 $space-5;
-    background: transparent;
+    background: $bg-primary;
     border: 1px solid $border-primary;
     border-radius: $radius-md;
     color: $text-primary;
@@ -48,8 +49,7 @@
     min-height: 36px;
     
     &:hover:not(:disabled) {
-        background: $bg-hover;
-        border-color: $border-hover;
+        background: $bg-tertiary;
     }
     
     &:active:not(:disabled) {
@@ -63,22 +63,21 @@
 }
 
 // ----------------------------------------
-// Icon Button - Square, minimal
+// Icon Button - Square, subtle
 // ----------------------------------------
 .btn-icon {
     @include button-base;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     background: transparent;
-    border: 1px solid $border-primary;
+    border: none;
     border-radius: $radius-md;
     color: $text-tertiary;
     flex-shrink: 0;
     
     &:hover:not(:disabled) {
-        background: $bg-hover;
+        background: $bg-tertiary;
         color: $text-primary;
-        border-color: $border-hover;
     }
     
     &:active:not(:disabled) {
@@ -87,8 +86,8 @@
     
     // Size variants
     &.btn-sm {
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
         
         svg {
             width: 14px;
@@ -97,15 +96,14 @@
     }
     
     &.btn-lg {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
     }
     
     // Danger variant
     &.danger {
         &:hover:not(:disabled) {
             background: $error-soft;
-            border-color: $error-border;
             color: $error;
         }
     }

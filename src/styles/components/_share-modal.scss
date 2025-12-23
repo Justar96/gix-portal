@@ -1,6 +1,6 @@
 // ========================================
 // Component - Share Modal
-// Swiss Luxury Minimalist Design
+// Modern Light Theme with Bordered Design
 // ========================================
 
 @use '../abstracts' as *;
@@ -70,9 +70,10 @@
     align-items: center;
     gap: $space-3;
     padding: $space-4;
-    background: $bg-tertiary;
-    border: 1px solid $border-primary;
+    background: $bg-secondary;
+    border: 1px solid $border-card;
     border-radius: $radius-lg;
+    box-shadow: $shadow-sm;
     
     code {
         flex: 1;
@@ -139,13 +140,15 @@
     justify-content: space-between;
     gap: $space-4;
     padding: $space-4;
-    background: $bg-tertiary;
-    border: 1px solid $border-primary;
+    background: $bg-card;
+    border: 1px solid $border-card;
     border-radius: $radius-lg;
+    box-shadow: $shadow-card;
     transition: all $transition-base;
     
     &:hover {
         border-color: $border-hover;
+        box-shadow: $shadow-card-hover;
     }
 }
 
