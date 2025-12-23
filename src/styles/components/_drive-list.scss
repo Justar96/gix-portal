@@ -1,75 +1,114 @@
 // ========================================
 // Component - Drive List
+// Swiss Luxury Minimalist Design
 // ========================================
 
 @use '../abstracts' as *;
 
+// ----------------------------------------
+// Drive List Container
+// ----------------------------------------
 .drive-list {
     flex: 1;
     overflow-y: auto;
     padding: $space-2;
     @include custom-scrollbar;
-
+    
     &.empty {
-        @include flex-column;
-        @include flex-center;
+        @include flex-column-center;
         text-align: center;
-        color: $text-tertiary;
-        padding: $space-8;
+        color: $text-muted;
+        padding: $space-10 $space-4;
         gap: $space-1;
-
-        .hint {
+        
+        p {
             font-size: $text-sm;
+            color: $text-muted;
+        }
+        
+        .hint {
+            font-size: $text-xs;
+            color: $text-disabled;
         }
     }
 }
 
+// ----------------------------------------
+// Drive Item
+// ----------------------------------------
 .drive-item {
     display: flex;
     align-items: center;
     gap: $space-3;
-    padding: $space-3;
-    border-radius: $radius-md;
+    padding: $space-3 $space-3;
+    margin-bottom: $space-1;
+    border-radius: $radius-lg;
     cursor: pointer;
-    transition: background $transition-fast;
-
-    @include respond-to(sm) {
-        padding: $space-2;
+    transition: all $transition-base;
+    border: 1px solid transparent;
+    
+    @include respond-to('md') {
+        padding: $space-2-5 $space-3;
     }
-
+    
     &:hover {
         background: $bg-hover;
     }
-
+    
     &.selected {
         background: $bg-elevated;
+        border-color: $border-primary;
+        
+        .drive-icon {
+            background: $bg-active;
+            color: $text-primary;
+        }
+    }
+    
+    &:last-child {
+        margin-bottom: 0;
     }
 }
 
+// ----------------------------------------
+// Drive Icon
+// ----------------------------------------
 .drive-icon {
     @include flex-center;
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     background: $bg-tertiary;
-    border-radius: $radius-md;
-    color: $text-secondary;
+    border: 1px solid $border-secondary;
+    border-radius: $radius-lg;
+    color: $text-tertiary;
     flex-shrink: 0;
+    transition: all $transition-base;
+    
+    svg {
+        width: 16px;
+        height: 16px;
+    }
 }
 
+// ----------------------------------------
+// Drive Info
+// ----------------------------------------
 .drive-info {
     flex: 1;
     min-width: 0;
 }
 
 .drive-name {
-    font-size: $text-base;
-    font-weight: 500;
+    font-size: $text-sm;
+    font-weight: $weight-medium;
     color: $text-primary;
     @include truncate;
+    line-height: $leading-snug;
 }
 
 .drive-stats {
     font-size: $text-xs;
-    color: $text-tertiary;
-    margin-top: 2px;
+    color: $text-muted;
+    margin-top: $space-0-5;
+    letter-spacing: $tracking-normal;
 }

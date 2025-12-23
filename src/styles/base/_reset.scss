@@ -1,82 +1,206 @@
 // ========================================
 // Base - Reset & Typography
+// Swiss Luxury Minimalist Design
 // ========================================
 
 @use '../abstracts' as *;
 
-// Google Fonts
+// Google Fonts - Inter for clean, professional typography
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
-// Reset
-* {
+// ----------------------------------------
+// Modern Reset
+// ----------------------------------------
+*,
+*::before,
+*::after {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-// Root variables for runtime access
+// Root configuration
 :root {
     color-scheme: dark;
+    font-size: 16px;
+    
+    @include respond-to('sm') {
+        font-size: 15px;
+    }
 }
 
+html {
+    @include custom-scrollbar;
+    height: 100%;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+}
+
+// ----------------------------------------
 // Body
+// ----------------------------------------
 body {
     font-family: $font-sans;
-    background: $bg-primary;
-    color: $text-primary;
-    line-height: 1.5;
     font-size: $text-base;
+    font-weight: $weight-normal;
+    line-height: $leading-normal;
+    color: $text-primary;
+    background: $bg-primary;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    min-height: 100%;
 }
 
+// ----------------------------------------
 // Typography
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    font-weight: 600;
-    line-height: 1.25;
+// ----------------------------------------
+h1, h2, h3, h4, h5, h6 {
+    font-weight: $weight-semibold;
+    line-height: $leading-tight;
+    letter-spacing: $tracking-tight;
+    color: $text-primary;
 }
 
 h1 {
     font-size: $text-2xl;
+    
+    @include respond-to('md') {
+        font-size: $text-xl;
+    }
 }
 
 h2 {
     font-size: $text-xl;
+    
+    @include respond-to('md') {
+        font-size: $text-lg;
+    }
 }
 
 h3 {
     font-size: $text-lg;
 }
 
+h4 {
+    font-size: $text-md;
+}
+
+p {
+    line-height: $leading-relaxed;
+    color: $text-secondary;
+}
+
+small {
+    font-size: $text-xs;
+    color: $text-tertiary;
+}
+
+strong, b {
+    font-weight: $weight-semibold;
+}
+
+// ----------------------------------------
 // Links
+// ----------------------------------------
 a {
     color: $text-primary;
     text-decoration: none;
-
+    transition: color $transition-fast;
+    
     &:hover {
         color: $accent;
     }
+    
+    &:focus-visible {
+        outline: none;
+        box-shadow: $glow-focus;
+        border-radius: $radius-sm;
+    }
 }
 
-// Monospace text
-code,
-pre,
-kbd {
+// ----------------------------------------
+// Code & Monospace
+// ----------------------------------------
+code, pre, kbd, samp {
     font-family: $font-mono;
+    font-size: 0.9em;
 }
 
+code {
+    padding: $space-0-5 $space-1;
+    background: $bg-tertiary;
+    border-radius: $radius-sm;
+    color: $text-secondary;
+}
+
+pre {
+    padding: $space-4;
+    background: $bg-tertiary;
+    border-radius: $radius-md;
+    overflow-x: auto;
+    @include custom-scrollbar;
+    
+    code {
+        padding: 0;
+        background: none;
+        border-radius: 0;
+    }
+}
+
+// ----------------------------------------
+// Lists
+// ----------------------------------------
+ul, ol {
+    list-style: none;
+}
+
+// ----------------------------------------
+// Images & Media
+// ----------------------------------------
+img, picture, video, canvas, svg {
+    display: block;
+    max-width: 100%;
+}
+
+// ----------------------------------------
+// Form Elements
+// ----------------------------------------
+button, input, select, textarea {
+    font: inherit;
+    color: inherit;
+}
+
+button {
+    cursor: pointer;
+    background: none;
+    border: none;
+}
+
+// ----------------------------------------
+// Tables
+// ----------------------------------------
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+// ----------------------------------------
 // Selection
+// ----------------------------------------
 ::selection {
-    background: rgba($text-primary, 0.2);
+    background: rgba($accent, 0.2);
     color: $text-primary;
 }
 
-// Global scrollbar
-html {
-    @include custom-scrollbar;
+// ----------------------------------------
+// Focus Styles
+// ----------------------------------------
+:focus {
+    outline: none;
+}
+
+:focus-visible {
+    outline: none;
+    box-shadow: $glow-focus;
 }

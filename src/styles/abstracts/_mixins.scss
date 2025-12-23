@@ -1,31 +1,56 @@
 // ========================================
-// Mixins
+// Mixins - Swiss Luxury Design System
 // ========================================
 
 @use 'variables' as *;
 
-// Responsive breakpoints
+// ----------------------------------------
+// Responsive Breakpoints
+// ----------------------------------------
 @mixin respond-to($breakpoint) {
-    @if $breakpoint ==xl {
+    @if $breakpoint == '2xl' {
+        @media (max-width: $breakpoint-2xl) {
+            @content;
+        }
+    } @else if $breakpoint == 'xl' {
         @media (max-width: $breakpoint-xl) {
             @content;
         }
-    }
-
-    @else if $breakpoint ==md {
+    } @else if $breakpoint == 'lg' {
+        @media (max-width: $breakpoint-lg) {
+            @content;
+        }
+    } @else if $breakpoint == 'md' {
         @media (max-width: $breakpoint-md) {
             @content;
         }
-    }
-
-    @else if $breakpoint ==sm {
+    } @else if $breakpoint == 'sm' {
         @media (max-width: $breakpoint-sm) {
             @content;
         }
     }
 }
 
-// Flexbox utilities
+// Min-width breakpoints
+@mixin respond-from($breakpoint) {
+    @if $breakpoint == 'sm' {
+        @media (min-width: $breakpoint-sm) {
+            @content;
+        }
+    } @else if $breakpoint == 'md' {
+        @media (min-width: $breakpoint-md) {
+            @content;
+        }
+    } @else if $breakpoint == 'lg' {
+        @media (min-width: $breakpoint-lg) {
+            @content;
+        }
+    }
+}
+
+// ----------------------------------------
+// Flexbox Utilities
+// ----------------------------------------
 @mixin flex-center {
     display: flex;
     align-items: center;
@@ -38,67 +63,214 @@
     justify-content: space-between;
 }
 
+@mixin flex-start {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
 @mixin flex-column {
     display: flex;
     flex-direction: column;
 }
 
-// Text truncation
+@mixin flex-column-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+// ----------------------------------------
+// Typography Utilities
+// ----------------------------------------
 @mixin truncate {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-// Focus state
-@mixin focus-ring {
-    outline: none;
-    border-color: $border-focus;
+@mixin line-clamp($lines: 2) {
+    display: -webkit-box;
+    -webkit-line-clamp: $lines;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
-// Button reset
+@mixin text-body {
+    font-size: $text-base;
+    line-height: $leading-normal;
+    color: $text-primary;
+}
+
+@mixin text-caption {
+    font-size: $text-xs;
+    line-height: $leading-normal;
+    color: $text-tertiary;
+}
+
+@mixin text-label {
+    font-size: $text-xs;
+    font-weight: $weight-medium;
+    letter-spacing: $tracking-wide;
+    text-transform: uppercase;
+    color: $text-tertiary;
+}
+
+// ----------------------------------------
+// Focus & Interactive States
+// ----------------------------------------
+@mixin focus-ring {
+    outline: none;
+    box-shadow: $glow-focus;
+}
+
+@mixin focus-visible-ring {
+    &:focus {
+        outline: none;
+    }
+    
+    &:focus-visible {
+        outline: none;
+        box-shadow: $glow-focus;
+    }
+}
+
+@mixin interactive {
+    cursor: pointer;
+    transition: all $transition-base;
+    
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+}
+
+@mixin hover-lift {
+    transition: transform $transition-base, box-shadow $transition-base;
+    
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: $shadow-md;
+    }
+}
+
+// ----------------------------------------
+// Button Utilities
+// ----------------------------------------
 @mixin button-reset {
+    appearance: none;
     background: transparent;
     border: none;
     cursor: pointer;
     font-family: inherit;
+    font-size: inherit;
+    padding: 0;
+    margin: 0;
 }
 
-// Interactive element
-@mixin interactive {
-    cursor: pointer;
-    transition: all $transition-fast;
-
+@mixin button-base {
+    @include button-reset;
+    @include flex-center;
+    @include focus-visible-ring;
+    gap: $space-2;
+    font-weight: $weight-medium;
+    transition: all $transition-base;
+    
     &:disabled {
         opacity: 0.4;
         cursor: not-allowed;
     }
 }
 
-// Card style
-@mixin card {
+// ----------------------------------------
+// Card & Surface Styles
+// ----------------------------------------
+@mixin surface-primary {
     background: $bg-secondary;
-    border: 1px solid $border;
+    border: 1px solid $border-primary;
     border-radius: $radius-lg;
 }
 
-// Scrollbar styling
-@mixin custom-scrollbar {
-    &::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
+@mixin surface-elevated {
+    background: $bg-elevated;
+    border: 1px solid $border-primary;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-md;
+}
 
+@mixin surface-hover {
+    &:hover {
+        background: $bg-hover;
+        border-color: $border-hover;
+    }
+}
+
+// ----------------------------------------
+// Scrollbar Styling
+// ----------------------------------------
+@mixin custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: $border-primary transparent;
+    
+    &::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    
     &::-webkit-scrollbar-track {
         background: transparent;
     }
-
+    
     &::-webkit-scrollbar-thumb {
-        background: $border;
-        border-radius: 4px;
-
+        background: $border-primary;
+        border-radius: $radius-full;
+        
         &:hover {
-            background: $text-muted;
+            background: $border-hover;
         }
     }
+}
+
+@mixin scrollbar-hidden {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+// ----------------------------------------
+// Animation Utilities
+// ----------------------------------------
+@mixin spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { 
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
 }

@@ -1,19 +1,24 @@
 // ========================================
 // Component - Share Modal
+// Swiss Luxury Minimalist Design
 // ========================================
 
 @use '../abstracts' as *;
 
-// Larger modal for share functionality
+// ----------------------------------------
+// Share Modal Size
+// ----------------------------------------
 .share-modal {
-    max-width: 480px;
+    max-width: 500px;
 }
 
-// Tab navigation
+// ----------------------------------------
+// Tab Navigation
+// ----------------------------------------
 .share-tabs {
     display: flex;
-    border-bottom: 1px solid $border;
-
+    border-bottom: 1px solid $border-primary;
+    
     .tab {
         flex: 1;
         display: flex;
@@ -24,19 +29,25 @@
         background: none;
         border: none;
         border-bottom: 2px solid transparent;
-        color: $text-secondary;
+        color: $text-tertiary;
         font-size: $text-sm;
+        font-weight: $weight-medium;
         cursor: pointer;
-        transition: all 0.15s ease;
-
+        transition: all $transition-base;
+        
+        svg {
+            width: 16px;
+            height: 16px;
+        }
+        
         &:hover {
             color: $text-primary;
-            background: rgba($accent, 0.05);
+            background: $bg-hover;
         }
-
+        
         &.active {
-            color: $accent;
-            border-bottom-color: $accent;
+            color: $text-primary;
+            border-bottom-color: $text-primary;
         }
     }
 }
@@ -45,58 +56,24 @@
 .invite-form {
     display: flex;
     flex-direction: column;
-    gap: $space-4;
-
-    .form-group.checkbox {
-        flex-direction: row;
-        align-items: center;
-        gap: $space-2;
-
-        input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: $accent;
-        }
-
-        label {
-            margin-bottom: 0;
-            font-weight: normal;
-            color: $text-secondary;
-        }
-    }
-
-    select {
-        width: 100%;
-        padding: $space-2 $space-3;
-        background: $bg-secondary;
-        border: 1px solid $border;
-        border-radius: $radius-md;
-        color: $text-primary;
-        font-size: $text-sm;
-
-        &:focus {
-            outline: none;
-            border-color: $accent;
-        }
-    }
+    gap: $space-5;
 }
 
 .invite-result {
-    display: flex;
-    flex-direction: column;
-    gap: $space-4;
+    @include flex-column;
+    gap: $space-5;
     text-align: center;
 }
 
 .invite-token {
     display: flex;
     align-items: center;
-    gap: $space-2;
-    padding: $space-3;
-    background: $bg-secondary;
-    border: 1px solid $border;
-    border-radius: $radius-md;
-
+    gap: $space-3;
+    padding: $space-4;
+    background: $bg-tertiary;
+    border: 1px solid $border-primary;
+    border-radius: $radius-lg;
+    
     code {
         flex: 1;
         font-family: $font-mono;
@@ -104,26 +81,8 @@
         color: $text-secondary;
         word-break: break-all;
         text-align: left;
-    }
-
-    .btn-icon {
-        flex-shrink: 0;
-        padding: $space-2;
+        padding: 0;
         background: none;
-        border: none;
-        color: $text-secondary;
-        cursor: pointer;
-        border-radius: $radius-sm;
-        transition: all 0.15s ease;
-
-        &:hover {
-            color: $accent;
-            background: rgba($accent, 0.1);
-        }
-
-        &.copied {
-            color: $success;
-        }
     }
 }
 
@@ -131,45 +90,46 @@
     text-align: left;
     font-size: $text-sm;
     color: $text-secondary;
-
+    
     p {
-        margin: $space-1 0;
+        margin: $space-2 0;
+        line-height: $leading-relaxed;
     }
-
+    
     strong {
         color: $text-primary;
+        font-weight: $weight-medium;
     }
-
+    
     .single-use-badge {
         display: inline-block;
         padding: $space-1 $space-2;
-        background: $warning-muted;
+        background: $warning-soft;
         color: $warning;
         border-radius: $radius-sm;
         font-size: $text-xs;
-        font-weight: 500;
+        font-weight: $weight-medium;
         margin-top: $space-2;
     }
 }
 
 // Permissions tab styles
 .permissions-loading {
-    @include flex-center;
-    flex-direction: column;
-    gap: $space-3;
-    padding: $space-6;
-    color: $text-secondary;
+    @include flex-column-center;
+    gap: $space-4;
+    padding: $space-8;
+    color: $text-muted;
 }
 
 .permissions-list {
-    display: flex;
-    flex-direction: column;
-    gap: $space-2;
-
+    @include flex-column;
+    gap: $space-3;
+    
     .empty-state {
         text-align: center;
-        color: $text-secondary;
-        padding: $space-4;
+        color: $text-muted;
+        padding: $space-6;
+        font-size: $text-sm;
     }
 }
 
@@ -177,14 +137,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: $space-3;
-    background: $bg-secondary;
-    border: 1px solid $border;
-    border-radius: $radius-md;
-    transition: border-color 0.15s ease;
-
+    gap: $space-4;
+    padding: $space-4;
+    background: $bg-tertiary;
+    border: 1px solid $border-primary;
+    border-radius: $radius-lg;
+    transition: all $transition-base;
+    
     &:hover {
-        border-color: rgba($accent, 0.3);
+        border-color: $border-hover;
     }
 }
 
@@ -192,39 +153,52 @@
     display: flex;
     align-items: center;
     gap: $space-3;
-
+    min-width: 0;
+    
     .user-icon {
         @include flex-center;
-        width: 32px;
-        height: 32px;
-        background: rgba($accent, 0.1);
-        color: $accent;
-        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        background: $bg-hover;
+        color: $text-secondary;
+        border-radius: $radius-full;
+        flex-shrink: 0;
+        
+        svg {
+            width: 16px;
+            height: 16px;
+        }
     }
-
+    
     .user-details {
+        min-width: 0;
+        
         .node-id {
             font-size: $text-sm;
-            font-weight: 500;
+            font-weight: $weight-medium;
             font-family: $font-mono;
             display: flex;
             align-items: center;
             gap: $space-2;
+            color: $text-primary;
         }
-
+        
         .owner-badge {
-            font-size: $text-xs;
-            padding: 2px $space-2;
-            background: $warning-muted;
+            font-size: $text-2xs;
+            padding: $space-0-5 $space-2;
+            background: $warning-soft;
             color: $warning;
             border-radius: $radius-sm;
             font-family: $font-sans;
-            font-weight: 500;
+            font-weight: $weight-medium;
+            text-transform: uppercase;
+            letter-spacing: $tracking-wide;
         }
-
+        
         .granted-info {
             font-size: $text-xs;
             color: $text-muted;
+            margin-top: $space-0-5;
         }
     }
 }
@@ -232,49 +206,35 @@
 .permission-actions {
     display: flex;
     align-items: center;
-    gap: $space-2;
-
+    gap: $space-3;
+    flex-shrink: 0;
+    
     .permission-badge {
-        padding: $space-1 $space-2;
-        font-size: $text-xs;
-        font-weight: 500;
+        padding: $space-1 $space-2-5;
+        font-size: $text-2xs;
+        font-weight: $weight-medium;
         border-radius: $radius-sm;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-
+        letter-spacing: $tracking-wide;
+        
         &.read {
-            background: rgba($text-secondary, 0.15);
-            color: $text-secondary;
+            background: $bg-hover;
+            color: $text-tertiary;
         }
-
+        
         &.write {
-            background: $success-muted;
+            background: $success-soft;
             color: $success;
         }
-
+        
         &.manage {
-            background: $warning-muted;
+            background: $warning-soft;
             color: $warning;
         }
-
+        
         &.admin {
-            background: rgba($accent, 0.1);
-            color: $accent;
-        }
-    }
-
-    .btn-icon.danger {
-        padding: $space-1;
-        background: none;
-        border: none;
-        color: $text-muted;
-        cursor: pointer;
-        border-radius: $radius-sm;
-        transition: all 0.15s ease;
-
-        &:hover {
-            color: $error;
-            background: $error-muted;
+            background: $info-soft;
+            color: $info;
         }
     }
 }

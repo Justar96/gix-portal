@@ -360,20 +360,19 @@ impl FileTransferManager {
     }
 
     /// Import a file into the blob store (internal helper)
+    ///
+    /// Uses iroh's import_file which computes the hash internally,
+    /// avoiding the need to read the entire file into memory.
     async fn import_file(&self, path: &Path) -> Result<Hash> {
-        // Read file and compute hash
-        let data = tokio::fs::read(path).await?;
-        let hash = iroh_blobs::Hash::new(&data);
-
-        // Import into store using import_file with a progress sender
         let store = self.blobs.store();
         let path_buf = path.to_path_buf();
 
-        // Use import_file which handles the storage
         use iroh_blobs::store::ImportMode;
         use iroh_blobs::util::progress::IgnoreProgressSender;
 
-        let (_tag, _size) = store
+        // iroh's import_file handles both storage and hash computation
+        // without loading the entire file into memory
+        let (tag, _size) = store
             .import_file(
                 path_buf,
                 ImportMode::Copy,
@@ -383,24 +382,43 @@ impl FileTransferManager {
             .await
             .map_err(|e| anyhow::anyhow!("Failed to import file: {}", e))?;
 
-        Ok(hash)
+        // Get hash from the returned tag - no redundant file read needed
+        Ok(*tag.hash())
     }
 
     /// Export a blob to a file (internal helper)
+    ///
+    /// Uses streaming to avoid loading the entire blob into memory.
+    /// Reads in 64KB chunks and writes directly to disk.
     async fn export_file(&self, hash: Hash, path: &Path) -> Result<()> {
+        use iroh_io::AsyncSliceReader;
+        use tokio::io::AsyncWriteExt;
+
         let store = self.blobs.store();
-
-        // Get the blob data
         let entry = store.get(&hash).await?.context("Blob not found")?;
+        let total_size = entry.size().value();
 
-        // Read all data from the entry using iroh_io's AsyncSliceReaderExt
-        use iroh_io::AsyncSliceReaderExt;
+        // Stream chunks to file instead of loading entire blob into memory
         let mut reader = entry.data_reader();
-        let data = reader.read_to_end().await?;
+        let mut file = tokio::fs::File::create(path).await?;
+        let mut written = 0u64;
+        const CHUNK_SIZE: usize = 64 * 1024; // 64KB chunks
 
-        // Write to file
-        tokio::fs::write(path, &data).await?;
+        while written < total_size {
+            let remaining = total_size - written;
+            let chunk_size = std::cmp::min(CHUNK_SIZE as u64, remaining) as usize;
 
+            // Read chunk from blob at current offset
+            let data = reader.read_at(written, chunk_size).await?;
+            if data.is_empty() {
+                break;
+            }
+
+            file.write_all(&data).await?;
+            written += data.len() as u64;
+        }
+
+        file.flush().await?;
         Ok(())
     }
 
@@ -459,10 +477,29 @@ impl FileTransferManager {
     }
 
     /// Get blob hash for a file path (if it exists in store)
+    ///
+    /// Uses streaming BLAKE3 hasher to compute hash without loading
+    /// the entire file into memory.
     pub async fn get_blob_hash(&self, local_path: &Path) -> Result<Option<Hash>> {
-        // Compute the hash of the file
-        let data = tokio::fs::read(local_path).await?;
-        let hash = iroh_blobs::Hash::new(&data);
+        use tokio::io::AsyncReadExt;
+
+        // Stream file through BLAKE3 hasher in 64KB chunks
+        let file = tokio::fs::File::open(local_path).await?;
+        let mut reader = tokio::io::BufReader::with_capacity(64 * 1024, file);
+        let mut hasher = blake3::Hasher::new();
+        let mut buffer = vec![0u8; 64 * 1024];
+
+        loop {
+            let bytes_read = reader.read(&mut buffer).await?;
+            if bytes_read == 0 {
+                break;
+            }
+            hasher.update(&buffer[..bytes_read]);
+        }
+
+        // Convert BLAKE3 hash to iroh_blobs::Hash
+        let blake3_hash = hasher.finalize();
+        let hash = Hash::from_bytes(*blake3_hash.as_bytes());
 
         // Check if it exists in store
         let store = self.blobs.store();

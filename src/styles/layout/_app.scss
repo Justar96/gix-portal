@@ -1,26 +1,37 @@
 // ========================================
 // Layout - App Structure
+// Swiss Luxury Minimalist Design
 // ========================================
 
 @use '../abstracts' as *;
 
-// Main app container
+// ----------------------------------------
+// Main App Container
+// ----------------------------------------
 .app {
     @include flex-column;
     height: 100vh;
     overflow: hidden;
+    background: $bg-primary;
 }
 
+// ----------------------------------------
 // Header
+// ----------------------------------------
 .app-header {
     @include flex-between;
     height: $header-height;
     padding: 0 $space-6;
     background: $bg-secondary;
-    border-bottom: 1px solid $border;
+    border-bottom: 1px solid $border-primary;
     flex-shrink: 0;
-
-    @include respond-to(md) {
+    z-index: $z-sticky;
+    
+    @include respond-to('lg') {
+        padding: 0 $space-5;
+    }
+    
+    @include respond-to('md') {
         padding: 0 $space-4;
     }
 }
@@ -28,88 +39,96 @@
 .header-left {
     display: flex;
     align-items: center;
-    gap: $space-3;
-
+    gap: $space-4;
+    
     h1 {
-        font-size: $text-xl;
-        font-weight: 600;
+        font-size: $text-lg;
+        font-weight: $weight-semibold;
         color: $text-primary;
-        letter-spacing: -0.025em;
-
-        @include respond-to(md) {
-            font-size: $text-lg;
+        letter-spacing: $tracking-tight;
+        
+        @include respond-to('md') {
+            font-size: $text-md;
         }
     }
-
+    
     .subtitle {
         font-size: $text-sm;
-        color: $text-tertiary;
-        font-weight: 400;
-
-        @include respond-to(md) {
+        color: $text-muted;
+        font-weight: $weight-normal;
+        padding-left: $space-4;
+        border-left: 1px solid $border-primary;
+        
+        @include respond-to('lg') {
             display: none;
         }
     }
 }
 
-// Main layout
+// ----------------------------------------
+// Main Layout
+// ----------------------------------------
 .app-main {
     display: flex;
     flex: 1;
     overflow: hidden;
-
-    @include respond-to(md) {
+    
+    @include respond-to('md') {
         flex-direction: column;
     }
 }
 
+// ----------------------------------------
 // Sidebar
+// ----------------------------------------
 .sidebar {
     width: $sidebar-width;
     background: $bg-secondary;
-    border-right: 1px solid $border;
+    border-right: 1px solid $border-primary;
     @include flex-column;
     flex-shrink: 0;
-
-    @include respond-to(xl) {
-        width: $sidebar-width-tablet;
+    
+    @include respond-to('xl') {
+        width: 240px;
     }
-
-    @include respond-to(md) {
+    
+    @include respond-to('lg') {
+        width: 220px;
+    }
+    
+    @include respond-to('md') {
         width: 100%;
         height: auto;
-        max-height: 40vh;
+        max-height: 35vh;
         border-right: none;
-        border-bottom: 1px solid $border;
+        border-bottom: 1px solid $border-primary;
     }
 }
 
 .sidebar-header {
     @include flex-between;
-    padding: $space-4;
-    border-bottom: 1px solid $border;
-
-    @include respond-to(sm) {
-        padding: $space-3;
+    padding: $space-5 $space-5 $space-4;
+    
+    @include respond-to('md') {
+        padding: $space-4;
     }
-
+    
     h2 {
-        font-size: $text-sm;
-        font-weight: 500;
-        color: $text-secondary;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        @include text-label;
     }
 }
 
-// Content area
+// ----------------------------------------
+// Content Area
+// ----------------------------------------
 .content {
     flex: 1;
     @include flex-column;
     overflow: hidden;
     background: $bg-primary;
-
-    @include respond-to(md) {
+    
+    @include respond-to('md') {
         min-height: 0;
+        flex: 1;
     }
 }

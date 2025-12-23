@@ -4,15 +4,19 @@ mod crypto;
 mod network;
 mod state;
 mod storage;
+mod tray;
 
 use commands::{
-    cancel_transfer, check_permission, create_drive, delete_drive, download_file, generate_invite,
-    get_connection_status, get_drive, get_identity, get_sync_status, get_transfer,
-    grant_permission, is_watching, list_drives, list_files, list_permissions, list_transfers,
-    rename_drive, revoke_permission, start_sync, start_watching, stop_sync, stop_watching,
-    subscribe_drive_events, upload_file, verify_invite, SecurityStore,
+    acquire_lock, cancel_transfer, check_permission, create_drive, delete_drive, dismiss_conflict,
+    download_file, extend_lock, force_release_lock, generate_invite, get_conflict,
+    get_conflict_count, get_connection_status, get_drive, get_identity, get_lock_status,
+    get_online_count, get_online_users, get_recent_activity, get_sync_status, get_transfer,
+    grant_permission, is_watching, join_drive_presence, leave_drive_presence, list_conflicts,
+    list_drives, list_files, list_locks, list_permissions, list_transfers, presence_heartbeat,
+    release_lock, rename_drive, resolve_conflict, revoke_permission, start_sync, start_watching,
+    stop_sync, stop_watching, subscribe_drive_events, upload_file, verify_invite, SecurityStore,
 };
-use core::{DriveEvent, DriveEventDto, DriveId};
+use core::{ConflictManager, DriveEvent, DriveEventDto, DriveId, LockManager, PresenceManager};
 use state::AppState;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager};
@@ -37,7 +41,24 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec!["--minimized"]),
+        ))
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            // Show window when another instance is launched
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .setup(|app| {
+            // Initialize system tray
+            if let Err(e) = tray::init(app) {
+                tracing::error!("Failed to initialize system tray: {}", e);
+            }
+
             let app_handle = app.handle().clone();
 
             // Get data directory
@@ -84,6 +105,23 @@ pub fn run() {
                         let security_store = Arc::new(SecurityStore::new());
                         app_handle.manage(security_store);
 
+                        // Initialize LockManager for Phase 4
+                        let node_id = state
+                            .identity_manager
+                            .node_id()
+                            .await
+                            .expect("Node ID should be available");
+                        let lock_manager = Arc::new(LockManager::new(node_id));
+                        app_handle.manage(lock_manager);
+
+                        // Initialize ConflictManager for Phase 4
+                        let conflict_manager = Arc::new(ConflictManager::new());
+                        app_handle.manage(conflict_manager);
+
+                        // Initialize PresenceManager for Phase 4
+                        let presence_manager = Arc::new(PresenceManager::new(node_id));
+                        app_handle.manage(presence_manager);
+
                         app_handle.manage(state);
                         tracing::info!("Application state initialized successfully");
                     }
@@ -126,6 +164,26 @@ pub fn run() {
             grant_permission,
             revoke_permission,
             check_permission,
+            // Phase 4: Locking commands
+            acquire_lock,
+            release_lock,
+            get_lock_status,
+            list_locks,
+            extend_lock,
+            force_release_lock,
+            // Phase 4: Conflict commands
+            list_conflicts,
+            get_conflict,
+            resolve_conflict,
+            get_conflict_count,
+            dismiss_conflict,
+            // Phase 4: Presence commands
+            get_online_users,
+            get_online_count,
+            get_recent_activity,
+            join_drive_presence,
+            leave_drive_presence,
+            presence_heartbeat,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

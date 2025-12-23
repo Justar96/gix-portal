@@ -1,0 +1,289 @@
+// ========================================
+// Component - Conflict Panel
+// Swiss Luxury Minimalist Design
+// ========================================
+
+@use '../abstracts' as *;
+
+// ----------------------------------------
+// Main Panel
+// ----------------------------------------
+.conflict-panel {
+    background: $bg-secondary;
+    border: 1px solid $warning-border;
+    border-radius: $radius-lg;
+    margin: $space-4;
+    overflow: hidden;
+}
+
+// ----------------------------------------
+// Header
+// ----------------------------------------
+.conflict-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $space-3 $space-4;
+    background: $warning-soft;
+    border-bottom: 1px solid $warning-border;
+}
+
+.conflict-title {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    font-size: $text-sm;
+    font-weight: $weight-medium;
+    color: $warning;
+    
+    .warning-icon {
+        flex-shrink: 0;
+        width: 16px;
+        height: 16px;
+    }
+}
+
+// ----------------------------------------
+// Conflict List
+// ----------------------------------------
+.conflict-list {
+    max-height: 300px;
+    overflow-y: auto;
+    @include custom-scrollbar;
+}
+
+.conflict-item {
+    border-bottom: 1px solid $border-secondary;
+    
+    &:last-child {
+        border-bottom: none;
+    }
+    
+    &.expanded {
+        background: $bg-tertiary;
+    }
+}
+
+.conflict-item-header {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-3 $space-4;
+    cursor: pointer;
+    transition: background $transition-base;
+    
+    &:hover {
+        background: $bg-hover;
+    }
+    
+    .expand-icon {
+        color: $text-muted;
+        flex-shrink: 0;
+    }
+    
+    .file-icon {
+        color: $text-tertiary;
+        flex-shrink: 0;
+    }
+    
+    .conflict-path {
+        flex: 1;
+        @include truncate;
+        font-size: $text-sm;
+        color: $text-primary;
+    }
+    
+    .conflict-time {
+        color: $text-muted;
+        font-size: $text-xs;
+        flex-shrink: 0;
+    }
+    
+    .btn-dismiss {
+        opacity: 0;
+        color: $text-muted;
+        transition: all $transition-base;
+        
+        &:hover {
+            color: $error;
+        }
+    }
+    
+    &:hover .btn-dismiss {
+        opacity: 1;
+    }
+}
+
+// ----------------------------------------
+// Conflict Details
+// ----------------------------------------
+.conflict-details {
+    padding: $space-4;
+    background: $bg-primary;
+    position: relative;
+}
+
+.conflict-versions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $space-4;
+    margin-bottom: $space-4;
+    
+    @include respond-to('sm') {
+        grid-template-columns: 1fr;
+    }
+}
+
+.version {
+    padding: $space-4;
+    border-radius: $radius-lg;
+    background: $bg-secondary;
+    border: 1px solid $border-primary;
+    
+    &.local {
+        border-color: $info-border;
+    }
+    
+    &.remote {
+        border-color: $warning-border;
+    }
+}
+
+.version-header {
+    @include text-label;
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    margin-bottom: $space-3;
+    
+    .local & {
+        color: $info;
+    }
+    
+    .remote & {
+        color: $warning;
+    }
+}
+
+.version-info {
+    font-size: $text-sm;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: $space-1-5 0;
+    
+    .label {
+        color: $text-muted;
+        font-size: $text-xs;
+    }
+    
+    .value {
+        color: $text-primary;
+        font-family: $font-mono;
+        font-size: $text-xs;
+    }
+}
+
+.version-preview {
+    margin-top: $space-3;
+    padding: $space-3;
+    background: $bg-primary;
+    border-radius: $radius-md;
+    font-family: $font-mono;
+    font-size: $text-xs;
+    color: $text-secondary;
+    max-height: 80px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    @include custom-scrollbar;
+}
+
+// ----------------------------------------
+// Resolution Options
+// ----------------------------------------
+.resolution-options {
+    display: flex;
+    align-items: center;
+    gap: $space-4;
+    padding-top: $space-4;
+    border-top: 1px solid $border-primary;
+    
+    @include respond-to('sm') {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+.options-label {
+    font-size: $text-sm;
+    color: $text-muted;
+    flex-shrink: 0;
+}
+
+.options-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-2;
+}
+
+.btn-resolution {
+    @include button-base;
+    padding: $space-2 $space-3;
+    font-size: $text-xs;
+    border-radius: $radius-md;
+    background: $bg-tertiary;
+    color: $text-secondary;
+    border: 1px solid $border-primary;
+    
+    &:hover:not(:disabled) {
+        background: $bg-hover;
+        color: $text-primary;
+        border-color: $border-hover;
+    }
+    
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+    
+    &.keeplocal:hover:not(:disabled) {
+        border-color: $info-border;
+        color: $info;
+    }
+    
+    &.keepremote:hover:not(:disabled) {
+        border-color: $warning-border;
+        color: $warning;
+    }
+    
+    &.keepboth:hover:not(:disabled) {
+        border-color: $success-border;
+        color: $success;
+    }
+    
+    &.manualmerge:hover:not(:disabled) {
+        border-color: rgba(139, 92, 246, 0.5);
+        color: #a78bfa;
+    }
+}
+
+// ----------------------------------------
+// Loading States
+// ----------------------------------------
+.resolving-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba($bg-primary, 0.9);
+    @include flex-center;
+    gap: $space-3;
+    color: $text-muted;
+    font-size: $text-sm;
+}
+
+.conflict-loading {
+    padding: $space-4;
+    @include flex-center;
+}

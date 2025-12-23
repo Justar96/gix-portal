@@ -1,5 +1,6 @@
 // ========================================
 // Component - Context Menu
+// Swiss Luxury Minimalist Design
 // ========================================
 
 @use '../abstracts' as *;
@@ -7,42 +8,56 @@
 .context-overlay {
     position: fixed;
     inset: 0;
-    z-index: 999;
+    z-index: $z-dropdown;
 }
 
 .context-menu {
     position: fixed;
     min-width: 160px;
     background: $bg-elevated;
-    border: 1px solid $border;
+    border: 1px solid $border-primary;
     border-radius: $radius-lg;
     box-shadow: $shadow-lg;
-    z-index: 1000;
+    z-index: $z-popover;
     overflow: hidden;
     padding: $space-1;
-
+    animation: slideUp $duration-fast $ease-out;
+    
     button {
         @include button-reset;
         @include interactive;
         width: 100%;
-        padding: $space-2 $space-3;
-        border-radius: $radius-sm;
+        padding: $space-2-5 $space-3;
+        border-radius: $radius-md;
         color: $text-primary;
         text-align: left;
         font-size: $text-sm;
         display: flex;
         align-items: center;
         gap: $space-3;
-
+        
+        svg {
+            color: $text-tertiary;
+            flex-shrink: 0;
+        }
+        
         &:hover {
             background: $bg-hover;
+            
+            svg {
+                color: $text-secondary;
+            }
         }
-
+        
         &.danger {
             color: $error;
-
+            
+            svg {
+                color: $error;
+            }
+            
             &:hover {
-                background: $error-muted;
+                background: $error-soft;
             }
         }
     }

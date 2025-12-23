@@ -2,10 +2,6 @@
 
 This file provides guidance to Agents when working with code in this repository.
 
-# Current time
-
-> 2025-12-22
-
 ## Project Overview
 
 P2P Realtime Drive Sharing System - A self-hosted peer-to-peer file sharing desktop application with enterprise-grade security. Built with Tauri v2 (Rust backend + React frontend) using Iroh for P2P networking.
@@ -23,9 +19,15 @@ pnpm tauri dev
 # Run tests
 cd src-tauri && cargo test
 
+# Run a single test
+cd src-tauri && cargo test test_name
+
 # Lint
 pnpm lint
 cd src-tauri && cargo clippy
+
+# Check Rust code (faster than full build)
+cd src-tauri && cargo check
 ```
 
 ## Architecture
@@ -34,31 +36,72 @@ cd src-tauri && cargo clippy
 
 ```
 src-tauri/src/
-├── core/           # Core data structures
-│   ├── drive.rs    # SharedDrive, DriveId
-│   ├── file.rs     # FileEntry, sync operations
-│   └── identity.rs # NodeId, keypair management
-├── network/        # P2P networking
-│   ├── endpoint.rs # Iroh endpoint setup
-│   ├── sync.rs     # SyncEngine implementation
-│   └── gossip.rs   # DriveEvent broadcasting
-├── crypto/         # Cryptography
-│   ├── encryption.rs # DriveEncryption
-│   └── keys.rs     # Key wrapping/unwrapping
-├── storage/        # Persistence
-│   └── db.rs       # redb database ops
-└── commands/       # Tauri commands
-    ├── drive.rs    # create_drive, list_drives
-    ├── file.rs     # list_files, read_file
-    └── invite.rs   # create_invite, join_drive
+├── lib.rs              # App entry, Tauri setup, event forwarders
+├── state.rs            # AppState with identity, network, sync engine
+├── core/               # Core data structures & managers
+│   ├── drive.rs        # SharedDrive, DriveInfo
+│   ├── file.rs         # FileEntryDto
+│   ├── identity.rs     # IdentityManager, Ed25519 keypair
+│   ├── events.rs       # DriveEvent, DriveEventDto, EventBroadcaster
+│   ├── watcher.rs      # FileWatcherManager (notify crate)
+│   ├── locking.rs      # FileLock, LockManager, DriveLockManager
+│   ├── conflict.rs     # FileConflict, ConflictManager
+│   └── presence.rs     # UserPresence, PresenceManager, ActivityEntry
+├── network/            # P2P networking
+│   ├── endpoint.rs     # Iroh QUIC endpoint setup
+│   ├── gossip.rs       # iroh-gossip event broadcasting
+│   ├── docs.rs         # iroh-docs CRDT metadata sync
+│   ├── sync.rs         # SyncEngine orchestration
+│   └── transfer.rs     # FileTransferManager via iroh-blobs
+├── crypto/             # Cryptography
+│   ├── keys.rs         # Key generation/management
+│   ├── encryption.rs   # DriveEncryption (ChaCha20-Poly1305)
+│   ├── key_exchange.rs # X25519 key exchange, KeyRing
+│   ├── access.rs       # AccessControlList, Permission, PathRule
+│   └── invite.rs       # InviteToken, InviteBuilder, TokenTracker
+├── storage/            # Persistence
+│   └── db.rs           # redb database operations
+└── commands/           # Tauri commands (frontend invoke handlers)
+    ├── identity.rs     # get_identity, get_connection_status
+    ├── drive.rs        # create_drive, delete_drive, list_drives, etc.
+    ├── files.rs        # list_files
+    ├── sync.rs         # start_sync, file transfers, watching
+    ├── security.rs     # invite generation, permissions
+    ├── locking.rs      # acquire_lock, release_lock, etc.
+    ├── conflict.rs     # list_conflicts, resolve_conflict, etc.
+    └── presence.rs     # presence tracking, activity feed
+```
+
+### Frontend Structure
+
+```
+src/
+├── App.tsx                      # Main app with sidebar layout
+├── main.tsx                     # Entry point
+├── types.ts                     # Shared TypeScript types
+├── components/
+│   ├── DriveList.tsx            # Sidebar drive list
+│   ├── FileBrowser.tsx          # File grid with icons, locking UI
+│   ├── IdentityBadge.tsx        # Node ID display
+│   ├── CreateDriveModal.tsx     # New drive dialog
+│   ├── ShareDriveModal.tsx      # Invite/permissions tabs
+│   ├── ConflictPanel.tsx        # Conflict resolution UI
+│   └── PresencePanel.tsx        # Online users & activity
+└── hooks/
+    ├── useDriveEvents.ts        # Subscribe to drive-event Tauri events
+    ├── useFileTransfer.ts       # Upload/download progress
+    ├── useLocking.ts            # File lock management
+    ├── useConflicts.ts          # Conflict state & resolution
+    └── usePresence.ts           # Online users & activity feed
 ```
 
 ### Key Components
 
-- **SharedDrive**: Folder shared by owner that peers can mount and access
-- **SyncEngine**: Real-time sync using iroh-gossip (events) + iroh-docs (metadata)
-- **DriveEncryption**: E2E encryption with ChaCha20-Poly1305, per-user X25519 key wrapping
-- **AccessControlList**: Permission levels (Read < Write < Manage < Admin)
+- **AppState**: Manages identity, network endpoint, database, drives, sync engine
+- **SyncEngine**: Orchestrates iroh-docs (metadata), iroh-gossip (events), iroh-blobs (transfers)
+- **EventBroadcaster**: Distributes DriveEvents to frontend via Tauri emit
+- **FileWatcherManager**: Monitors local file changes with debouncing
+- **LockManager/ConflictManager/PresenceManager**: Collaboration state managers
 
 ### Technology Stack
 
@@ -71,7 +114,7 @@ src-tauri/src/
 | Hashing | BLAKE3 | Content addressing, integrity |
 | Database | redb | Embedded key-value store |
 | Frontend | React 18 | UI with concurrent features |
-| State | Zustand | Global state management |
+| Styling | SCSS | Component styles in `src/styles/` |
 
 ## Code Conventions
 
@@ -86,7 +129,7 @@ src-tauri/src/
 - Strict TypeScript with no `any` types
 - Import Tauri APIs from `@tauri-apps/api`
 - Use React 18 concurrent features (useDeferredValue, useTransition)
-- Implement virtual scrolling for large lists
+- Invoke Tauri commands via `invoke<T>("command_name", { args })`
 
 ### Naming
 - Rust: snake_case files, PascalCase types
@@ -107,6 +150,78 @@ src-tauri/src/
 - Find encryption: Search for `DriveEncryption` or `ChaCha20`
 - Find permissions: Search for `AccessControlList` or `Permission`
 - Find Tauri commands: Search for `#[tauri::command]`
+- Find file locking: Search for `LockManager` or `FileLock`
+- Find conflicts: Search for `ConflictManager` or `FileConflict`
+- Find presence: Search for `PresenceManager` or `UserPresence`
+
+## Current Tauri Commands
+
+```rust
+// Identity
+get_identity() -> IdentityInfo
+get_connection_status() -> ConnectionStatus
+
+// Drives
+create_drive(name, path) -> DriveInfo
+delete_drive(id)
+rename_drive(id, new_name) -> DriveInfo
+list_drives() -> Vec<DriveInfo>
+get_drive(id) -> DriveInfo
+
+// Files
+list_files(drive_id, path) -> Vec<FileEntryDto>
+
+// Sync & Transfers
+start_sync(drive_id)
+stop_sync(drive_id)
+get_sync_status(drive_id) -> SyncStatus
+subscribe_drive_events(drive_id)
+start_watching(drive_id), stop_watching(drive_id), is_watching(drive_id)
+upload_file(drive_id, path), download_file(drive_id, path, hash)
+list_transfers(drive_id), get_transfer(id), cancel_transfer(id)
+
+// Security & Invites
+generate_invite(drive_id, permission, expires_in) -> InviteToken
+verify_invite(token) -> InviteInfo
+list_permissions(drive_id) -> Vec<PermissionEntry>
+grant_permission(drive_id, user_id, permission)
+revoke_permission(drive_id, user_id)
+check_permission(drive_id, user_id, operation) -> bool
+
+// File Locking
+acquire_lock(drive_id, path, lock_type) -> FileLock
+release_lock(drive_id, path)
+get_lock_status(drive_id, path) -> Option<FileLock>
+list_locks(drive_id) -> Vec<FileLock>
+extend_lock(drive_id, path, duration)
+force_release_lock(drive_id, path) // admin only
+
+// Conflict Resolution
+list_conflicts(drive_id) -> Vec<FileConflict>
+get_conflict(drive_id, conflict_id) -> FileConflict
+resolve_conflict(drive_id, conflict_id, strategy)
+get_conflict_count(drive_id) -> usize
+dismiss_conflict(drive_id, conflict_id)
+
+// Presence & Activity
+get_online_users(drive_id) -> Vec<UserPresence>
+get_online_count(drive_id) -> usize
+get_recent_activity(drive_id, limit) -> Vec<ActivityEntry>
+join_drive_presence(drive_id)
+leave_drive_presence(drive_id)
+presence_heartbeat(drive_id)
+```
+
+## Tauri Events (Frontend Subscriptions)
+
+```typescript
+// Listen for drive events in React
+import { listen } from '@tauri-apps/api/event';
+
+listen<DriveEventDto>('drive-event', (event) => {
+  // event.payload contains: drive_id, event_type, path, timestamp, etc.
+});
+```
 
 ## Documentation
 
@@ -115,3 +230,4 @@ Detailed documentation is in `docs/p2p-drive/`:
 - `security.md` - E2E encryption and access control
 - `performance.md` - 120 FPS optimization strategies
 - `api-reference.md` - Tauri commands reference
+- `IMPLEMENTATION_PLAN.md` - Phase breakdown with progress

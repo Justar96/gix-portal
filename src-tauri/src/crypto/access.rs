@@ -8,9 +8,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Permission levels for drive access
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Permission {
     /// Can view files and download
+    #[default]
     Read = 0,
     /// Can read + upload, modify, delete files
     Write = 1,
@@ -37,11 +38,6 @@ impl Permission {
     }
 }
 
-impl Default for Permission {
-    fn default() -> Self {
-        Permission::Read
-    }
-}
 
 /// An access rule for a specific user or path
 #[derive(Clone, Debug, Serialize, Deserialize)]

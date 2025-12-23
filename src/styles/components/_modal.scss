@@ -1,5 +1,6 @@
 // ========================================
 // Component - Modal
+// Swiss Luxury Minimalist Design
 // ========================================
 
 @use '../abstracts' as *;
@@ -7,45 +8,53 @@
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
     @include flex-center;
-    z-index: 1000;
-    padding: $space-4;
+    z-index: $z-modal;
+    padding: $space-6;
+    animation: fadeIn $duration-fast $ease-out;
+    
+    @include respond-to('sm') {
+        padding: $space-4;
+    }
 }
 
 .modal {
-    @include card;
-    border-radius: $radius-xl;
+    @include surface-elevated;
+    border-radius: $radius-2xl;
     width: 100%;
-    max-width: 420px;
-    box-shadow: $shadow-lg;
-
-    @include respond-to(sm) {
+    max-width: 440px;
+    box-shadow: $shadow-xl;
+    animation: slideUp $duration-base $ease-out;
+    
+    @include respond-to('sm') {
         max-width: 100%;
-        border-radius: $radius-lg;
+        border-radius: $radius-xl;
     }
 }
 
 .modal-header {
     @include flex-between;
     padding: $space-5 $space-6;
-    border-bottom: 1px solid $border;
-
-    @include respond-to(sm) {
-        padding: $space-4;
+    border-bottom: 1px solid $border-primary;
+    
+    @include respond-to('sm') {
+        padding: $space-4 $space-5;
     }
-
+    
     h2 {
-        font-size: $text-lg;
-        font-weight: 600;
+        font-size: $text-md;
+        font-weight: $weight-semibold;
+        letter-spacing: $tracking-tight;
     }
 }
 
 .modal-body {
     padding: $space-6;
-
-    @include respond-to(sm) {
-        padding: $space-4;
+    
+    @include respond-to('sm') {
+        padding: $space-5;
     }
 }
 
@@ -54,9 +63,9 @@
     justify-content: flex-end;
     gap: $space-3;
     padding: $space-4 $space-6;
-    border-top: 1px solid $border;
-
-    @include respond-to(sm) {
-        padding: $space-4;
+    border-top: 1px solid $border-primary;
+    
+    @include respond-to('sm') {
+        padding: $space-4 $space-5;
     }
 }

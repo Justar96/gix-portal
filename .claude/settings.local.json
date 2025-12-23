@@ -17,7 +17,9 @@
       "Bash(cargo check:*)",
       "Bash(powershell -Command:*)",
       "Bash(cargo clean:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(grep:*)",
+      "Bash(pnpm add:*)"
     ]
   }
 }

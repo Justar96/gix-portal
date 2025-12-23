@@ -42,6 +42,22 @@ pub enum DriveEvent {
         editor: NodeId,
     },
 
+    /// A file lock was acquired
+    FileLockAcquired {
+        path: PathBuf,
+        holder: NodeId,
+        lock_type: String,
+        expires_at: DateTime<Utc>,
+        timestamp: DateTime<Utc>,
+    },
+
+    /// A file lock was released
+    FileLockReleased {
+        path: PathBuf,
+        holder: NodeId,
+        timestamp: DateTime<Utc>,
+    },
+
     /// User joined the drive
     UserJoined {
         user: NodeId,
@@ -76,6 +92,8 @@ impl DriveEvent {
             DriveEvent::FileDeleted { .. } => "FileDeleted",
             DriveEvent::FileEditStarted { .. } => "FileEditStarted",
             DriveEvent::FileEditEnded { .. } => "FileEditEnded",
+            DriveEvent::FileLockAcquired { .. } => "FileLockAcquired",
+            DriveEvent::FileLockReleased { .. } => "FileLockReleased",
             DriveEvent::UserJoined { .. } => "UserJoined",
             DriveEvent::UserLeft { .. } => "UserLeft",
             DriveEvent::SyncProgress { .. } => "SyncProgress",
@@ -88,6 +106,8 @@ impl DriveEvent {
         match self {
             DriveEvent::FileChanged { timestamp, .. } => Some(*timestamp),
             DriveEvent::FileDeleted { timestamp, .. } => Some(*timestamp),
+            DriveEvent::FileLockAcquired { timestamp, .. } => Some(*timestamp),
+            DriveEvent::FileLockReleased { timestamp, .. } => Some(*timestamp),
             DriveEvent::UserJoined { timestamp, .. } => Some(*timestamp),
             DriveEvent::UserLeft { timestamp, .. } => Some(*timestamp),
             _ => None,

@@ -1,114 +1,196 @@
 // ========================================
 // Component - Buttons
+// Swiss Luxury Minimalist Design
 // ========================================
 
 @use '../abstracts' as *;
 
-// Primary button
+// ----------------------------------------
+// Primary Button - Solid, confident
+// ----------------------------------------
 .btn-primary {
-    @include flex-center;
-    @include interactive;
-    gap: $space-2;
-    padding: $space-3 $space-5;
+    @include button-base;
+    padding: $space-2-5 $space-5;
     background: $text-primary;
-    border: none;
+    border: 1px solid transparent;
     border-radius: $radius-md;
     color: $bg-primary;
     font-size: $text-sm;
-    font-weight: 500;
-
+    font-weight: $weight-medium;
+    min-height: 36px;
+    
     &:hover:not(:disabled) {
-        background: $accent;
+        background: $accent-soft;
+    }
+    
+    &:active:not(:disabled) {
+        transform: scale(0.98);
+    }
+    
+    @include respond-to('sm') {
+        padding: $space-2 $space-4;
+        font-size: $text-xs;
     }
 }
 
-// Secondary button
+// ----------------------------------------
+// Secondary Button - Outlined, subtle
+// ----------------------------------------
 .btn-secondary {
-    @include flex-center;
-    @include interactive;
-    gap: $space-2;
-    padding: $space-3 $space-5;
+    @include button-base;
+    padding: $space-2-5 $space-5;
     background: transparent;
-    border: 1px solid $border;
+    border: 1px solid $border-primary;
     border-radius: $radius-md;
     color: $text-primary;
     font-size: $text-sm;
-    font-weight: 500;
-
+    font-weight: $weight-medium;
+    min-height: 36px;
+    
     &:hover:not(:disabled) {
         background: $bg-hover;
-        border-color: $border-focus;
+        border-color: $border-hover;
+    }
+    
+    &:active:not(:disabled) {
+        background: $bg-active;
+    }
+    
+    @include respond-to('sm') {
+        padding: $space-2 $space-4;
+        font-size: $text-xs;
     }
 }
 
-// Icon button
+// ----------------------------------------
+// Icon Button - Square, minimal
+// ----------------------------------------
 .btn-icon {
-    @include flex-center;
-    @include interactive;
+    @include button-base;
     width: 32px;
     height: 32px;
     background: transparent;
-    border: 1px solid $border;
+    border: 1px solid $border-primary;
     border-radius: $radius-md;
-    color: $text-secondary;
-
+    color: $text-tertiary;
+    flex-shrink: 0;
+    
     &:hover:not(:disabled) {
         background: $bg-hover;
         color: $text-primary;
-        border-color: $border-focus;
+        border-color: $border-hover;
+    }
+    
+    &:active:not(:disabled) {
+        background: $bg-active;
+    }
+    
+    // Size variants
+    &.btn-sm {
+        width: 28px;
+        height: 28px;
+        
+        svg {
+            width: 14px;
+            height: 14px;
+        }
+    }
+    
+    &.btn-lg {
+        width: 40px;
+        height: 40px;
+    }
+    
+    // Danger variant
+    &.danger {
+        &:hover:not(:disabled) {
+            background: $error-soft;
+            border-color: $error-border;
+            color: $error;
+        }
     }
 }
 
-// Ghost button
+// ----------------------------------------
+// Ghost Button - Invisible until hover
+// ----------------------------------------
 .btn-ghost {
-    @include flex-center;
-    @include button-reset;
-    @include interactive;
+    @include button-base;
     padding: $space-2;
-    border-radius: $radius-sm;
+    border-radius: $radius-md;
     color: $text-tertiary;
-
-    &:hover {
+    
+    &:hover:not(:disabled) {
         background: $bg-hover;
         color: $text-primary;
     }
+    
+    &:active:not(:disabled) {
+        background: $bg-active;
+    }
 }
 
-// Close button
+// ----------------------------------------
+// Close Button - Modal/panel close
+// ----------------------------------------
 .btn-close {
-    @include flex-center;
-    @include button-reset;
-    @include interactive;
+    @include button-base;
     width: 28px;
     height: 28px;
     border-radius: $radius-md;
-    color: $text-tertiary;
-
-    &:hover {
+    color: $text-muted;
+    
+    &:hover:not(:disabled) {
         background: $bg-hover;
         color: $text-primary;
     }
 }
 
-// Copy button
+// ----------------------------------------
+// Copy Button - Clipboard action
+// ----------------------------------------
 .btn-copy {
-    @include flex-center;
-    @include interactive;
-    padding: $space-1 $space-2;
+    @include button-base;
+    padding: $space-1-5 $space-2-5;
     background: transparent;
-    border: 1px solid $border;
+    border: 1px solid $border-primary;
     border-radius: $radius-sm;
-    color: $text-secondary;
-
-    &:hover {
+    color: $text-tertiary;
+    
+    &:hover:not(:disabled) {
         background: $bg-hover;
         color: $text-primary;
-        border-color: $border-focus;
+        border-color: $border-hover;
     }
-
+    
     &.copied {
-        background: $success-muted;
-        border-color: $success;
+        background: $success-soft;
+        border-color: $success-border;
         color: $success;
     }
+}
+
+// ----------------------------------------
+// Text Button - Link-style
+// ----------------------------------------
+.btn-text {
+    @include button-base;
+    padding: $space-1 $space-2;
+    color: $text-secondary;
+    font-size: $text-sm;
+    
+    &:hover:not(:disabled) {
+        color: $text-primary;
+    }
+}
+
+// ----------------------------------------
+// Spinning animation for loading states
+// ----------------------------------------
+.animate-spin {
+    @include spin;
+}
+
+.spinning {
+    @include spin;
 }

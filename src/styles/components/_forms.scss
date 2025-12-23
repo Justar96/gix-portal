@@ -1,73 +1,145 @@
 // ========================================
 // Component - Forms
+// Swiss Luxury Minimalist Design
 // ========================================
 
 @use '../abstracts' as *;
 
+// ----------------------------------------
+// Form Group
+// ----------------------------------------
 .form-group {
     margin-bottom: $space-5;
-
+    
     &:last-child {
         margin-bottom: 0;
     }
-
+    
     label {
         display: block;
-        font-size: $text-sm;
-        font-weight: 500;
+        font-size: $text-xs;
+        font-weight: $weight-medium;
         color: $text-secondary;
         margin-bottom: $space-2;
+        letter-spacing: $tracking-wide;
     }
-
-    input {
+    
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"] {
         width: 100%;
-        padding: $space-3 $space-4;
+        padding: $space-2-5 $space-4;
         background: $bg-primary;
-        border: 1px solid $border;
+        border: 1px solid $border-primary;
         border-radius: $radius-md;
         color: $text-primary;
-        font-size: $text-base;
+        font-size: $text-sm;
         font-family: inherit;
-        transition: border-color $transition-fast;
-
-        &:focus {
-            @include focus-ring;
+        transition: all $transition-base;
+        min-height: 40px;
+        
+        &:hover:not(:focus):not(:disabled) {
+            border-color: $border-hover;
         }
-
+        
+        &:focus {
+            outline: none;
+            border-color: $border-focus;
+            box-shadow: $glow-focus;
+        }
+        
         &::placeholder {
             color: $text-muted;
+        }
+        
+        &:disabled {
+            background: $bg-tertiary;
+            color: $text-disabled;
+            cursor: not-allowed;
+        }
+    }
+    
+    select {
+        width: 100%;
+        padding: $space-2-5 $space-4;
+        background: $bg-primary;
+        border: 1px solid $border-primary;
+        border-radius: $radius-md;
+        color: $text-primary;
+        font-size: $text-sm;
+        font-family: inherit;
+        cursor: pointer;
+        min-height: 40px;
+        transition: all $transition-base;
+        
+        &:hover:not(:focus) {
+            border-color: $border-hover;
+        }
+        
+        &:focus {
+            outline: none;
+            border-color: $border-focus;
+            box-shadow: $glow-focus;
+        }
+    }
+    
+    // Checkbox variant
+    &.checkbox {
+        display: flex;
+        align-items: center;
+        gap: $space-3;
+        
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: $text-primary;
+            cursor: pointer;
+        }
+        
+        label {
+            margin-bottom: 0;
+            font-size: $text-sm;
+            font-weight: $weight-normal;
+            letter-spacing: $tracking-normal;
+            cursor: pointer;
         }
     }
 }
 
+// ----------------------------------------
+// Path Input (File browser)
+// ----------------------------------------
 .path-input {
     display: flex;
     gap: $space-2;
-
+    
     input {
         flex: 1;
+        min-width: 0;
     }
-
+    
     button {
-        @include flex-center;
-        @include interactive;
-        gap: $space-2;
-        padding: $space-3 $space-4;
+        @include button-base;
+        padding: $space-2-5 $space-4;
         background: $bg-tertiary;
-        border: 1px solid $border;
+        border: 1px solid $border-primary;
         border-radius: $radius-md;
         color: $text-primary;
         font-size: $text-sm;
         white-space: nowrap;
-
+        flex-shrink: 0;
+        
         &:hover:not(:disabled) {
             background: $bg-hover;
-            border-color: $border-focus;
+            border-color: $border-hover;
         }
     }
 }
 
-// Rename input (inline)
+// ----------------------------------------
+// Inline Rename Input
+// ----------------------------------------
 .rename-input {
     width: 100%;
     padding: $space-1 $space-2;
@@ -75,7 +147,11 @@
     border: 1px solid $border-focus;
     border-radius: $radius-sm;
     color: $text-primary;
-    font-size: $text-base;
+    font-size: $text-sm;
     font-family: inherit;
     outline: none;
+    
+    &:focus {
+        box-shadow: $glow-focus;
+    }
 }

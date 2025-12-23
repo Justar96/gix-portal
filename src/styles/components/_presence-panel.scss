@@ -1,0 +1,242 @@
+// ========================================
+// Component - Presence Panel
+// Swiss Luxury Minimalist Design
+// ========================================
+
+@use '../abstracts' as *;
+
+// ----------------------------------------
+// Main Panel
+// ----------------------------------------
+.presence-panel {
+    @include flex-column;
+    background: $bg-secondary;
+    border-left: 1px solid $border-primary;
+    width: 220px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    @include custom-scrollbar;
+    
+    @include respond-to('xl') {
+        width: 200px;
+    }
+    
+    @include respond-to('lg') {
+        display: none;
+    }
+}
+
+// ----------------------------------------
+// Section
+// ----------------------------------------
+.presence-section {
+    border-bottom: 1px solid $border-primary;
+    
+    &:last-child {
+        border-bottom: none;
+    }
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-3 $space-4;
+    cursor: pointer;
+    transition: background $transition-base;
+    color: $text-secondary;
+    
+    &:hover {
+        background: $bg-hover;
+    }
+    
+    .expand-icon {
+        color: $text-muted;
+    }
+    
+    svg {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+.section-title {
+    flex: 1;
+    font-size: $text-sm;
+    font-weight: $weight-medium;
+}
+
+.section-count {
+    font-size: $text-2xs;
+    color: $text-muted;
+    background: $bg-tertiary;
+    padding: $space-0-5 $space-2;
+    border-radius: $radius-sm;
+    font-weight: $weight-medium;
+}
+
+.section-content {
+    padding: 0 $space-3 $space-3;
+}
+
+.empty-section {
+    padding: $space-4;
+    text-align: center;
+    color: $text-muted;
+    font-size: $text-xs;
+}
+
+// ----------------------------------------
+// User List
+// ----------------------------------------
+.user-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.user-item {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-2;
+    border-radius: $radius-md;
+    transition: background $transition-base;
+    
+    &:hover {
+        background: $bg-hover;
+    }
+    
+    &.is-self {
+        background: $accent-subtle;
+    }
+}
+
+.status-dot {
+    flex-shrink: 0;
+    
+    &.status-online {
+        color: $success;
+    }
+    
+    &.status-away {
+        color: $warning;
+    }
+    
+    &.status-offline {
+        color: $text-disabled;
+    }
+}
+
+.user-id {
+    flex: 1;
+    font-size: $text-xs;
+    font-family: $font-mono;
+    color: $text-primary;
+    @include truncate;
+}
+
+.self-badge {
+    color: $text-muted;
+    font-family: $font-sans;
+    font-size: $text-2xs;
+    margin-left: $space-1;
+}
+
+.user-activity {
+    font-size: $text-2xs;
+    color: $text-muted;
+    @include truncate;
+    max-width: 70px;
+}
+
+// ----------------------------------------
+// Activity List
+// ----------------------------------------
+.activity-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: $space-2;
+    padding: $space-2;
+    border-radius: $radius-md;
+    transition: background $transition-base;
+    
+    &:hover {
+        background: $bg-hover;
+    }
+    
+    &.is-self {
+        .activity-user {
+            color: $text-primary;
+        }
+    }
+}
+
+.activity-icon {
+    flex-shrink: 0;
+    color: $text-muted;
+    margin-top: 1px;
+    
+    svg {
+        width: 12px;
+        height: 12px;
+    }
+    
+    .icon-created { color: $success; }
+    .icon-modified { color: $info; }
+    .icon-deleted { color: $error; }
+    .icon-renamed { color: #a78bfa; }
+    .icon-joined { color: $success; }
+    .icon-left { color: $text-disabled; }
+    .icon-locked { color: $warning; }
+    .icon-unlocked { color: $info; }
+    .icon-conflict { color: $warning; }
+    .icon-resolved { color: $success; }
+}
+
+.activity-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-1;
+    font-size: $text-xs;
+    line-height: $leading-snug;
+}
+
+.activity-user {
+    font-weight: $weight-medium;
+    color: $text-secondary;
+}
+
+.activity-action {
+    color: $text-muted;
+}
+
+.activity-file {
+    color: $text-tertiary;
+    font-family: $font-mono;
+    font-size: $text-2xs;
+    @include truncate;
+    max-width: 90px;
+}
+
+.activity-time {
+    flex-shrink: 0;
+    font-size: $text-2xs;
+    color: $text-disabled;
+}
+
+// ----------------------------------------
+// Loading
+// ----------------------------------------
+.presence-loading {
+    padding: $space-4;
+    @include flex-center;
+}

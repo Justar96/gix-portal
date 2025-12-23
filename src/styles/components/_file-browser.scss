@@ -1,164 +1,353 @@
 // ========================================
 // Component - File Browser
+// Swiss Luxury Minimalist Design
 // ========================================
 
 @use '../abstracts' as *;
 
+// ----------------------------------------
+// Main Container
+// ----------------------------------------
 .file-browser {
     @include flex-column;
     height: 100%;
     outline: none;
+    background: $bg-primary;
 }
 
+// ----------------------------------------
+// Browser Header
+// ----------------------------------------
 .browser-header {
     display: flex;
     align-items: center;
-    gap: $space-2;
-    padding: $space-3 $space-4;
+    gap: $space-3;
+    padding: $space-3 $space-5;
     background: $bg-secondary;
-    border-bottom: 1px solid $border;
+    border-bottom: 1px solid $border-primary;
     flex-shrink: 0;
-
-    @include respond-to(sm) {
+    min-height: 48px;
+    
+    @include respond-to('lg') {
+        padding: $space-3 $space-4;
+    }
+    
+    @include respond-to('sm') {
         padding: $space-2 $space-3;
+        gap: $space-2;
     }
 }
 
+// ----------------------------------------
 // Breadcrumbs
+// ----------------------------------------
 .breadcrumbs {
     flex: 1;
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: $space-1;
+    gap: $space-0-5;
+    min-width: 0;
 }
 
 .breadcrumb {
     @include button-reset;
     @include interactive;
-    color: $text-secondary;
+    @include truncate;
+    color: $text-tertiary;
     padding: $space-1 $space-2;
     border-radius: $radius-sm;
     font-size: $text-sm;
-
+    max-width: 200px;
+    
     &:hover:not(:disabled) {
         background: $bg-hover;
         color: $text-primary;
     }
-
+    
     &:last-child {
         color: $text-primary;
-        font-weight: 500;
+        font-weight: $weight-medium;
+    }
+    
+    @include respond-to('sm') {
+        font-size: $text-xs;
+        padding: $space-1;
     }
 }
 
 .separator {
+    color: $text-disabled;
+    font-size: $text-xs;
+    user-select: none;
+}
+
+// Pending indicator for React transitions
+.pending-indicator {
     color: $text-muted;
     font-size: $text-sm;
+    margin-left: $space-2;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+// Spinning animation for refresh icon during transitions
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
+
+// File table container (virtualized layout)
+.file-table-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: opacity $transition-base;
+    
+    &.stale {
+        opacity: 0.5;
+        pointer-events: none;
+    }
 }
 
 // File table
-.file-table-container {
-    flex: 1;
-    overflow-y: auto;
-    @include custom-scrollbar;
-}
-
 .file-table {
     width: 100%;
     border-collapse: collapse;
-
+    
     thead {
         position: sticky;
         top: 0;
         z-index: 1;
     }
-
+    
     th {
+        @include text-label;
         text-align: left;
-        padding: $space-3 $space-4;
-        font-weight: 500;
-        font-size: $text-xs;
-        color: $text-tertiary;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        padding: $space-3 $space-5;
         background: $bg-secondary;
-        border-bottom: 1px solid $border;
-
-        @include respond-to(sm) {
+        border-bottom: 1px solid $border-primary;
+        
+        @include respond-to('lg') {
+            padding: $space-3 $space-4;
+        }
+        
+        @include respond-to('sm') {
             padding: $space-2 $space-3;
         }
     }
-
+    
     td {
-        padding: $space-3 $space-4;
+        padding: $space-3 $space-5;
         font-size: $text-sm;
-        border-bottom: 1px solid $border-subtle;
-
-        @include respond-to(sm) {
+        border-bottom: 1px solid $border-secondary;
+        
+        @include respond-to('lg') {
+            padding: $space-3 $space-4;
+        }
+        
+        @include respond-to('sm') {
             padding: $space-2 $space-3;
         }
     }
-
+    
     tbody tr {
         cursor: pointer;
-        transition: background $transition-fast;
-
+        transition: background $transition-base;
+        
         &:hover {
-            background: $bg-secondary;
+            background: $bg-hover;
         }
-
+        
         &.selected {
             background: $bg-tertiary;
         }
+        
+        &.locked-other {
+            background: $warning-soft;
+            
+            &:hover {
+                background: rgba($warning, 0.1);
+            }
+        }
+        
+        &.locked-mine {
+            background: $accent-subtle;
+            
+            &:hover {
+                background: rgba($accent, 0.08);
+            }
+        }
     }
-
+    
     .directory .file-name {
-        font-weight: 500;
+        font-weight: $weight-medium;
     }
 }
 
+// Column widths
 .col-name {
-    width: 60%;
-
-    @include respond-to(md) {
-        width: 70%;
+    width: 50%;
+    min-width: 200px;
+    
+    @include respond-to('md') {
+        width: 60%;
     }
 }
 
 .col-size {
-    width: 15%;
+    width: 100px;
     text-align: right;
-    color: $text-tertiary;
-
-    @include respond-to(md) {
-        width: 30%;
+    color: $text-muted;
+    
+    @include respond-to('md') {
+        width: 80px;
     }
 }
 
 .col-modified {
-    width: 25%;
-    color: $text-tertiary;
-
-    @include respond-to(md) {
+    width: 160px;
+    color: $text-muted;
+    
+    @include respond-to('lg') {
         display: none;
     }
 }
 
+.col-actions {
+    width: 60px;
+    text-align: right;
+    
+    @include respond-to('sm') {
+        width: 40px;
+    }
+}
+
+// File cell
 .file-cell {
     display: flex;
     align-items: center;
     gap: $space-3;
+    min-width: 0;
 }
 
 .file-icon {
     @include flex-center;
-    width: 20px;
-    color: $text-tertiary;
+    width: 18px;
+    color: $text-muted;
     flex-shrink: 0;
+    
+    svg {
+        width: 16px;
+        height: 16px;
+    }
 }
 
 .file-name {
     @include truncate;
     color: $text-primary;
+    font-size: $text-sm;
+}
+
+// Lock indicators
+.lock-indicator {
+    @include flex-center;
+    margin-left: $space-2;
+    flex-shrink: 0;
+    
+    &.mine {
+        color: $info;
+    }
+    
+    &.other {
+        color: $warning;
+    }
+}
+
+.lock-icon {
+    &.mine {
+        color: $info;
+    }
+    
+    &.other {
+        color: $warning;
+    }
+}
+
+// Action buttons
+.action-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $space-1;
+    position: relative;
+}
+
+.btn-lock,
+.btn-unlock {
+    opacity: 0;
+    transition: opacity $transition-base;
+    
+    .file-table tbody tr:hover & {
+        opacity: 1;
+    }
+}
+
+.btn-unlock {
+    color: $info;
+    
+    &:hover {
+        color: $text-primary;
+    }
+}
+
+.btn-lock {
+    color: $text-muted;
+    
+    &:hover {
+        color: $text-secondary;
+    }
+}
+
+// Lock menu dropdown
+.lock-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: $z-dropdown;
+    background: $bg-elevated;
+    border: 1px solid $border-primary;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-lg;
+    overflow: hidden;
+    min-width: 150px;
+    animation: slideUp $duration-fast $ease-out;
+    
+    button {
+        @include button-reset;
+        display: block;
+        width: 100%;
+        padding: $space-2-5 $space-4;
+        text-align: left;
+        font-size: $text-sm;
+        color: $text-primary;
+        transition: background $transition-base;
+        
+        &:hover {
+            background: $bg-hover;
+        }
+        
+        &:first-child {
+            border-bottom: 1px solid $border-secondary;
+        }
+    }
 }
