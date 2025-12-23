@@ -22,10 +22,11 @@ impl DriveId {
         &self.0
     }
 
-    pub fn to_hex(&self) -> String {
+    pub fn to_hex(self) -> String {
         hex::encode(self.0)
     }
 
+    #[allow(dead_code)]
     pub fn from_hex(s: &str) -> Result<Self, hex::FromHexError> {
         let bytes = hex::decode(s)?;
         if bytes.len() != 32 {
@@ -122,6 +123,8 @@ mod tests {
         let path = std::path::Path::new("/test/path");
 
         let id1 = DriveId::generate(&node_id, path);
+        // Sleep to ensure different timestamp
+        std::thread::sleep(std::time::Duration::from_millis(2));
         let id2 = DriveId::generate(&node_id, path);
 
         // IDs should be unique due to timestamp

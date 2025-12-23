@@ -7,13 +7,14 @@
 //! Note: This is the foundation for Phase 2. Full iroh-docs integration
 //! requires additional setup with blobs and downloader components.
 
+#![allow(dead_code)]
+
 use crate::core::DriveId;
 use anyhow::Result;
 use iroh_docs::{AuthorId, DocTicket, NamespaceId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// Metadata schema stored in iroh-docs
@@ -73,7 +74,7 @@ impl std::fmt::Display for PlaceholderAuthorId {
 /// infrastructure is set up.
 pub struct DocsManager {
     /// Our author identity ID (placeholder until full integration)
-    author_id: PlaceholderAuthorId,
+    _author_id: PlaceholderAuthorId,
     /// Mapping from DriveId to document NamespaceId
     namespaces: RwLock<HashMap<DriveId, NamespaceId>>,
     /// Local metadata cache per drive
@@ -95,10 +96,13 @@ impl DocsManager {
         author_bytes.copy_from_slice(&rand::random::<[u8; 32]>());
         let author_id = PlaceholderAuthorId(author_bytes);
 
-        tracing::info!("DocsManager initialized with placeholder author: {}", author_id);
+        tracing::info!(
+            "DocsManager initialized with placeholder author: {}",
+            author_id
+        );
 
         Ok(Self {
-            author_id,
+            _author_id: author_id,
             namespaces: RwLock::new(HashMap::new()),
             metadata_cache: RwLock::new(HashMap::new()),
             data_dir: data_dir.to_path_buf(),
@@ -216,7 +220,7 @@ impl DocsManager {
     /// Get our author ID
     pub fn author_id(&self) -> AuthorId {
         // Convert placeholder to real AuthorId format
-        AuthorId::from(self.author_id.0)
+        AuthorId::from(self._author_id.0)
     }
 }
 
@@ -226,8 +230,13 @@ mod tests {
 
     #[test]
     fn test_file_metadata_doc_key() {
-        let meta =
-            FileMetadata::new("docs/readme.md", "readme.md", false, 1024, "2024-01-01T00:00:00Z");
+        let meta = FileMetadata::new(
+            "docs/readme.md",
+            "readme.md",
+            false,
+            1024,
+            "2024-01-01T00:00:00Z",
+        );
         assert_eq!(meta.doc_key(), b"file:docs/readme.md".to_vec());
     }
 
@@ -248,7 +257,7 @@ mod tests {
         let drive_id = DriveId([1u8; 32]);
 
         // Create doc
-        let ns_id = manager.create_doc(drive_id).await.unwrap();
+        let _ns_id = manager.create_doc(drive_id).await.unwrap();
         assert!(manager.has_doc(&drive_id).await);
 
         // Set metadata
@@ -261,7 +270,10 @@ mod tests {
         assert_eq!(all_meta[0].path, "test.txt");
 
         // Delete metadata
-        manager.delete_file_metadata(&drive_id, "test.txt").await.unwrap();
+        manager
+            .delete_file_metadata(&drive_id, "test.txt")
+            .await
+            .unwrap();
         let all_meta = manager.get_all_metadata(&drive_id).await.unwrap();
         assert_eq!(all_meta.len(), 0);
 

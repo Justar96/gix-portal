@@ -3,6 +3,8 @@
 //! Provides pub/sub for real-time drive events between peers.
 //! Each drive has its own gossip topic derived from its DriveId.
 
+#![allow(dead_code)]
+
 use crate::core::{DriveEvent, DriveEventDto, DriveId};
 use anyhow::Result;
 use iroh::Endpoint;
@@ -26,7 +28,7 @@ pub struct EventBroadcaster {
 /// Holds state for a single drive's gossip subscription
 struct TopicSubscription {
     /// The gossip topic ID for this drive
-    topic_id: TopicId,
+    _topic_id: TopicId,
     /// Handle to the receiver task
     receiver_task: JoinHandle<()>,
 }
@@ -147,7 +149,7 @@ impl EventBroadcaster {
         subs.insert(
             drive_id,
             TopicSubscription {
-                topic_id,
+                _topic_id: topic_id,
                 receiver_task,
             },
         );

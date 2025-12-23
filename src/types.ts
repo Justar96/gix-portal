@@ -259,6 +259,69 @@ export type DriveEvent =
     | SyncProgressEvent
     | SyncCompleteEvent;
 
+// ============================================
+// Phase 2.4: File Transfer Types
+// ============================================
+
+/** Transfer direction */
+export type TransferDirection = "Upload" | "Download";
+
+/** Transfer status */
+export type TransferStatus =
+    | "Pending"
+    | "InProgress"
+    | "Completed"
+    | "Failed"
+    | "Cancelled";
+
+/** Transfer state for tracking active transfers */
+export interface TransferState {
+    /** Unique transfer ID */
+    id: string;
+    /** Drive this transfer belongs to */
+    drive_id: string;
+    /** File path (relative to drive root) */
+    path: string;
+    /** Transfer direction */
+    direction: TransferDirection;
+    /** Current state */
+    status: TransferStatus;
+    /** Bytes transferred so far */
+    bytes_transferred: number;
+    /** Total bytes to transfer */
+    total_bytes: number;
+    /** BLAKE3 hash of the content */
+    hash: string | null;
+    /** Error message if failed */
+    error: string | null;
+}
+
+/** Progress event for transfers */
+export interface TransferProgress {
+    transfer_id: string;
+    drive_id: string;
+    path: string;
+    direction: TransferDirection;
+    bytes_transferred: number;
+    total_bytes: number;
+    status: TransferStatus;
+}
+
+/**
+ * Calculate transfer progress percentage
+ */
+export function getTransferProgress(transfer: TransferState | TransferProgress): number {
+    if (transfer.total_bytes === 0) return 0;
+    return Math.round((transfer.bytes_transferred / transfer.total_bytes) * 100);
+}
+
+/**
+ * Format transfer speed (bytes per second)
+ */
+export function formatSpeed(bytesPerSecond: number): string {
+    return `${formatBytes(bytesPerSecond)}/s`;
+}
+
 /**
  * Format date string to localized display
  */

@@ -57,12 +57,14 @@ impl IdentityManager {
     }
 
     /// Sign a message with our identity
+    #[allow(dead_code)]
     pub async fn sign(&self, message: &[u8]) -> Option<ed25519_dalek::Signature> {
         let guard = self.identity.read().await;
         guard.as_ref().map(|i| i.sign(message))
     }
 
     /// Check if identity is initialized
+    #[allow(dead_code)]
     pub async fn is_initialized(&self) -> bool {
         let guard = self.identity.read().await;
         guard.is_some()

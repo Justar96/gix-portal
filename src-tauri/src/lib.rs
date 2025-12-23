@@ -6,13 +6,18 @@ mod state;
 mod storage;
 
 use commands::{
-    create_drive, delete_drive, get_connection_status, get_drive, get_identity, get_sync_status,
-    list_drives, list_files, rename_drive, start_sync, stop_sync, subscribe_drive_events,
+    cancel_transfer, create_drive, delete_drive, download_file, get_connection_status, get_drive,
+    get_identity, get_sync_status, get_transfer, is_watching, list_drives, list_files,
+    list_transfers, rename_drive, start_sync, start_watching, stop_sync, stop_watching,
+    subscribe_drive_events, upload_file,
 };
-use core::DriveEventDto;
+use core::{DriveEvent, DriveEventDto, DriveId};
 use state::AppState;
+use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::sync::broadcast;
+
+use crate::network::SyncEngine;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -56,6 +61,24 @@ pub fn run() {
                             });
                         }
 
+                        // Spawn file watcher event forwarding task
+                        if let (Some(ref watcher), Some(ref sync_engine)) =
+                            (&state.file_watcher, &state.sync_engine)
+                        {
+                            let watcher_rx = watcher.subscribe();
+                            let sync_engine_clone = sync_engine.clone();
+                            let app_handle_for_watcher = app_handle.clone();
+
+                            tauri::async_runtime::spawn(async move {
+                                spawn_watcher_forwarder(
+                                    app_handle_for_watcher,
+                                    watcher_rx,
+                                    sync_engine_clone,
+                                )
+                                .await;
+                            });
+                        }
+
                         app_handle.manage(state);
                         tracing::info!("Application state initialized successfully");
                     }
@@ -81,6 +104,16 @@ pub fn run() {
             stop_sync,
             get_sync_status,
             subscribe_drive_events,
+            // Phase 2: File watcher commands
+            start_watching,
+            stop_watching,
+            is_watching,
+            // Phase 2: File transfer commands
+            upload_file,
+            download_file,
+            list_transfers,
+            get_transfer,
+            cancel_transfer,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -106,6 +139,39 @@ async fn spawn_event_forwarder(
             }
             Err(broadcast::error::RecvError::Closed) => {
                 tracing::info!("Event channel closed, stopping forwarder");
+                break;
+            }
+        }
+    }
+}
+
+/// Spawns a background task that forwards file watcher events to SyncEngine and frontend
+async fn spawn_watcher_forwarder(
+    app_handle: AppHandle,
+    mut watcher_rx: broadcast::Receiver<(DriveId, DriveEvent)>,
+    sync_engine: Arc<SyncEngine>,
+) {
+    tracing::info!("File watcher forwarder started");
+
+    loop {
+        match watcher_rx.recv().await {
+            Ok((drive_id, event)) => {
+                // Forward to sync engine for processing (metadata updates, gossip broadcast)
+                if let Err(e) = sync_engine.on_local_change(&drive_id, event.clone()).await {
+                    tracing::warn!("Failed to process local change: {}", e);
+                }
+
+                // Also emit directly to frontend for immediate UI update
+                let dto = DriveEventDto::from_event(&hex::encode(drive_id.as_bytes()), &event);
+                if let Err(e) = app_handle.emit("drive-event", &dto) {
+                    tracing::warn!("Failed to emit watcher event: {}", e);
+                }
+            }
+            Err(broadcast::error::RecvError::Lagged(count)) => {
+                tracing::warn!("Watcher receiver lagged, missed {} events", count);
+            }
+            Err(broadcast::error::RecvError::Closed) => {
+                tracing::info!("Watcher channel closed, stopping forwarder");
                 break;
             }
         }

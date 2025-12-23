@@ -112,3 +112,202 @@ pub async fn subscribe_drive_events(
     tracing::info!("Frontend subscribed to events for drive: {}", drive_id);
     Ok(())
 }
+
+/// Start watching a drive's folder for local changes
+///
+/// This enables the file watcher for the specified drive, which will
+/// detect local file changes and emit events to the sync engine.
+#[tauri::command]
+pub async fn start_watching(drive_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let id = parse_drive_id(&drive_id)?;
+
+    // Check if file watcher is available
+    let file_watcher = state
+        .file_watcher
+        .as_ref()
+        .ok_or_else(|| "File watcher not initialized".to_string())?;
+
+    // Get the drive's local path from cache
+    let drives = state.drives.read().await;
+    let drive = drives
+        .get(id.as_bytes())
+        .ok_or_else(|| "Drive not found".to_string())?;
+
+    let local_path = drive.local_path.clone();
+    drop(drives); // Release lock before async operation
+
+    // Start watching
+    file_watcher
+        .watch(id, local_path)
+        .await
+        .map_err(|e| format!("Failed to start watching: {}", e))?;
+
+    tracing::info!("Started file watching for drive: {}", drive_id);
+    Ok(())
+}
+
+/// Stop watching a drive's folder
+#[tauri::command]
+pub async fn stop_watching(drive_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let id = parse_drive_id(&drive_id)?;
+
+    // Check if file watcher is available
+    let file_watcher = state
+        .file_watcher
+        .as_ref()
+        .ok_or_else(|| "File watcher not initialized".to_string())?;
+
+    file_watcher.unwatch(&id).await;
+
+    tracing::info!("Stopped file watching for drive: {}", drive_id);
+    Ok(())
+}
+
+/// Check if a drive is being watched
+#[tauri::command]
+pub async fn is_watching(drive_id: String, state: State<'_, AppState>) -> Result<bool, String> {
+    let id = parse_drive_id(&drive_id)?;
+
+    let file_watcher = state
+        .file_watcher
+        .as_ref()
+        .ok_or_else(|| "File watcher not initialized".to_string())?;
+
+    Ok(file_watcher.is_watching(&id).await)
+}
+
+// ==============================================
+// File Transfer Commands
+// ==============================================
+
+use crate::network::TransferState;
+
+/// Upload a file to the blob store
+///
+/// This imports a local file into iroh-blobs, making it available to peers.
+#[tauri::command]
+pub async fn upload_file(
+    drive_id: String,
+    file_path: String,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let id = parse_drive_id(&drive_id)?;
+
+    let file_transfer = state
+        .file_transfer
+        .as_ref()
+        .ok_or_else(|| "File transfer not initialized".to_string())?;
+
+    // Get drive to determine relative path
+    let drives = state.drives.read().await;
+    let drive = drives
+        .get(id.as_bytes())
+        .ok_or_else(|| "Drive not found".to_string())?;
+
+    let local_path = std::path::PathBuf::from(&file_path);
+    let relative_path = local_path
+        .strip_prefix(&drive.local_path)
+        .map_err(|_| "File is not within drive folder".to_string())?
+        .to_path_buf();
+
+    drop(drives);
+
+    // Upload the file
+    let hash = file_transfer
+        .upload_file(&id, &local_path, &relative_path)
+        .await
+        .map_err(|e| format!("Upload failed: {}", e))?;
+
+    tracing::info!("Uploaded file {} -> {}", file_path, hash.to_hex());
+    Ok(hash.to_hex().to_string())
+}
+
+/// Download a file from the blob store to local filesystem
+#[tauri::command]
+pub async fn download_file(
+    drive_id: String,
+    hash: String,
+    destination_path: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let id = parse_drive_id(&drive_id)?;
+
+    let file_transfer = state
+        .file_transfer
+        .as_ref()
+        .ok_or_else(|| "File transfer not initialized".to_string())?;
+
+    // Parse the hash
+    let blob_hash = hash
+        .parse::<iroh_blobs::Hash>()
+        .map_err(|e| format!("Invalid hash: {}", e))?;
+
+    let dest_path = std::path::PathBuf::from(&destination_path);
+
+    // Get drive for relative path calculation
+    let drives = state.drives.read().await;
+    let drive = drives
+        .get(id.as_bytes())
+        .ok_or_else(|| "Drive not found".to_string())?;
+
+    let relative_path = dest_path
+        .strip_prefix(&drive.local_path)
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|_| dest_path.clone());
+
+    drop(drives);
+
+    // Download the file
+    file_transfer
+        .download_file(&id, blob_hash, &dest_path, &relative_path)
+        .await
+        .map_err(|e| format!("Download failed: {}", e))?;
+
+    tracing::info!("Downloaded {} -> {}", hash, destination_path);
+    Ok(())
+}
+
+/// List all active transfers
+#[tauri::command]
+pub async fn list_transfers(state: State<'_, AppState>) -> Result<Vec<TransferState>, String> {
+    let file_transfer = state
+        .file_transfer
+        .as_ref()
+        .ok_or_else(|| "File transfer not initialized".to_string())?;
+
+    Ok(file_transfer.list_transfers().await)
+}
+
+/// Get a specific transfer by ID
+#[tauri::command]
+pub async fn get_transfer(
+    transfer_id: String,
+    state: State<'_, AppState>,
+) -> Result<Option<TransferState>, String> {
+    let file_transfer = state
+        .file_transfer
+        .as_ref()
+        .ok_or_else(|| "File transfer not initialized".to_string())?;
+
+    Ok(file_transfer.get_transfer(&transfer_id).await)
+}
+
+/// Cancel an active transfer
+#[tauri::command]
+pub async fn cancel_transfer(
+    transfer_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let file_transfer = state
+        .file_transfer
+        .as_ref()
+        .ok_or_else(|| "File transfer not initialized".to_string())?;
+
+    file_transfer
+        .cancel_transfer(&transfer_id)
+        .await
+        .map_err(|e| format!("Failed to cancel transfer: {}", e))?;
+
+    tracing::info!("Cancelled transfer: {}", transfer_id);
+    Ok(())
+}

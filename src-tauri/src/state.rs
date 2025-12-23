@@ -1,5 +1,5 @@
-use crate::core::{IdentityManager, SharedDrive};
-use crate::network::{DocsManager, EventBroadcaster, P2PEndpoint, SyncEngine};
+use crate::core::{FileWatcherManager, IdentityManager, SharedDrive};
+use crate::network::{DocsManager, EventBroadcaster, FileTransferManager, P2PEndpoint, SyncEngine};
 use crate::storage::Database;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -22,8 +22,13 @@ pub struct AppState {
     pub sync_engine: Option<Arc<SyncEngine>>,
     /// Event broadcaster for gossip pub/sub
     pub event_broadcaster: Option<Arc<EventBroadcaster>>,
-    /// Document manager for CRDT metadata sync
+    /// Document manager for CRDT metadata sync (used by SyncEngine)
+    #[allow(dead_code)]
     pub docs_manager: Option<Arc<DocsManager>>,
+    /// File watcher manager for detecting local changes
+    pub file_watcher: Option<Arc<FileWatcherManager>>,
+    /// File transfer manager for blob sync
+    pub file_transfer: Option<Arc<FileTransferManager>>,
 }
 
 impl AppState {
@@ -72,9 +77,9 @@ impl AppState {
             tracing::info!("Loaded {} drives from database", drives_guard.len());
         }
 
-        // Initialize Phase 2 components (gossip, docs, sync)
-        let (sync_engine, event_broadcaster, docs_manager) =
-            Self::initialize_sync_components(&endpoint, &data_dir).await;
+        // Initialize Phase 2 components (gossip, docs, sync, watcher, transfer)
+        let (sync_engine, event_broadcaster, docs_manager, file_watcher, file_transfer) =
+            Self::initialize_sync_components(&endpoint, &identity_manager, &data_dir).await;
 
         Ok(Self {
             db,
@@ -84,27 +89,41 @@ impl AppState {
             sync_engine,
             event_broadcaster,
             docs_manager,
+            file_watcher,
+            file_transfer,
         })
     }
 
     /// Initialize Phase 2 sync components
     ///
-    /// Returns (sync_engine, event_broadcaster, docs_manager) wrapped in Option.
+    /// Returns (sync_engine, event_broadcaster, docs_manager, file_watcher, file_transfer) wrapped in Option.
     /// If initialization fails, logs error and returns None for all.
     async fn initialize_sync_components(
         endpoint: &Arc<P2PEndpoint>,
-        data_dir: &PathBuf,
+        identity_manager: &Arc<IdentityManager>,
+        data_dir: &std::path::Path,
     ) -> (
         Option<Arc<SyncEngine>>,
         Option<Arc<EventBroadcaster>>,
         Option<Arc<DocsManager>>,
+        Option<Arc<FileWatcherManager>>,
+        Option<Arc<FileTransferManager>>,
     ) {
         // Get the underlying Iroh endpoint
         let iroh_endpoint = match endpoint.get_endpoint().await {
             Some(ep) => ep,
             None => {
                 tracing::warn!("Cannot initialize sync: P2P endpoint not ready");
-                return (None, None, None);
+                return (None, None, None, None, None);
+            }
+        };
+
+        // Get node ID for event attribution
+        let node_id = match identity_manager.node_id().await {
+            Some(id) => id,
+            None => {
+                tracing::warn!("Cannot initialize sync: node ID not available");
+                return (None, None, None, None, None);
             }
         };
 
@@ -113,7 +132,7 @@ impl AppState {
             Ok(eb) => Arc::new(eb),
             Err(e) => {
                 tracing::error!("Failed to initialize EventBroadcaster: {}", e);
-                return (None, None, None);
+                return (None, None, None, None, None);
             }
         };
 
@@ -122,7 +141,7 @@ impl AppState {
             Ok(dm) => Arc::new(dm),
             Err(e) => {
                 tracing::error!("Failed to initialize DocsManager: {}", e);
-                return (None, Some(event_broadcaster), None);
+                return (None, Some(event_broadcaster), None, None, None);
             }
         };
 
@@ -132,8 +151,34 @@ impl AppState {
             event_broadcaster.clone(),
         ));
 
+        // Initialize FileWatcherManager
+        let file_watcher = {
+            let watcher = FileWatcherManager::new(node_id);
+            tracing::info!("FileWatcherManager initialized");
+            Some(Arc::new(watcher))
+        };
+
+        // Initialize FileTransferManager
+        let file_transfer = match FileTransferManager::new(&iroh_endpoint, data_dir, node_id).await
+        {
+            Ok(ftm) => {
+                tracing::info!("FileTransferManager initialized");
+                Some(Arc::new(ftm))
+            }
+            Err(e) => {
+                tracing::error!("Failed to initialize FileTransferManager: {}", e);
+                None
+            }
+        };
+
         tracing::info!("Phase 2 sync components initialized successfully");
 
-        (Some(sync_engine), Some(event_broadcaster), Some(docs_manager))
+        (
+            Some(sync_engine),
+            Some(event_broadcaster),
+            Some(docs_manager),
+            file_watcher,
+            file_transfer,
+        )
     }
 }

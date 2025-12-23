@@ -6,6 +6,8 @@
 //! - Local change processing
 //! - Remote event handling
 
+#![allow(dead_code)]
+
 use crate::core::{DriveEvent, DriveId, SharedDrive};
 use crate::network::{DocsManager, EventBroadcaster};
 use anyhow::Result;
@@ -129,7 +131,7 @@ impl SyncEngine {
         self.event_broadcaster.broadcast(drive_id, event.clone()).await?;
 
         // Forward to internal channel
-        let _ = self.event_tx.send((drive_id.clone(), event));
+        let _ = self.event_tx.send((*drive_id, event));
 
         Ok(())
     }
@@ -183,7 +185,7 @@ impl SyncEngine {
         }
 
         // Forward to internal channel
-        let _ = self.event_tx.send((drive_id.clone(), event));
+        let _ = self.event_tx.send((*drive_id, event));
 
         Ok(())
     }

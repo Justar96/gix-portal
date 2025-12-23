@@ -1,3 +1,9 @@
+//! P2P endpoint management for Iroh networking
+//!
+//! Many methods are scaffolding for future P2P features.
+
+#![allow(dead_code)]
+
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use iroh::{endpoint::Connection, Endpoint, NodeId as IrohNodeId, SecretKey};

@@ -70,6 +70,7 @@ impl Database {
     }
 
     /// Get a specific drive by ID
+    #[allow(dead_code)]
     pub fn get_drive(&self, drive_id: &[u8; 32]) -> Result<Option<Vec<u8>>> {
         let read_txn = self.db.begin_read()?;
         let table = read_txn.open_table(DRIVES_TABLE)?;

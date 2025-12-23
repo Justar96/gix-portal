@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[allow(dead_code)]
 pub enum KeyError {
     #[error("Failed to generate keypair")]
     GenerationFailed,
@@ -42,11 +43,13 @@ impl Identity {
     }
 
     /// Sign a message
+    #[allow(dead_code)]
     pub fn sign(&self, message: &[u8]) -> Signature {
         self.signing_key.sign(message)
     }
 
     /// Get the verifying key for signature verification
+    #[allow(dead_code)]
     pub fn verifying_key(&self) -> VerifyingKey {
         self.signing_key.verifying_key()
     }
@@ -68,11 +71,12 @@ impl NodeId {
     }
 
     /// Full hex representation
-    pub fn to_hex(&self) -> String {
+    pub fn to_hex(self) -> String {
         hex::encode(self.0)
     }
 
     /// Parse from hex string
+    #[allow(dead_code)]
     pub fn from_hex(s: &str) -> Result<Self, KeyError> {
         let bytes = hex::decode(s).map_err(|_| KeyError::InvalidKeyBytes)?;
         if bytes.len() != 32 {
