@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { HardDrive, Pencil, Trash2 } from "lucide-react";
 import type { DriveInfo } from "../types";
 import { formatBytes } from "../types";
 
@@ -100,7 +101,9 @@ export function DriveList({
             onClick={() => onSelect(drive)}
             onContextMenu={(e) => handleContextMenu(e, drive)}
           >
-            <div className="drive-icon">📁</div>
+            <div className="drive-icon">
+              <HardDrive size={16} />
+            </div>
             <div className="drive-info">
               {renameId === drive.id ? (
                 <input
@@ -132,13 +135,15 @@ export function DriveList({
             style={{ top: contextMenu.y, left: contextMenu.x }}
           >
             <button onClick={() => startRename(contextMenu.drive)}>
-              ✏️ Rename
+              <Pencil size={14} />
+              Rename
             </button>
             <button
               className="danger"
               onClick={() => handleDelete(contextMenu.drive)}
             >
-              🗑️ Delete
+              <Trash2 size={14} />
+              Delete
             </button>
           </div>
         </>

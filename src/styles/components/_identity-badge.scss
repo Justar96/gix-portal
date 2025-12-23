@@ -1,0 +1,59 @@
+// ========================================
+// Component - Identity Badge
+// ========================================
+
+@use '../abstracts' as *;
+
+.identity-badge {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    padding: $space-2 $space-4;
+    background: $bg-tertiary;
+    border: 1px solid $border;
+    border-radius: $radius-lg;
+
+    @include respond-to(md) {
+        padding: $space-2 $space-3;
+    }
+
+    &.loading,
+    &.error {
+        color: $text-tertiary;
+    }
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    font-size: $text-sm;
+    color: $text-secondary;
+
+    &.online .status-dot {
+        background: $success;
+    }
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: $warning;
+    flex-shrink: 0;
+}
+
+.peer-count {
+    color: $text-tertiary;
+    font-size: $text-xs;
+}
+
+.node-id {
+    font-family: $font-mono;
+    font-size: $text-sm;
+    color: $text-tertiary;
+
+    @include respond-to(md) {
+        display: none;
+    }
+}

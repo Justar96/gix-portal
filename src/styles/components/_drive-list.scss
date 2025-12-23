@@ -1,0 +1,75 @@
+// ========================================
+// Component - Drive List
+// ========================================
+
+@use '../abstracts' as *;
+
+.drive-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: $space-2;
+    @include custom-scrollbar;
+
+    &.empty {
+        @include flex-column;
+        @include flex-center;
+        text-align: center;
+        color: $text-tertiary;
+        padding: $space-8;
+        gap: $space-1;
+
+        .hint {
+            font-size: $text-sm;
+        }
+    }
+}
+
+.drive-item {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    padding: $space-3;
+    border-radius: $radius-md;
+    cursor: pointer;
+    transition: background $transition-fast;
+
+    @include respond-to(sm) {
+        padding: $space-2;
+    }
+
+    &:hover {
+        background: $bg-hover;
+    }
+
+    &.selected {
+        background: $bg-elevated;
+    }
+}
+
+.drive-icon {
+    @include flex-center;
+    width: 32px;
+    height: 32px;
+    background: $bg-tertiary;
+    border-radius: $radius-md;
+    color: $text-secondary;
+    flex-shrink: 0;
+}
+
+.drive-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.drive-name {
+    font-size: $text-base;
+    font-weight: 500;
+    color: $text-primary;
+    @include truncate;
+}
+
+.drive-stats {
+    font-size: $text-xs;
+    color: $text-tertiary;
+    margin-top: 2px;
+}

@@ -1,0 +1,104 @@
+// ========================================
+// Mixins
+// ========================================
+
+@use 'variables' as *;
+
+// Responsive breakpoints
+@mixin respond-to($breakpoint) {
+    @if $breakpoint ==xl {
+        @media (max-width: $breakpoint-xl) {
+            @content;
+        }
+    }
+
+    @else if $breakpoint ==md {
+        @media (max-width: $breakpoint-md) {
+            @content;
+        }
+    }
+
+    @else if $breakpoint ==sm {
+        @media (max-width: $breakpoint-sm) {
+            @content;
+        }
+    }
+}
+
+// Flexbox utilities
+@mixin flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@mixin flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+@mixin flex-column {
+    display: flex;
+    flex-direction: column;
+}
+
+// Text truncation
+@mixin truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+// Focus state
+@mixin focus-ring {
+    outline: none;
+    border-color: $border-focus;
+}
+
+// Button reset
+@mixin button-reset {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+// Interactive element
+@mixin interactive {
+    cursor: pointer;
+    transition: all $transition-fast;
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+}
+
+// Card style
+@mixin card {
+    background: $bg-secondary;
+    border: 1px solid $border;
+    border-radius: $radius-lg;
+}
+
+// Scrollbar styling
+@mixin custom-scrollbar {
+    &::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: $border;
+        border-radius: 4px;
+
+        &:hover {
+            background: $text-muted;
+        }
+    }
+}

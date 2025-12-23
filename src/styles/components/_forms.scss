@@ -1,0 +1,81 @@
+// ========================================
+// Component - Forms
+// ========================================
+
+@use '../abstracts' as *;
+
+.form-group {
+    margin-bottom: $space-5;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+
+    label {
+        display: block;
+        font-size: $text-sm;
+        font-weight: 500;
+        color: $text-secondary;
+        margin-bottom: $space-2;
+    }
+
+    input {
+        width: 100%;
+        padding: $space-3 $space-4;
+        background: $bg-primary;
+        border: 1px solid $border;
+        border-radius: $radius-md;
+        color: $text-primary;
+        font-size: $text-base;
+        font-family: inherit;
+        transition: border-color $transition-fast;
+
+        &:focus {
+            @include focus-ring;
+        }
+
+        &::placeholder {
+            color: $text-muted;
+        }
+    }
+}
+
+.path-input {
+    display: flex;
+    gap: $space-2;
+
+    input {
+        flex: 1;
+    }
+
+    button {
+        @include flex-center;
+        @include interactive;
+        gap: $space-2;
+        padding: $space-3 $space-4;
+        background: $bg-tertiary;
+        border: 1px solid $border;
+        border-radius: $radius-md;
+        color: $text-primary;
+        font-size: $text-sm;
+        white-space: nowrap;
+
+        &:hover:not(:disabled) {
+            background: $bg-hover;
+            border-color: $border-focus;
+        }
+    }
+}
+
+// Rename input (inline)
+.rename-input {
+    width: 100%;
+    padding: $space-1 $space-2;
+    background: $bg-primary;
+    border: 1px solid $border-focus;
+    border-radius: $radius-sm;
+    color: $text-primary;
+    font-size: $text-base;
+    font-family: inherit;
+    outline: none;
+}

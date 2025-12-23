@@ -1,0 +1,114 @@
+// ========================================
+// Component - Buttons
+// ========================================
+
+@use '../abstracts' as *;
+
+// Primary button
+.btn-primary {
+    @include flex-center;
+    @include interactive;
+    gap: $space-2;
+    padding: $space-3 $space-5;
+    background: $text-primary;
+    border: none;
+    border-radius: $radius-md;
+    color: $bg-primary;
+    font-size: $text-sm;
+    font-weight: 500;
+
+    &:hover:not(:disabled) {
+        background: $accent;
+    }
+}
+
+// Secondary button
+.btn-secondary {
+    @include flex-center;
+    @include interactive;
+    gap: $space-2;
+    padding: $space-3 $space-5;
+    background: transparent;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    color: $text-primary;
+    font-size: $text-sm;
+    font-weight: 500;
+
+    &:hover:not(:disabled) {
+        background: $bg-hover;
+        border-color: $border-focus;
+    }
+}
+
+// Icon button
+.btn-icon {
+    @include flex-center;
+    @include interactive;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    color: $text-secondary;
+
+    &:hover:not(:disabled) {
+        background: $bg-hover;
+        color: $text-primary;
+        border-color: $border-focus;
+    }
+}
+
+// Ghost button
+.btn-ghost {
+    @include flex-center;
+    @include button-reset;
+    @include interactive;
+    padding: $space-2;
+    border-radius: $radius-sm;
+    color: $text-tertiary;
+
+    &:hover {
+        background: $bg-hover;
+        color: $text-primary;
+    }
+}
+
+// Close button
+.btn-close {
+    @include flex-center;
+    @include button-reset;
+    @include interactive;
+    width: 28px;
+    height: 28px;
+    border-radius: $radius-md;
+    color: $text-tertiary;
+
+    &:hover {
+        background: $bg-hover;
+        color: $text-primary;
+    }
+}
+
+// Copy button
+.btn-copy {
+    @include flex-center;
+    @include interactive;
+    padding: $space-1 $space-2;
+    background: transparent;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    color: $text-secondary;
+
+    &:hover {
+        background: $bg-hover;
+        color: $text-primary;
+        border-color: $border-focus;
+    }
+
+    &.copied {
+        background: $success-muted;
+        border-color: $success;
+        color: $success;
+    }
+}

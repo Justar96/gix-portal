@@ -1,0 +1,74 @@
+// ========================================
+// Component - States (Loading, Empty, Error)
+// ========================================
+
+@use '../abstracts' as *;
+
+// Empty state
+.empty-state {
+    @include flex-column;
+    @include flex-center;
+    height: 100%;
+    text-align: center;
+    padding: $space-8;
+
+    h3 {
+        font-size: $text-lg;
+        font-weight: 500;
+        color: $text-primary;
+        margin-bottom: $space-2;
+    }
+
+    p {
+        font-size: $text-sm;
+        color: $text-tertiary;
+        margin-bottom: $space-6;
+        max-width: 280px;
+    }
+}
+
+.empty-icon {
+    @include flex-center;
+    width: 64px;
+    height: 64px;
+    background: $bg-tertiary;
+    border-radius: $radius-xl;
+    color: $text-muted;
+    margin-bottom: $space-5;
+}
+
+// Loading state
+.loading-state {
+    @include flex-center;
+    gap: $space-3;
+    padding: $space-8;
+    color: $text-tertiary;
+    font-size: $text-sm;
+}
+
+.loading-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid $border;
+    border-top-color: $text-tertiary;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+// Error states
+.error-message,
+.error-banner {
+    padding: $space-3 $space-4;
+    background: $error-muted;
+    border: 1px solid rgba($error, 0.3);
+    border-radius: $radius-md;
+    color: $error;
+    font-size: $text-sm;
+    margin: $space-3;
+}

@@ -1,0 +1,82 @@
+// ========================================
+// Base - Reset & Typography
+// ========================================
+
+@use '../abstracts' as *;
+
+// Google Fonts
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+// Reset
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+// Root variables for runtime access
+:root {
+    color-scheme: dark;
+}
+
+// Body
+body {
+    font-family: $font-sans;
+    background: $bg-primary;
+    color: $text-primary;
+    line-height: 1.5;
+    font-size: $text-base;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+// Typography
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+h1 {
+    font-size: $text-2xl;
+}
+
+h2 {
+    font-size: $text-xl;
+}
+
+h3 {
+    font-size: $text-lg;
+}
+
+// Links
+a {
+    color: $text-primary;
+    text-decoration: none;
+
+    &:hover {
+        color: $accent;
+    }
+}
+
+// Monospace text
+code,
+pre,
+kbd {
+    font-family: $font-mono;
+}
+
+// Selection
+::selection {
+    background: rgba($text-primary, 0.2);
+    color: $text-primary;
+}
+
+// Global scrollbar
+html {
+    @include custom-scrollbar;
+}

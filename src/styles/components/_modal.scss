@@ -1,0 +1,62 @@
+// ========================================
+// Component - Modal
+// ========================================
+
+@use '../abstracts' as *;
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    @include flex-center;
+    z-index: 1000;
+    padding: $space-4;
+}
+
+.modal {
+    @include card;
+    border-radius: $radius-xl;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: $shadow-lg;
+
+    @include respond-to(sm) {
+        max-width: 100%;
+        border-radius: $radius-lg;
+    }
+}
+
+.modal-header {
+    @include flex-between;
+    padding: $space-5 $space-6;
+    border-bottom: 1px solid $border;
+
+    @include respond-to(sm) {
+        padding: $space-4;
+    }
+
+    h2 {
+        font-size: $text-lg;
+        font-weight: 600;
+    }
+}
+
+.modal-body {
+    padding: $space-6;
+
+    @include respond-to(sm) {
+        padding: $space-4;
+    }
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: $space-3;
+    padding: $space-4 $space-6;
+    border-top: 1px solid $border;
+
+    @include respond-to(sm) {
+        padding: $space-4;
+    }
+}

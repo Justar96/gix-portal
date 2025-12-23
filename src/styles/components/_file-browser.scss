@@ -1,0 +1,164 @@
+// ========================================
+// Component - File Browser
+// ========================================
+
+@use '../abstracts' as *;
+
+.file-browser {
+    @include flex-column;
+    height: 100%;
+    outline: none;
+}
+
+.browser-header {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-3 $space-4;
+    background: $bg-secondary;
+    border-bottom: 1px solid $border;
+    flex-shrink: 0;
+
+    @include respond-to(sm) {
+        padding: $space-2 $space-3;
+    }
+}
+
+// Breadcrumbs
+.breadcrumbs {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: $space-1;
+}
+
+.breadcrumb {
+    @include button-reset;
+    @include interactive;
+    color: $text-secondary;
+    padding: $space-1 $space-2;
+    border-radius: $radius-sm;
+    font-size: $text-sm;
+
+    &:hover:not(:disabled) {
+        background: $bg-hover;
+        color: $text-primary;
+    }
+
+    &:last-child {
+        color: $text-primary;
+        font-weight: 500;
+    }
+}
+
+.separator {
+    color: $text-muted;
+    font-size: $text-sm;
+}
+
+// File table
+.file-table-container {
+    flex: 1;
+    overflow-y: auto;
+    @include custom-scrollbar;
+}
+
+.file-table {
+    width: 100%;
+    border-collapse: collapse;
+
+    thead {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+    }
+
+    th {
+        text-align: left;
+        padding: $space-3 $space-4;
+        font-weight: 500;
+        font-size: $text-xs;
+        color: $text-tertiary;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: $bg-secondary;
+        border-bottom: 1px solid $border;
+
+        @include respond-to(sm) {
+            padding: $space-2 $space-3;
+        }
+    }
+
+    td {
+        padding: $space-3 $space-4;
+        font-size: $text-sm;
+        border-bottom: 1px solid $border-subtle;
+
+        @include respond-to(sm) {
+            padding: $space-2 $space-3;
+        }
+    }
+
+    tbody tr {
+        cursor: pointer;
+        transition: background $transition-fast;
+
+        &:hover {
+            background: $bg-secondary;
+        }
+
+        &.selected {
+            background: $bg-tertiary;
+        }
+    }
+
+    .directory .file-name {
+        font-weight: 500;
+    }
+}
+
+.col-name {
+    width: 60%;
+
+    @include respond-to(md) {
+        width: 70%;
+    }
+}
+
+.col-size {
+    width: 15%;
+    text-align: right;
+    color: $text-tertiary;
+
+    @include respond-to(md) {
+        width: 30%;
+    }
+}
+
+.col-modified {
+    width: 25%;
+    color: $text-tertiary;
+
+    @include respond-to(md) {
+        display: none;
+    }
+}
+
+.file-cell {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+}
+
+.file-icon {
+    @include flex-center;
+    width: 20px;
+    color: $text-tertiary;
+    flex-shrink: 0;
+}
+
+.file-name {
+    @include truncate;
+    color: $text-primary;
+}

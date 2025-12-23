@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { FolderOpen, Plus } from "lucide-react";
 import { IdentityBadge } from "./components/IdentityBadge";
 import { DriveList } from "./components/DriveList";
 import { CreateDriveModal } from "./components/CreateDriveModal";
 import { FileBrowser } from "./components/FileBrowser";
 import type { DriveInfo } from "./types";
+import "./styles/main.scss";
 
 function App() {
   const [drives, setDrives] = useState<DriveInfo[]>([]);
@@ -59,18 +61,21 @@ function App() {
       <main className="app-main">
         <aside className="sidebar">
           <div className="sidebar-header">
-            <h2>My Drives</h2>
+            <h2>Drives</h2>
             <button
               className="btn-icon"
               onClick={() => setShowCreateModal(true)}
               title="Create new drive"
             >
-              +
+              <Plus size={16} />
             </button>
           </div>
 
           {loading ? (
-            <div className="loading-state">Loading...</div>
+            <div className="loading-state">
+              <div className="loading-spinner" />
+              <span>Loading...</span>
+            </div>
           ) : (
             <DriveList
               drives={drives}
@@ -86,14 +91,17 @@ function App() {
             <FileBrowser drive={selectedDrive} />
           ) : (
             <div className="empty-state">
-              <div className="empty-icon">📁</div>
+              <div className="empty-icon">
+                <FolderOpen size={32} />
+              </div>
               <h3>No drive selected</h3>
-              <p>Select a drive from the sidebar or create a new one</p>
+              <p>Select a drive from the sidebar or create a new one to get started</p>
               <button
                 className="btn-primary"
                 onClick={() => setShowCreateModal(true)}
               >
-                Create New Drive
+                <Plus size={16} />
+                Create Drive
               </button>
             </div>
           )}

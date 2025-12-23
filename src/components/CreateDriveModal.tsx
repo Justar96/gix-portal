@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
+import { X, FolderOpen, Loader2 } from "lucide-react";
 import type { DriveInfo } from "../types";
 
 interface CreateDriveModalProps {
@@ -77,15 +78,15 @@ export function CreateDriveModal({ onClose, onCreated }: CreateDriveModalProps) 
         onKeyDown={handleKeyDown}
       >
         <div className="modal-header">
-          <h2>Create New Drive</h2>
+          <h2>Create Drive</h2>
           <button className="btn-close" onClick={onClose}>
-            &times;
+            <X size={18} />
           </button>
         </div>
 
         <div className="modal-body">
           <div className="form-group">
-            <label htmlFor="drive-name">Drive Name</label>
+            <label htmlFor="drive-name">Name</label>
             <input
               id="drive-name"
               type="text"
@@ -97,7 +98,7 @@ export function CreateDriveModal({ onClose, onCreated }: CreateDriveModalProps) 
           </div>
 
           <div className="form-group">
-            <label htmlFor="drive-path">Folder Path</label>
+            <label htmlFor="drive-path">Folder</label>
             <div className="path-input">
               <input
                 id="drive-path"
@@ -108,7 +109,8 @@ export function CreateDriveModal({ onClose, onCreated }: CreateDriveModalProps) 
                 readOnly
               />
               <button onClick={selectFolder} disabled={loading}>
-                Browse...
+                <FolderOpen size={16} />
+                Browse
               </button>
             </div>
           </div>
@@ -125,7 +127,14 @@ export function CreateDriveModal({ onClose, onCreated }: CreateDriveModalProps) 
             onClick={handleCreate}
             disabled={loading || !name.trim() || !path.trim()}
           >
-            {loading ? "Creating..." : "Create Drive"}
+            {loading ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Creating...
+              </>
+            ) : (
+              "Create Drive"
+            )}
           </button>
         </div>
       </div>

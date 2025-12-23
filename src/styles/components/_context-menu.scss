@@ -1,0 +1,49 @@
+// ========================================
+// Component - Context Menu
+// ========================================
+
+@use '../abstracts' as *;
+
+.context-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+}
+
+.context-menu {
+    position: fixed;
+    min-width: 160px;
+    background: $bg-elevated;
+    border: 1px solid $border;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-lg;
+    z-index: 1000;
+    overflow: hidden;
+    padding: $space-1;
+
+    button {
+        @include button-reset;
+        @include interactive;
+        width: 100%;
+        padding: $space-2 $space-3;
+        border-radius: $radius-sm;
+        color: $text-primary;
+        text-align: left;
+        font-size: $text-sm;
+        display: flex;
+        align-items: center;
+        gap: $space-3;
+
+        &:hover {
+            background: $bg-hover;
+        }
+
+        &.danger {
+            color: $error;
+
+            &:hover {
+                background: $error-muted;
+            }
+        }
+    }
+}

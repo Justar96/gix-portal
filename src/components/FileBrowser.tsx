@@ -1,10 +1,46 @@
 import { useEffect, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { FileEntry, DriveInfo } from "../types";
-import { getFileIcon, formatBytes, formatDate } from "../types";
+import {
+  ChevronUp,
+  RefreshCw,
+  Folder,
+  FolderOpen,
+  File,
+  FileText,
+  Image,
+  Film,
+  Music,
+  Code,
+  Archive,
+  Database,
+} from "lucide-react";
+import type { FileEntry, DriveInfo, FileCategory } from "../types";
+import { formatBytes, formatDate, getFileCategory } from "../types";
 
 interface FileBrowserProps {
   drive: DriveInfo;
+}
+
+/** Get Lucide icon component for file category */
+function getFileIconComponent(entry: FileEntry) {
+  if (entry.is_dir) {
+    return <Folder size={16} />;
+  }
+
+  const category = getFileCategory(entry.name);
+  const iconMap: Record<FileCategory, React.ReactNode> = {
+    folder: <Folder size={16} />,
+    document: <FileText size={16} />,
+    image: <Image size={16} />,
+    video: <Film size={16} />,
+    audio: <Music size={16} />,
+    code: <Code size={16} />,
+    archive: <Archive size={16} />,
+    data: <Database size={16} />,
+    unknown: <File size={16} />,
+  };
+
+  return iconMap[category];
 }
 
 export function FileBrowser({ drive }: FileBrowserProps) {
@@ -99,7 +135,7 @@ export function FileBrowser({ drive }: FileBrowserProps) {
           disabled={currentPath === "/" || currentPath === "" || loading}
           title="Go up"
         >
-          ↑
+          <ChevronUp size={16} />
         </button>
         <div className="breadcrumbs">
           {getBreadcrumbs().map((crumb, i) => (
@@ -121,7 +157,7 @@ export function FileBrowser({ drive }: FileBrowserProps) {
           disabled={loading}
           title="Refresh"
         >
-          ↻
+          <RefreshCw size={16} />
         </button>
       </div>
 
@@ -134,39 +170,45 @@ export function FileBrowser({ drive }: FileBrowserProps) {
         </div>
       ) : files.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon">📂</div>
+          <div className="empty-icon">
+            <FolderOpen size={32} />
+          </div>
           <p>This folder is empty</p>
         </div>
       ) : (
-        <table className="file-table">
-          <thead>
-            <tr>
-              <th className="col-name">Name</th>
-              <th className="col-size">Size</th>
-              <th className="col-modified">Modified</th>
-            </tr>
-          </thead>
-          <tbody>
-            {files.map((file, index) => (
-              <tr
-                key={file.path}
-                className={`${file.is_dir ? "directory" : "file"} ${index === selectedIndex ? "selected" : ""
-                  }`}
-                onClick={() => setSelectedIndex(index)}
-                onDoubleClick={() => navigateTo(file)}
-              >
-                <td className="col-name">
-                  <span className="file-icon">{getFileIcon(file)}</span>
-                  <span className="file-name">{file.name}</span>
-                </td>
-                <td className="col-size">
-                  {file.is_dir ? "-" : formatBytes(file.size)}
-                </td>
-                <td className="col-modified">{formatDate(file.modified_at)}</td>
+        <div className="file-table-container">
+          <table className="file-table">
+            <thead>
+              <tr>
+                <th className="col-name">Name</th>
+                <th className="col-size">Size</th>
+                <th className="col-modified">Modified</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {files.map((file, index) => (
+                <tr
+                  key={file.path}
+                  className={`${file.is_dir ? "directory" : "file"} ${index === selectedIndex ? "selected" : ""
+                    }`}
+                  onClick={() => setSelectedIndex(index)}
+                  onDoubleClick={() => navigateTo(file)}
+                >
+                  <td className="col-name">
+                    <div className="file-cell">
+                      <span className="file-icon">{getFileIconComponent(file)}</span>
+                      <span className="file-name">{file.name}</span>
+                    </div>
+                  </td>
+                  <td className="col-size">
+                    {file.is_dir ? "-" : formatBytes(file.size)}
+                  </td>
+                  <td className="col-modified">{formatDate(file.modified_at)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

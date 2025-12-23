@@ -127,28 +127,6 @@ export function getFileCategory(filename: string): FileCategory {
 }
 
 /**
- * Get emoji icon for file category
- */
-export function getFileIcon(entry: FileEntry): string {
-    if (entry.is_dir) return "📁";
-
-    const category = getFileCategory(entry.name);
-    const icons: Record<FileCategory, string> = {
-        folder: "📁",
-        document: "📄",
-        image: "🖼️",
-        video: "🎬",
-        audio: "🎵",
-        code: "💻",
-        archive: "📦",
-        data: "📊",
-        unknown: "📄",
-    };
-
-    return icons[category];
-}
-
-/**
  * Format bytes to human-readable string
  */
 export function formatBytes(bytes: number): string {

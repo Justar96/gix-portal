@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { Copy, Check } from "lucide-react";
 import type { IdentityInfo, ConnectionInfo } from "../types";
 
 export function IdentityBadge() {
@@ -63,7 +64,7 @@ export function IdentityBadge() {
   }
 
   if (!identity) {
-    return <div className="identity-badge error">Failed to load identity</div>;
+    return <div className="identity-badge error">Connection failed</div>;
   }
 
   const isOnline = connection?.is_online ?? false;
@@ -72,7 +73,8 @@ export function IdentityBadge() {
   return (
     <div className="identity-badge">
       <span className={`status-indicator ${isOnline ? "online" : "offline"}`}>
-        {isOnline ? "Online" : "Connecting..."}
+        <span className="status-dot" />
+        {isOnline ? "Online" : "Connecting"}
         {isOnline && peerCount > 0 && (
           <span className="peer-count" title={`${peerCount} peer(s) connected`}>
             ({peerCount})
@@ -87,7 +89,7 @@ export function IdentityBadge() {
         onClick={copyId}
         title="Copy Node ID"
       >
-        {copied ? "Copied!" : "Copy"}
+        {copied ? <Check size={14} /> : <Copy size={14} />}
       </button>
     </div>
   );
