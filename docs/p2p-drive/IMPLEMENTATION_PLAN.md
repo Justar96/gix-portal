@@ -13,8 +13,8 @@
 | Phase | Status | Progress |
 |-------|--------|----------|
 | **Phase 1:** Core P2P Foundation | ✅ Complete | 100% |
-| **Phase 2:** Realtime Sync Engine | 🔲 Not Started | 0% |
-| **Phase 3:** Security & Access Control | 🔲 Not Started | 0% |
+| **Phase 2:** Realtime Sync Engine | ✅ Complete | 100% |
+| **Phase 3:** Security & Access Control | 🔄 In Progress | 75% |
 | **Phase 4:** Collaboration Features | 🔲 Not Started | 0% |
 | **Phase 5:** Polish & Distribution | 🔲 Not Started | 0% |
 
@@ -26,12 +26,23 @@
 - ✅ File browser with icons & keyboard navigation
 - ✅ Drive management (rename, delete)
 
-### Up Next (Phase 2)
-- 🔜 Invite/Join system for sharing drives
-- 🔜 iroh-docs for metadata sync
-- 🔜 iroh-gossip for live events
-- 🔜 File system watcher
-- 🔜 Bidirectional file sync
+### Phase 2 Completed (Dec 23, 2024)
+- ✅ iroh-docs integration (`DocsManager` for CRDT metadata sync)
+- ✅ iroh-gossip integration (`EventBroadcaster` for live events)
+- ✅ File system watcher (`FileWatcherManager` with debouncing)
+- ✅ Bidirectional sync (`FileTransferManager` via iroh-blobs)
+- ✅ Sync engine orchestration (`SyncEngine` coordinator)
+- ✅ Tauri sync commands (frontend API)
+- ✅ Code polishing (Clippy fixes, dead code audit)
+
+### Phase 3 In Progress (Dec 23, 2024)
+- ✅ E2E Encryption (`DriveEncryption` with ChaCha20-Poly1305)
+- ✅ Key exchange (`KeyExchangePair`, `KeyRing` with X25519)
+- ✅ Access control (`AccessControlList`, `Permission`, `PathRule`)
+- ✅ Invite tokens (`InviteToken`, `InviteBuilder`, `TokenTracker`)
+- 🔜 Tauri commands for security operations
+- 🔜 Frontend UI for permissions & invites
+
 
 
 ## Phase 1: Core P2P Foundation
@@ -122,7 +133,7 @@
 
 **Deliverables:**
 - [x] Can browse local shared drive
-- [ ] Can request and display remote drive contents (Phase 2)
+- [x] Can request and display remote drive contents (Phase 2)
 
 ---
 
@@ -140,8 +151,8 @@
 | Watch Doc changes | Subscribe to document updates | 3h |
 
 **Deliverables:**
-- [ ] Drive metadata syncs between peers
-- [ ] Changes on one peer appear on others
+- [x] Drive metadata syncs between peers
+- [x] Changes on one peer appear on others
 
 ---
 
@@ -157,8 +168,8 @@
 | Frontend event bridge | Emit events to UI via Tauri | 3h |
 
 **Deliverables:**
-- [ ] Real-time events flow between peers
-- [ ] UI updates on incoming events
+- [x] Real-time events flow between peers
+- [x] UI updates on incoming events
 
 ---
 
@@ -173,8 +184,8 @@
 | Handle rename/move | Track file relocations | 3h |
 
 **Deliverables:**
-- [ ] Local file changes trigger sync events
-- [ ] Debouncing prevents excessive updates
+- [x] Local file changes trigger sync events
+- [x] Debouncing prevents excessive updates
 
 ---
 
@@ -190,9 +201,9 @@
 | Bandwidth throttling | Optional speed limits | 3h |
 
 **Deliverables:**
-- [ ] Files sync bidirectionally
-- [ ] Large files transfer efficiently
-- [ ] Progress shown in UI
+- [x] Files sync bidirectionally
+- [x] Large files transfer efficiently
+- [x] Progress shown in UI
 
 ---
 
@@ -211,8 +222,8 @@
 | Metadata encryption | Encrypt file names/paths | 3h |
 
 **Deliverables:**
-- [ ] All file content encrypted at rest
-- [ ] Only authorized users can decrypt
+- [x] All file content encrypted at rest
+- [x] Only authorized users can decrypt
 
 ---
 
@@ -227,8 +238,8 @@
 | Revocation | Remove user's wrapped key | 2h |
 
 **Deliverables:**
-- [ ] Each user has their own wrapped key
-- [ ] Key can be rotated on demand
+- [x] Each user has their own wrapped key
+- [x] Key can be rotated on demand
 
 ---
 
@@ -244,8 +255,8 @@
 | Permission UI | Manage user permissions | 4h |
 
 **Deliverables:**
-- [ ] Operations fail without proper permission
-- [ ] Admins can manage user access
+- [x] Operations fail without proper permission
+- [ ] Admins can manage user access (UI pending)
 
 ---
 
@@ -260,8 +271,8 @@
 | Invite UI | Generate and share links | 3h |
 
 **Deliverables:**
-- [ ] Users can create invite links
-- [ ] Invitees can join via link
+- [ ] Users can create invite links (UI pending)
+- [ ] Invitees can join via link (integration pending)
 
 ---
 
