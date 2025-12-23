@@ -1,5 +1,5 @@
 use crate::core::{IdentityManager, SharedDrive};
-use crate::network::P2PEndpoint;
+use crate::network::{DocsManager, EventBroadcaster, P2PEndpoint, SyncEngine};
 use crate::storage::Database;
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -16,6 +16,14 @@ pub struct AppState {
     pub endpoint: Arc<P2PEndpoint>,
     /// In-memory cache of drives (keyed by DriveId bytes)
     pub drives: Arc<RwLock<HashMap<[u8; 32], SharedDrive>>>,
+
+    // Phase 2 components
+    /// Sync engine for coordinating real-time sync
+    pub sync_engine: Option<Arc<SyncEngine>>,
+    /// Event broadcaster for gossip pub/sub
+    pub event_broadcaster: Option<Arc<EventBroadcaster>>,
+    /// Document manager for CRDT metadata sync
+    pub docs_manager: Option<Arc<DocsManager>>,
 }
 
 impl AppState {
@@ -64,11 +72,68 @@ impl AppState {
             tracing::info!("Loaded {} drives from database", drives_guard.len());
         }
 
+        // Initialize Phase 2 components (gossip, docs, sync)
+        let (sync_engine, event_broadcaster, docs_manager) =
+            Self::initialize_sync_components(&endpoint, &data_dir).await;
+
         Ok(Self {
             db,
             identity_manager,
             endpoint,
             drives,
+            sync_engine,
+            event_broadcaster,
+            docs_manager,
         })
+    }
+
+    /// Initialize Phase 2 sync components
+    ///
+    /// Returns (sync_engine, event_broadcaster, docs_manager) wrapped in Option.
+    /// If initialization fails, logs error and returns None for all.
+    async fn initialize_sync_components(
+        endpoint: &Arc<P2PEndpoint>,
+        data_dir: &PathBuf,
+    ) -> (
+        Option<Arc<SyncEngine>>,
+        Option<Arc<EventBroadcaster>>,
+        Option<Arc<DocsManager>>,
+    ) {
+        // Get the underlying Iroh endpoint
+        let iroh_endpoint = match endpoint.get_endpoint().await {
+            Some(ep) => ep,
+            None => {
+                tracing::warn!("Cannot initialize sync: P2P endpoint not ready");
+                return (None, None, None);
+            }
+        };
+
+        // Initialize EventBroadcaster
+        let event_broadcaster = match EventBroadcaster::new(&iroh_endpoint).await {
+            Ok(eb) => Arc::new(eb),
+            Err(e) => {
+                tracing::error!("Failed to initialize EventBroadcaster: {}", e);
+                return (None, None, None);
+            }
+        };
+
+        // Initialize DocsManager
+        let docs_manager = match DocsManager::new(data_dir).await {
+            Ok(dm) => Arc::new(dm),
+            Err(e) => {
+                tracing::error!("Failed to initialize DocsManager: {}", e);
+                return (None, Some(event_broadcaster), None);
+            }
+        };
+
+        // Initialize SyncEngine
+        let sync_engine = Arc::new(SyncEngine::new(
+            docs_manager.clone(),
+            event_broadcaster.clone(),
+        ));
+
+        tracing::info!("Phase 2 sync components initialized successfully");
+
+        (Some(sync_engine), Some(event_broadcaster), Some(docs_manager))
     }
 }

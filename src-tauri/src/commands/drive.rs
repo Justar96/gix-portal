@@ -91,3 +91,74 @@ pub async fn get_drive(drive_id: String, state: State<'_, AppState>) -> Result<D
 
     Ok(DriveInfo::from(drive))
 }
+
+/// Helper to parse and validate drive ID
+fn parse_drive_id(drive_id: &str) -> Result<[u8; 32], String> {
+    let id_bytes = hex::decode(drive_id).map_err(|_| "Invalid drive ID format".to_string())?;
+
+    if id_bytes.len() != 32 {
+        return Err("Invalid drive ID length".to_string());
+    }
+
+    let mut id_arr = [0u8; 32];
+    id_arr.copy_from_slice(&id_bytes);
+    Ok(id_arr)
+}
+
+/// Delete a drive by ID
+#[tauri::command]
+pub async fn delete_drive(drive_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let id_arr = parse_drive_id(&drive_id)?;
+
+    // Remove from database
+    let removed = state
+        .db
+        .delete_drive(&id_arr)
+        .map_err(|e| format!("Failed to delete drive: {}", e))?;
+
+    if !removed {
+        return Err("Drive not found".to_string());
+    }
+
+    // Remove from in-memory cache
+    state.drives.write().await.remove(&id_arr);
+
+    tracing::info!("Deleted drive: {}", drive_id);
+    Ok(())
+}
+
+/// Rename a drive
+#[tauri::command]
+pub async fn rename_drive(
+    drive_id: String,
+    new_name: String,
+    state: State<'_, AppState>,
+) -> Result<DriveInfo, String> {
+    let id_arr = parse_drive_id(&drive_id)?;
+
+    // Validate new name
+    let new_name = new_name.trim();
+    if new_name.is_empty() {
+        return Err("Name cannot be empty".to_string());
+    }
+
+    // Update in memory first
+    let mut drives = state.drives.write().await;
+    let drive = drives
+        .get_mut(&id_arr)
+        .ok_or_else(|| "Drive not found".to_string())?;
+
+    drive.name = new_name.to_string();
+
+    // Save to database
+    let drive_bytes =
+        serde_json::to_vec(&drive).map_err(|e| format!("Failed to serialize drive: {}", e))?;
+
+    state
+        .db
+        .save_drive(&id_arr, &drive_bytes)
+        .map_err(|e| format!("Failed to save drive: {}", e))?;
+
+    tracing::info!("Renamed drive {} to '{}'", drive_id, new_name);
+    Ok(DriveInfo::from(&*drive))
+}

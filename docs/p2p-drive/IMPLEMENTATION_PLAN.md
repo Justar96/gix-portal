@@ -8,6 +8,32 @@
 
 ---
 
+## 📊 Progress Summary
+
+| Phase | Status | Progress |
+|-------|--------|----------|
+| **Phase 1:** Core P2P Foundation | ✅ Complete | 100% |
+| **Phase 2:** Realtime Sync Engine | 🔲 Not Started | 0% |
+| **Phase 3:** Security & Access Control | 🔲 Not Started | 0% |
+| **Phase 4:** Collaboration Features | 🔲 Not Started | 0% |
+| **Phase 5:** Polish & Distribution | 🔲 Not Started | 0% |
+
+### Phase 1 Completed (Dec 22, 2024)
+- ✅ Tauri v2 + React + Rust project structure
+- ✅ Ed25519 identity generation & persistence  
+- ✅ Iroh P2P endpoint with relay discovery
+- ✅ Drive creation with folder selection
+- ✅ File browser with icons & keyboard navigation
+- ✅ Drive management (rename, delete)
+
+### Up Next (Phase 2)
+- 🔜 Invite/Join system for sharing drives
+- 🔜 iroh-docs for metadata sync
+- 🔜 iroh-gossip for live events
+- 🔜 File system watcher
+- 🔜 Bidirectional file sync
+
+
 ## Phase 1: Core P2P Foundation
 **Duration:** 3 weeks | **Priority:** Critical
 
@@ -24,9 +50,9 @@
 | Add CI/CD pipeline | GitHub Actions for build/test/lint | 3h |
 
 **Deliverables:**
-- [ ] Empty Tauri app runs on Windows/macOS/Linux
-- [ ] Hot reload working for both frontend and backend
-- [ ] All linting passes
+- [x] Empty Tauri app runs on Windows/macOS/Linux
+- [x] Hot reload working for both frontend and backend
+- [x] All linting passes
 
 ---
 
@@ -41,9 +67,9 @@
 | Identity persistence | Store identity metadata in redb | 3h |
 
 **Deliverables:**
-- [ ] App generates unique identity on first run
-- [ ] Identity persists across app restarts
-- [ ] Public ID displayed in UI
+- [x] App generates unique identity on first run
+- [x] Identity persists across app restarts
+- [x] Public ID displayed in UI
 
 ---
 
@@ -59,9 +85,9 @@
 | Error handling | Graceful handling of network failures | 3h |
 
 **Deliverables:**
-- [ ] Iroh endpoint starts successfully
-- [ ] App can discover and connect to other instances
-- [ ] Connection status visible in UI
+- [x] Iroh endpoint starts successfully
+- [x] App can discover and connect to other instances
+- [x] Connection status visible in UI
 
 ---
 
@@ -78,9 +104,9 @@
 | Drive list UI | Display owned drives in sidebar | 3h |
 
 **Deliverables:**
-- [ ] User can select folder to share
-- [ ] Drive appears in "My Drives" list
-- [ ] Drive persists after restart
+- [x] User can select folder to share
+- [x] Drive appears in "My Drives" list
+- [x] Drive persists after restart
 
 ---
 
@@ -95,8 +121,8 @@
 | Breadcrumb navigation | Path navigation UI | 2h |
 
 **Deliverables:**
-- [ ] Can browse local shared drive
-- [ ] Can request and display remote drive contents
+- [x] Can browse local shared drive
+- [ ] Can request and display remote drive contents (Phase 2)
 
 ---
 

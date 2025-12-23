@@ -1,16 +1,7 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-
-interface DriveInfo {
-  id: string;
-  name: string;
-  local_path: string;
-  owner: string;
-  created_at: string;
-  total_size: number;
-  file_count: number;
-}
+import type { DriveInfo } from "../types";
 
 interface CreateDriveModalProps {
   onClose: () => void;

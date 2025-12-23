@@ -1,24 +1,84 @@
-interface DriveInfo {
-  id: string;
-  name: string;
-  local_path: string;
-  total_size: number;
-  file_count: number;
-}
+import { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import type { DriveInfo } from "../types";
+import { formatBytes } from "../types";
 
 interface DriveListProps {
   drives: DriveInfo[];
   onSelect: (drive: DriveInfo) => void;
+  onUpdate: () => void;
   selectedId: string | null;
 }
 
-export function DriveList({ drives, onSelect, selectedId }: DriveListProps) {
-  const formatSize = (bytes: number): string => {
-    if (bytes === 0) return "0 B";
-    const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB", "TB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
+interface ContextMenuState {
+  x: number;
+  y: number;
+  drive: DriveInfo;
+}
+
+export function DriveList({
+  drives,
+  onSelect,
+  onUpdate,
+  selectedId,
+}: DriveListProps) {
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameName, setRenameName] = useState("");
+
+  const handleContextMenu = (e: React.MouseEvent, drive: DriveInfo) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, drive });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  const handleDelete = async (drive: DriveInfo) => {
+    closeContextMenu();
+    if (!confirm(`Delete drive "${drive.name}"? This will not delete your files.`)) {
+      return;
+    }
+
+    try {
+      await invoke("delete_drive", { driveId: drive.id });
+      onUpdate();
+    } catch (e) {
+      console.error("Failed to delete drive:", e);
+      alert(`Failed to delete drive: ${e}`);
+    }
+  };
+
+  const startRename = (drive: DriveInfo) => {
+    closeContextMenu();
+    setRenameId(drive.id);
+    setRenameName(drive.name);
+  };
+
+  const handleRename = async (driveId: string) => {
+    if (!renameName.trim()) {
+      setRenameId(null);
+      return;
+    }
+
+    try {
+      await invoke("rename_drive", { driveId, newName: renameName });
+      onUpdate();
+    } catch (e) {
+      console.error("Failed to rename drive:", e);
+      alert(`Failed to rename drive: ${e}`);
+    } finally {
+      setRenameId(null);
+    }
+  };
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent, driveId: string) => {
+    if (e.key === "Enter") {
+      handleRename(driveId);
+    } else if (e.key === "Escape") {
+      setRenameId(null);
+    }
   };
 
   if (drives.length === 0) {
@@ -31,22 +91,58 @@ export function DriveList({ drives, onSelect, selectedId }: DriveListProps) {
   }
 
   return (
-    <div className="drive-list">
-      {drives.map((drive) => (
-        <div
-          key={drive.id}
-          className={`drive-item ${selectedId === drive.id ? "selected" : ""}`}
-          onClick={() => onSelect(drive)}
-        >
-          <div className="drive-icon">📁</div>
-          <div className="drive-info">
-            <div className="drive-name">{drive.name}</div>
-            <div className="drive-stats">
-              {drive.file_count} files &middot; {formatSize(drive.total_size)}
+    <>
+      <div className="drive-list" onClick={closeContextMenu}>
+        {drives.map((drive) => (
+          <div
+            key={drive.id}
+            className={`drive-item ${selectedId === drive.id ? "selected" : ""}`}
+            onClick={() => onSelect(drive)}
+            onContextMenu={(e) => handleContextMenu(e, drive)}
+          >
+            <div className="drive-icon">📁</div>
+            <div className="drive-info">
+              {renameId === drive.id ? (
+                <input
+                  className="rename-input"
+                  value={renameName}
+                  onChange={(e) => setRenameName(e.target.value)}
+                  onBlur={() => handleRename(drive.id)}
+                  onKeyDown={(e) => handleRenameKeyDown(e, drive.id)}
+                  autoFocus
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <div className="drive-name">{drive.name}</div>
+              )}
+              <div className="drive-stats">
+                {drive.file_count} files &middot; {formatBytes(drive.total_size)}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <>
+          <div className="context-overlay" onClick={closeContextMenu} />
+          <div
+            className="context-menu"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+          >
+            <button onClick={() => startRename(contextMenu.drive)}>
+              ✏️ Rename
+            </button>
+            <button
+              className="danger"
+              onClick={() => handleDelete(contextMenu.drive)}
+            >
+              🗑️ Delete
+            </button>
+          </div>
+        </>
+      )}
+    </>
   );
 }

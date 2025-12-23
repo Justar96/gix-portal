@@ -2,6 +2,29 @@
 
 > A peer-to-peer application enabling **realtime shared folder access** between users with **enterprise-grade security**. Think "self-hosted Google Drive" or "P2P network share" — where one user shares a folder and others can browse, edit, and collaborate in real-time.
 
+## 🚀 Development Status
+
+| Phase | Status |
+|-------|--------|
+| Phase 1: Core P2P Foundation | ✅ **Complete** |
+| Phase 2: Realtime Sync Engine | ⏳ Up Next |
+| Phase 3: Security & Access Control | 🔲 Planned |
+| Phase 4: Collaboration Features | 🔲 Planned |
+| Phase 5: Polish & Distribution | 🔲 Planned |
+
+**Current Features:**
+- Desktop app runs on Windows/macOS/Linux
+- Unique identity per device (Ed25519)
+- P2P networking via Iroh relay
+- Create and browse shared drives
+- File icons, keyboard navigation
+- Drive rename/delete via context menu
+
+**Coming Next (Phase 2):**
+- Invite links to share drives
+- Real-time file sync between peers
+- File system watching
+
 ## Executive Summary
 
 This system enables users to:

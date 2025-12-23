@@ -1,19 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
-
-interface FileEntry {
-  name: string;
-  path: string;
-  is_dir: boolean;
-  size: number;
-  modified_at: string;
-}
-
-interface DriveInfo {
-  id: string;
-  name: string;
-  local_path: string;
-}
+import type { FileEntry, DriveInfo } from "../types";
+import { getFileIcon, formatBytes, formatDate } from "../types";
 
 interface FileBrowserProps {
   drive: DriveInfo;
@@ -24,29 +12,34 @@ export function FileBrowser({ drive }: FileBrowserProps) {
   const [currentPath, setCurrentPath] = useState("/");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
 
-  const loadFiles = async (path: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const entries = await invoke<FileEntry[]>("list_files", {
-        driveId: drive.id,
-        path,
-      });
-      setFiles(entries);
-      setCurrentPath(path);
-    } catch (e) {
-      console.error("Failed to list files:", e);
-      setError(String(e));
-      setFiles([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loadFiles = useCallback(
+    async (path: string) => {
+      setLoading(true);
+      setError(null);
+      setSelectedIndex(-1);
+      try {
+        const entries = await invoke<FileEntry[]>("list_files", {
+          driveId: drive.id,
+          path,
+        });
+        setFiles(entries);
+        setCurrentPath(path);
+      } catch (e) {
+        console.error("Failed to list files:", e);
+        setError(String(e));
+        setFiles([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [drive.id]
+  );
 
   useEffect(() => {
     loadFiles("/");
-  }, [drive.id]);
+  }, [loadFiles]);
 
   const navigateTo = (entry: FileEntry) => {
     if (entry.is_dir) {
@@ -62,22 +55,6 @@ export function FileBrowser({ drive }: FileBrowserProps) {
     loadFiles(parent);
   };
 
-  const formatSize = (bytes: number): string => {
-    if (bytes === 0) return "-";
-    const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`;
-  };
-
-  const formatDate = (dateStr: string): string => {
-    try {
-      return new Date(dateStr).toLocaleDateString();
-    } catch {
-      return "-";
-    }
-  };
-
   const getBreadcrumbs = () => {
     const parts = currentPath.split(/[/\\]/).filter(Boolean);
     const crumbs = [{ name: drive.name, path: "/" }];
@@ -89,8 +66,32 @@ export function FileBrowser({ drive }: FileBrowserProps) {
     return crumbs;
   };
 
+  // Keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (files.length === 0) return;
+
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setSelectedIndex((prev) => Math.min(prev + 1, files.length - 1));
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setSelectedIndex((prev) => Math.max(prev - 1, 0));
+        break;
+      case "Enter":
+        if (selectedIndex >= 0 && selectedIndex < files.length) {
+          navigateTo(files[selectedIndex]);
+        }
+        break;
+      case "Backspace":
+        navigateUp();
+        break;
+    }
+  };
+
   return (
-    <div className="file-browser">
+    <div className="file-browser" tabIndex={0} onKeyDown={handleKeyDown}>
       <div className="browser-header">
         <button
           className="btn-icon"
@@ -127,9 +128,13 @@ export function FileBrowser({ drive }: FileBrowserProps) {
       {error && <div className="error-banner">{error}</div>}
 
       {loading ? (
-        <div className="loading-state">Loading files...</div>
+        <div className="loading-state">
+          <div className="loading-spinner" />
+          <span>Loading files...</span>
+        </div>
       ) : files.length === 0 ? (
         <div className="empty-state">
+          <div className="empty-icon">📂</div>
           <p>This folder is empty</p>
         </div>
       ) : (
@@ -142,18 +147,20 @@ export function FileBrowser({ drive }: FileBrowserProps) {
             </tr>
           </thead>
           <tbody>
-            {files.map((file) => (
+            {files.map((file, index) => (
               <tr
                 key={file.path}
-                className={file.is_dir ? "directory" : "file"}
+                className={`${file.is_dir ? "directory" : "file"} ${index === selectedIndex ? "selected" : ""
+                  }`}
+                onClick={() => setSelectedIndex(index)}
                 onDoubleClick={() => navigateTo(file)}
               >
                 <td className="col-name">
-                  <span className="file-icon">{file.is_dir ? "📁" : "📄"}</span>
+                  <span className="file-icon">{getFileIcon(file)}</span>
                   <span className="file-name">{file.name}</span>
                 </td>
                 <td className="col-size">
-                  {file.is_dir ? "-" : formatSize(file.size)}
+                  {file.is_dir ? "-" : formatBytes(file.size)}
                 </td>
                 <td className="col-modified">{formatDate(file.modified_at)}</td>
               </tr>

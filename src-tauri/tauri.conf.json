@@ -27,14 +27,5 @@
     "active": true,
     "targets": "all",
     "icon": []
-  },
-  "plugins": {
-    "dialog": {},
-    "fs": {
-      "scope": ["**"]
-    },
-    "shell": {
-      "open": true
-    }
   }
 }

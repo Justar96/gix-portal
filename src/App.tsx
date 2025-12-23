@@ -1,19 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { IdentityBadge } from "./components/IdentityBadge";
 import { DriveList } from "./components/DriveList";
 import { CreateDriveModal } from "./components/CreateDriveModal";
 import { FileBrowser } from "./components/FileBrowser";
-
-interface DriveInfo {
-  id: string;
-  name: string;
-  local_path: string;
-  owner: string;
-  created_at: string;
-  total_size: number;
-  file_count: number;
-}
+import type { DriveInfo } from "./types";
 
 function App() {
   const [drives, setDrives] = useState<DriveInfo[]>([]);
@@ -21,16 +12,21 @@ function App() {
   const [selectedDrive, setSelectedDrive] = useState<DriveInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadDrives = async () => {
+  const loadDrives = useCallback(async () => {
     try {
       const driveList = await invoke<DriveInfo[]>("list_drives");
       setDrives(driveList);
+
+      // If selected drive was deleted, clear selection
+      if (selectedDrive && !driveList.find((d) => d.id === selectedDrive.id)) {
+        setSelectedDrive(null);
+      }
     } catch (error) {
       console.error("Failed to load drives:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDrive]);
 
   useEffect(() => {
     // Wait a bit for the backend to initialize
@@ -79,6 +75,7 @@ function App() {
             <DriveList
               drives={drives}
               onSelect={handleSelectDrive}
+              onUpdate={loadDrives}
               selectedId={selectedDrive?.id ?? null}
             />
           )}

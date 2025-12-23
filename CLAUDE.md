@@ -2,10 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# Current time
-
-> 2025-12-22
-
 ## Project Overview
 
 P2P Realtime Drive Sharing System - A self-hosted peer-to-peer file sharing desktop application with enterprise-grade security. Built with Tauri v2 (Rust backend + React frontend) using Iroh for P2P networking.
@@ -34,28 +30,33 @@ cd src-tauri && cargo clippy
 
 ```
 src-tauri/src/
+├── lib.rs          # App entry, Tauri setup
+├── state.rs        # AppState with identity & network
 ├── core/           # Core data structures
-│   ├── drive.rs    # SharedDrive, DriveId
-│   ├── file.rs     # FileEntry, sync operations
-│   └── identity.rs # NodeId, keypair management
+│   ├── drive.rs    # SharedDrive, DriveInfo
+│   ├── file.rs     # FileEntryDto
+│   └── identity.rs # IdentityManager, Ed25519 keypair
 ├── network/        # P2P networking
-│   ├── endpoint.rs # Iroh endpoint setup
-│   ├── sync.rs     # SyncEngine implementation
-│   └── gossip.rs   # DriveEvent broadcasting
+│   └── endpoint.rs # Iroh endpoint setup
 ├── crypto/         # Cryptography
-│   ├── encryption.rs # DriveEncryption
-│   └── keys.rs     # Key wrapping/unwrapping
+│   └── keys.rs     # Key generation/management
 ├── storage/        # Persistence
 │   └── db.rs       # redb database ops
-└── commands/       # Tauri commands
-    ├── drive.rs    # create_drive, list_drives
-    ├── file.rs     # list_files, read_file
-    └── invite.rs   # create_invite, join_drive
+└── commands/       # Tauri commands (invoke handlers)
+    ├── drive.rs    # create_drive, delete_drive, list_drives
+    ├── files.rs    # list_files
+    └── identity.rs # get_identity, get_connection_status
 ```
 
 ### Key Components
 
+- **AppState**: Manages identity, network endpoint, database, and drives
+- **IdentityManager**: Ed25519 keypair per device for node identity
 - **SharedDrive**: Folder shared by owner that peers can mount and access
+- **NetworkEndpoint**: Iroh QUIC endpoint with relay discovery
+
+### Planned Components (Phase 2)
+
 - **SyncEngine**: Real-time sync using iroh-gossip (events) + iroh-docs (metadata)
 - **DriveEncryption**: E2E encryption with ChaCha20-Poly1305, per-user X25519 key wrapping
 - **AccessControlList**: Permission levels (Read < Write < Manage < Admin)
@@ -108,6 +109,24 @@ src-tauri/src/
 - Find permissions: Search for `AccessControlList` or `Permission`
 - Find Tauri commands: Search for `#[tauri::command]`
 
+## Current Tauri Commands
+
+```rust
+// Identity
+get_identity() -> IdentityInfo
+get_connection_status() -> ConnectionStatus
+
+// Drives
+create_drive(name, path) -> DriveInfo
+delete_drive(id)
+rename_drive(id, new_name) -> DriveInfo
+list_drives() -> Vec<DriveInfo>
+get_drive(id) -> DriveInfo
+
+// Files
+list_files(drive_id, path) -> Vec<FileEntryDto>
+```
+
 ## Documentation
 
 Detailed documentation is in `docs/p2p-drive/`:
@@ -115,3 +134,4 @@ Detailed documentation is in `docs/p2p-drive/`:
 - `security.md` - E2E encryption and access control
 - `performance.md` - 120 FPS optimization strategies
 - `api-reference.md` - Tauri commands reference
+- `AI_CONTEXT.md` - Full AI assistant context

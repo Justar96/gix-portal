@@ -1,3 +1,4 @@
+use crate::network::ConnectionInfo;
 use crate::state::AppState;
 use serde::Serialize;
 use tauri::State;
@@ -23,9 +24,9 @@ pub async fn get_identity(state: State<'_, AppState>) -> Result<IdentityInfo, St
     })
 }
 
-/// Get P2P connection status
+/// Get comprehensive P2P connection status
 #[tauri::command]
-pub async fn get_connection_status(state: State<'_, AppState>) -> Result<bool, String> {
-    let endpoint_ready = state.endpoint.is_ready().await;
-    Ok(endpoint_ready)
+pub async fn get_connection_status(state: State<'_, AppState>) -> Result<ConnectionInfo, String> {
+    let info = state.endpoint.get_connection_info().await;
+    Ok(info)
 }

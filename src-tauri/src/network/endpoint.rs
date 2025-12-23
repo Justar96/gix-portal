@@ -1,15 +1,36 @@
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use iroh::{endpoint::Connection, Endpoint, NodeId as IrohNodeId, SecretKey};
+use serde::Serialize;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// Application-level protocol name for P2P drive sharing
 const ALPN: &[u8] = b"gix/1";
 
+/// Information about a connected peer
+#[derive(Clone, Debug, Serialize)]
+pub struct PeerInfo {
+    pub node_id: String,
+    pub connected_at: DateTime<Utc>,
+    pub last_seen: DateTime<Utc>,
+}
+
+/// Connection status information for the frontend
+#[derive(Clone, Debug, Serialize)]
+pub struct ConnectionInfo {
+    pub is_online: bool,
+    pub node_id: Option<String>,
+    pub relay_url: Option<String>,
+    pub peer_count: usize,
+}
+
 /// Manages the Iroh endpoint for P2P connections
 pub struct P2PEndpoint {
     endpoint: Arc<RwLock<Option<Endpoint>>>,
     secret_key: SecretKey,
+    peers: Arc<RwLock<HashMap<String, PeerInfo>>>,
 }
 
 impl P2PEndpoint {
@@ -19,6 +40,7 @@ impl P2PEndpoint {
         Self {
             endpoint: Arc::new(RwLock::new(None)),
             secret_key,
+            peers: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -55,6 +77,59 @@ impl P2PEndpoint {
     pub async fn is_ready(&self) -> bool {
         let guard = self.endpoint.read().await;
         guard.is_some()
+    }
+
+    /// Get comprehensive connection information
+    pub async fn get_connection_info(&self) -> ConnectionInfo {
+        let guard = self.endpoint.read().await;
+        let peers = self.peers.read().await;
+
+        match guard.as_ref() {
+            Some(endpoint) => {
+                // TODO: Properly extract relay URL from Watcher
+                // For now, we skip this as the Watcher API is complex
+                let relay_url: Option<String> = None;
+
+                ConnectionInfo {
+                    is_online: true,
+                    node_id: Some(endpoint.node_id().to_string()),
+                    relay_url,
+                    peer_count: peers.len(),
+                }
+            }
+            None => ConnectionInfo {
+                is_online: false,
+                node_id: None,
+                relay_url: None,
+                peer_count: 0,
+            },
+        }
+    }
+
+    /// Get list of connected peers
+    pub async fn get_peers(&self) -> Vec<PeerInfo> {
+        let peers = self.peers.read().await;
+        peers.values().cloned().collect()
+    }
+
+    /// Track a new peer connection
+    pub async fn add_peer(&self, node_id: IrohNodeId) {
+        let now = Utc::now();
+        let peer_info = PeerInfo {
+            node_id: node_id.to_string(),
+            connected_at: now,
+            last_seen: now,
+        };
+        let mut peers = self.peers.write().await;
+        peers.insert(node_id.to_string(), peer_info);
+        tracing::info!("Peer added: {}", node_id);
+    }
+
+    /// Remove a peer from tracking
+    pub async fn remove_peer(&self, node_id: &IrohNodeId) {
+        let mut peers = self.peers.write().await;
+        peers.remove(&node_id.to_string());
+        tracing::info!("Peer removed: {}", node_id);
     }
 
     /// Connect to a peer by their NodeId
@@ -96,5 +171,13 @@ impl P2PEndpoint {
             endpoint.close().await;
             tracing::info!("Endpoint shutdown complete");
         }
+    }
+
+    /// Get the underlying Iroh Endpoint for use with gossip/docs protocols
+    ///
+    /// Returns None if the endpoint hasn't been started yet.
+    pub async fn get_endpoint(&self) -> Option<Endpoint> {
+        let guard = self.endpoint.read().await;
+        guard.clone()
     }
 }
