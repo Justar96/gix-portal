@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { HardDrive, Pencil, Trash2 } from "lucide-react";
+import { HardDrive, Pencil, Trash2, Share2 } from "lucide-react";
 import type { DriveInfo } from "../types";
 import { formatBytes } from "../types";
+import { ShareDriveModal } from "./ShareDriveModal";
 
 interface DriveListProps {
   drives: DriveInfo[];
@@ -26,6 +27,7 @@ export function DriveList({
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameName, setRenameName] = useState("");
+  const [shareDrive, setShareDrive] = useState<DriveInfo | null>(null);
 
   const handleContextMenu = (e: React.MouseEvent, drive: DriveInfo) => {
     e.preventDefault();
@@ -134,6 +136,15 @@ export function DriveList({
             className="context-menu"
             style={{ top: contextMenu.y, left: contextMenu.x }}
           >
+            <button
+              onClick={() => {
+                setShareDrive(contextMenu.drive);
+                closeContextMenu();
+              }}
+            >
+              <Share2 size={14} />
+              Share
+            </button>
             <button onClick={() => startRename(contextMenu.drive)}>
               <Pencil size={14} />
               Rename
@@ -148,6 +159,15 @@ export function DriveList({
           </div>
         </>
       )}
+
+      {/* Share Modal */}
+      {shareDrive && (
+        <ShareDriveModal
+          drive={shareDrive}
+          onClose={() => setShareDrive(null)}
+        />
+      )}
     </>
   );
 }
+

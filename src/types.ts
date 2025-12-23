@@ -334,3 +334,74 @@ export function formatDate(dateStr: string): string {
         return "-";
     }
 }
+
+// ============================================
+// Phase 3: Security & Permission Types
+// ============================================
+
+/** Permission level for drive access */
+export type PermissionLevel = "read" | "write" | "manage" | "admin";
+
+/** Permission display names */
+export const PERMISSION_LABELS: Record<PermissionLevel, string> = {
+    read: "Read",
+    write: "Write",
+    manage: "Manage",
+    admin: "Admin",
+};
+
+/** Permission descriptions */
+export const PERMISSION_DESCRIPTIONS: Record<PermissionLevel, string> = {
+    read: "Can view and download files",
+    write: "Can upload, modify, and delete files",
+    manage: "Can manage users and permissions",
+    admin: "Full control including key rotation",
+};
+
+/** User permission info from backend */
+export interface UserPermission {
+    node_id: string;
+    permission: PermissionLevel;
+    granted_by: string;
+    granted_at: string;
+    expires_at: string | null;
+    is_owner: boolean;
+}
+
+/** Request to create an invite token */
+export interface CreateInviteRequest {
+    drive_id: string;
+    permission: PermissionLevel;
+    validity_hours?: number;
+    note?: string;
+    single_use?: boolean;
+}
+
+/** Generated invite token info */
+export interface InviteInfo {
+    token: string;
+    drive_id: string;
+    permission: PermissionLevel;
+    expires_at: string;
+    note: string | null;
+    single_use: boolean;
+}
+
+/** Invite verification result */
+export interface InviteVerification {
+    valid: boolean;
+    drive_id: string | null;
+    permission: PermissionLevel | null;
+    inviter: string | null;
+    expires_at: string | null;
+    error: string | null;
+}
+
+/**
+ * Get short node ID for display (first 8 + last 4 chars)
+ */
+export function shortNodeId(nodeId: string): string {
+    if (nodeId.length <= 16) return nodeId;
+    return `${nodeId.slice(0, 8)}...${nodeId.slice(-4)}`;
+}
+

@@ -6,10 +6,11 @@ mod state;
 mod storage;
 
 use commands::{
-    cancel_transfer, create_drive, delete_drive, download_file, get_connection_status, get_drive,
-    get_identity, get_sync_status, get_transfer, is_watching, list_drives, list_files,
-    list_transfers, rename_drive, start_sync, start_watching, stop_sync, stop_watching,
-    subscribe_drive_events, upload_file,
+    cancel_transfer, check_permission, create_drive, delete_drive, download_file, generate_invite,
+    get_connection_status, get_drive, get_identity, get_sync_status, get_transfer,
+    grant_permission, is_watching, list_drives, list_files, list_permissions, list_transfers,
+    rename_drive, revoke_permission, start_sync, start_watching, stop_sync, stop_watching,
+    subscribe_drive_events, upload_file, verify_invite, SecurityStore,
 };
 use core::{DriveEvent, DriveEventDto, DriveId};
 use state::AppState;
@@ -79,6 +80,10 @@ pub fn run() {
                             });
                         }
 
+                        // Initialize SecurityStore for Phase 3
+                        let security_store = Arc::new(SecurityStore::new());
+                        app_handle.manage(security_store);
+
                         app_handle.manage(state);
                         tracing::info!("Application state initialized successfully");
                     }
@@ -114,6 +119,13 @@ pub fn run() {
             list_transfers,
             get_transfer,
             cancel_transfer,
+            // Phase 3: Security commands
+            generate_invite,
+            verify_invite,
+            list_permissions,
+            grant_permission,
+            revoke_permission,
+            check_permission,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

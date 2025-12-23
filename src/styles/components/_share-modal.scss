@@ -1,0 +1,280 @@
+// ========================================
+// Component - Share Modal
+// ========================================
+
+@use '../abstracts' as *;
+
+// Larger modal for share functionality
+.share-modal {
+    max-width: 480px;
+}
+
+// Tab navigation
+.share-tabs {
+    display: flex;
+    border-bottom: 1px solid $border;
+
+    .tab {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: $space-2;
+        padding: $space-3 $space-4;
+        background: none;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: $text-secondary;
+        font-size: $text-sm;
+        cursor: pointer;
+        transition: all 0.15s ease;
+
+        &:hover {
+            color: $text-primary;
+            background: rgba($accent, 0.05);
+        }
+
+        &.active {
+            color: $accent;
+            border-bottom-color: $accent;
+        }
+    }
+}
+
+// Invite tab styles
+.invite-form {
+    display: flex;
+    flex-direction: column;
+    gap: $space-4;
+
+    .form-group.checkbox {
+        flex-direction: row;
+        align-items: center;
+        gap: $space-2;
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: $accent;
+        }
+
+        label {
+            margin-bottom: 0;
+            font-weight: normal;
+            color: $text-secondary;
+        }
+    }
+
+    select {
+        width: 100%;
+        padding: $space-2 $space-3;
+        background: $bg-secondary;
+        border: 1px solid $border;
+        border-radius: $radius-md;
+        color: $text-primary;
+        font-size: $text-sm;
+
+        &:focus {
+            outline: none;
+            border-color: $accent;
+        }
+    }
+}
+
+.invite-result {
+    display: flex;
+    flex-direction: column;
+    gap: $space-4;
+    text-align: center;
+}
+
+.invite-token {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-3;
+    background: $bg-secondary;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+
+    code {
+        flex: 1;
+        font-family: $font-mono;
+        font-size: $text-xs;
+        color: $text-secondary;
+        word-break: break-all;
+        text-align: left;
+    }
+
+    .btn-icon {
+        flex-shrink: 0;
+        padding: $space-2;
+        background: none;
+        border: none;
+        color: $text-secondary;
+        cursor: pointer;
+        border-radius: $radius-sm;
+        transition: all 0.15s ease;
+
+        &:hover {
+            color: $accent;
+            background: rgba($accent, 0.1);
+        }
+
+        &.copied {
+            color: $success;
+        }
+    }
+}
+
+.invite-details {
+    text-align: left;
+    font-size: $text-sm;
+    color: $text-secondary;
+
+    p {
+        margin: $space-1 0;
+    }
+
+    strong {
+        color: $text-primary;
+    }
+
+    .single-use-badge {
+        display: inline-block;
+        padding: $space-1 $space-2;
+        background: $warning-muted;
+        color: $warning;
+        border-radius: $radius-sm;
+        font-size: $text-xs;
+        font-weight: 500;
+        margin-top: $space-2;
+    }
+}
+
+// Permissions tab styles
+.permissions-loading {
+    @include flex-center;
+    flex-direction: column;
+    gap: $space-3;
+    padding: $space-6;
+    color: $text-secondary;
+}
+
+.permissions-list {
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+
+    .empty-state {
+        text-align: center;
+        color: $text-secondary;
+        padding: $space-4;
+    }
+}
+
+.permission-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $space-3;
+    background: $bg-secondary;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    transition: border-color 0.15s ease;
+
+    &:hover {
+        border-color: rgba($accent, 0.3);
+    }
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+
+    .user-icon {
+        @include flex-center;
+        width: 32px;
+        height: 32px;
+        background: rgba($accent, 0.1);
+        color: $accent;
+        border-radius: 50%;
+    }
+
+    .user-details {
+        .node-id {
+            font-size: $text-sm;
+            font-weight: 500;
+            font-family: $font-mono;
+            display: flex;
+            align-items: center;
+            gap: $space-2;
+        }
+
+        .owner-badge {
+            font-size: $text-xs;
+            padding: 2px $space-2;
+            background: $warning-muted;
+            color: $warning;
+            border-radius: $radius-sm;
+            font-family: $font-sans;
+            font-weight: 500;
+        }
+
+        .granted-info {
+            font-size: $text-xs;
+            color: $text-muted;
+        }
+    }
+}
+
+.permission-actions {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+
+    .permission-badge {
+        padding: $space-1 $space-2;
+        font-size: $text-xs;
+        font-weight: 500;
+        border-radius: $radius-sm;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+
+        &.read {
+            background: rgba($text-secondary, 0.15);
+            color: $text-secondary;
+        }
+
+        &.write {
+            background: $success-muted;
+            color: $success;
+        }
+
+        &.manage {
+            background: $warning-muted;
+            color: $warning;
+        }
+
+        &.admin {
+            background: rgba($accent, 0.1);
+            color: $accent;
+        }
+    }
+
+    .btn-icon.danger {
+        padding: $space-1;
+        background: none;
+        border: none;
+        color: $text-muted;
+        cursor: pointer;
+        border-radius: $radius-sm;
+        transition: all 0.15s ease;
+
+        &:hover {
+            color: $error;
+            background: $error-muted;
+        }
+    }
+}

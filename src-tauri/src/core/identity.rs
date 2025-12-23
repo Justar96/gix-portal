@@ -69,4 +69,10 @@ impl IdentityManager {
         let guard = self.identity.read().await;
         guard.is_some()
     }
+
+    /// Get the signing key for creating signed tokens
+    pub async fn signing_key(&self) -> Option<ed25519_dalek::SigningKey> {
+        let guard = self.identity.read().await;
+        guard.as_ref().map(|i| i.signing_key().clone())
+    }
 }

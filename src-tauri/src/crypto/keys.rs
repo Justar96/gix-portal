@@ -53,6 +53,11 @@ impl Identity {
     pub fn verifying_key(&self) -> VerifyingKey {
         self.signing_key.verifying_key()
     }
+
+    /// Get the signing key (needed for invite token generation)
+    pub fn signing_key(&self) -> &SigningKey {
+        &self.signing_key
+    }
 }
 
 /// Public node identifier (32 bytes Ed25519 public key)

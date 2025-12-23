@@ -14,7 +14,7 @@
 |-------|--------|----------|
 | **Phase 1:** Core P2P Foundation | ✅ Complete | 100% |
 | **Phase 2:** Realtime Sync Engine | ✅ Complete | 100% |
-| **Phase 3:** Security & Access Control | 🔄 In Progress | 75% |
+| **Phase 3:** Security & Access Control | ✅ Complete | 100% |
 | **Phase 4:** Collaboration Features | 🔲 Not Started | 0% |
 | **Phase 5:** Polish & Distribution | 🔲 Not Started | 0% |
 
@@ -35,13 +35,15 @@
 - ✅ Tauri sync commands (frontend API)
 - ✅ Code polishing (Clippy fixes, dead code audit)
 
-### Phase 3 In Progress (Dec 23, 2024)
+### Phase 3 Completed (Dec 23, 2024)
 - ✅ E2E Encryption (`DriveEncryption` with ChaCha20-Poly1305)
 - ✅ Key exchange (`KeyExchangePair`, `KeyRing` with X25519)
 - ✅ Access control (`AccessControlList`, `Permission`, `PathRule`)
 - ✅ Invite tokens (`InviteToken`, `InviteBuilder`, `TokenTracker`)
-- 🔜 Tauri commands for security operations
-- 🔜 Frontend UI for permissions & invites
+- ✅ Tauri security commands (`security.rs` with `SecurityStore`)
+  - `generate_invite`, `verify_invite`, `list_permissions`
+  - `grant_permission`, `revoke_permission`, `check_permission`
+- ✅ Frontend UI (`ShareDriveModal` with invite/permissions tabs)
 
 
 
