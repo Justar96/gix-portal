@@ -1,0 +1,62 @@
+// ========================================
+// Component - Custom Titlebar
+// Windows-style custom window controls
+// ========================================
+
+@use '../abstracts' as *;
+
+.titlebar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 32px;
+    background: $bg-primary;
+    border-bottom: 1px solid $border-secondary;
+    user-select: none;
+    -webkit-user-select: none;
+    flex-shrink: 0;
+}
+
+.titlebar-title {
+    padding-left: $space-3;
+    font-size: $text-xs;
+    font-weight: $weight-semibold;
+    color: $text-secondary;
+    letter-spacing: $tracking-tight;
+    flex: 1;
+}
+
+.titlebar-controls {
+    display: flex;
+    height: 100%;
+}
+
+.titlebar-btn {
+    @include button-reset;
+    @include flex-center;
+    width: 46px;
+    height: 100%;
+    color: $text-secondary;
+    transition: background $transition-fast, color $transition-fast;
+
+    &:hover {
+        background: $bg-hover;
+        color: $text-primary;
+    }
+
+    &:active {
+        background: $bg-active;
+    }
+}
+
+.titlebar-close {
+    &:hover {
+        background: #e81123;
+        color: white;
+    }
+
+    &:active {
+        background: #bf0f1d;
+        color: white;
+    }
+}

@@ -67,6 +67,49 @@
 }
 
 // ----------------------------------------
+// Content Header
+// ----------------------------------------
+.content-header {
+    @include flex-between;
+    height: 40px;
+    padding: 0 $space-4;
+    background: $bg-primary;
+    border-bottom: 1px solid $border-secondary;
+    flex-shrink: 0;
+}
+
+.content-header-left {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    min-width: 0;
+}
+
+.content-title {
+    font-size: $text-sm;
+    font-weight: $weight-semibold;
+    color: $text-primary;
+    letter-spacing: $tracking-tight;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.content-header-right {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    flex-shrink: 0;
+}
+
+.content-body {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+// ----------------------------------------
 // Main Layout
 // ----------------------------------------
 .app-main {
@@ -83,45 +126,153 @@
 // Sidebar
 // ----------------------------------------
 .sidebar {
-    width: $sidebar-width;
+    width: 200px;
     background: $bg-primary;
-    border-right: 1px solid $border-primary;
+    border-right: 1px solid $border-secondary;
     @include flex-column;
     flex-shrink: 0;
-    
-    @include respond-to('xl') {
-        width: 240px;
-    }
+    transition: width $duration-slow $ease-default;
     
     @include respond-to('lg') {
-        width: 220px;
+        width: 180px;
     }
     
     @include respond-to('md') {
         width: 100%;
         height: auto;
-        max-height: 35vh;
+        max-height: 30vh;
         border-right: none;
-        border-bottom: 1px solid $border-primary;
+        border-bottom: 1px solid $border-secondary;
+    }
+    
+    // Collapsed state
+    &.collapsed {
+        width: 48px;
+        
+        @include respond-to('md') {
+            width: 100%;
+            max-height: none;
+            height: auto;
+            flex-direction: row;
+            align-items: center;
+            
+            .sidebar-header {
+                border-bottom: none;
+                border-right: 1px solid $border-secondary;
+            }
+            
+            .sidebar-collapsed-content {
+                flex-direction: row;
+                padding: $space-1 $space-2;
+                overflow-x: auto;
+                overflow-y: hidden;
+            }
+        }
+        
+        .sidebar-header {
+            justify-content: center;
+            padding: $space-2;
+        }
     }
 }
 
 .sidebar-header {
-    @include flex-between;
-    padding: $space-4 $space-4 $space-3;
+    display: flex;
+    align-items: center;
+    gap: $space-1;
+    padding: $space-2;
     border-bottom: 1px solid $border-secondary;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.sidebar-title {
+    flex: 1;
+    font-size: $text-xs;
+    font-weight: $weight-semibold;
+    color: $text-tertiary;
+    text-transform: uppercase;
+    letter-spacing: $tracking-wider;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    @include custom-scrollbar;
+}
+
+.btn-add {
+    color: $text-tertiary;
+    margin-left: auto;
     
-    @include respond-to('md') {
-        padding: $space-3;
+    &:hover {
+        color: $text-primary;
+    }
+}
+
+.btn-collapse {
+    color: $text-muted;
+    flex-shrink: 0;
+    
+    &:hover {
+        color: $text-primary;
+    }
+}
+
+// ----------------------------------------
+// Sidebar Collapsed Content
+// ----------------------------------------
+.sidebar-collapsed-content {
+    @include flex-column;
+    align-items: center;
+    padding: $space-2 $space-1;
+    gap: $space-1;
+    flex: 1;
+    overflow-y: auto;
+    @include custom-scrollbar;
+}
+
+.btn-add-collapsed {
+    @include button-reset;
+    @include flex-center;
+    width: 32px;
+    height: 32px;
+    border-radius: $radius-md;
+    color: $text-tertiary;
+    margin-bottom: $space-1;
+    
+    &:hover {
+        background: $bg-hover;
+        color: $text-primary;
+    }
+}
+
+.collapsed-drive-item {
+    @include button-reset;
+    @include flex-center;
+    width: 32px;
+    height: 32px;
+    border-radius: $radius-md;
+    color: $text-tertiary;
+    transition: all $transition-fast;
+    
+    &:hover {
+        background: $bg-hover;
+        color: $text-primary;
     }
     
-    h2 {
-        font-size: $text-xs;
-        font-weight: $weight-semibold;
-        color: $text-tertiary;
-        text-transform: uppercase;
-        letter-spacing: $tracking-wider;
+    &.selected {
+        background: $bg-tertiary;
+        color: $text-primary;
     }
+}
+
+.collapsed-more {
+    font-size: $text-2xs;
+    color: $text-muted;
+    margin-top: $space-0-5;
 }
 
 // ----------------------------------------

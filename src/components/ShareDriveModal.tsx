@@ -33,10 +33,10 @@ export function ShareDriveModal({ drive, onClose }: ShareDriveModalProps) {
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={handleKeyDown}
             >
-                <div className="modal-header">
+<div className="modal-header">
                     <h2>Share "{drive.name}"</h2>
-                    <button className="btn-close" onClick={onClose}>
-                        <X size={18} />
+                    <button className="modal-close" onClick={onClose}>
+                        <X size={16} />
                     </button>
                 </div>
 

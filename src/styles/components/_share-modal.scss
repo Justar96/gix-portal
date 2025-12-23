@@ -71,7 +71,7 @@
     gap: $space-3;
     padding: $space-4;
     background: $bg-secondary;
-    border: 1px solid $border-card;
+    border: 1px solid $border-primary;
     border-radius: $radius-lg;
     box-shadow: $shadow-sm;
     
@@ -141,9 +141,9 @@
     gap: $space-4;
     padding: $space-4;
     background: $bg-card;
-    border: 1px solid $border-card;
+    border: 1px solid $border-secondary;
     border-radius: $radius-lg;
-    box-shadow: $shadow-card;
+    box-shadow: none;
     transition: all $transition-base;
     
     &:hover {

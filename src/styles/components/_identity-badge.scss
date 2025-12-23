@@ -8,38 +8,31 @@
 .identity-badge {
     display: flex;
     align-items: center;
-    gap: $space-3;
-    padding: $space-1-5 $space-3;
-    background: $bg-card;
-    border: 1px solid $border-card;
-    border-radius: $radius-full;
-    box-shadow: $shadow-sm;
-    
-    @include respond-to('lg') {
-        padding: $space-1-5 $space-2-5;
-        gap: $space-2;
-    }
+    gap: $space-2;
+    padding: $space-1 $space-2;
+    background: $bg-tertiary;
+    border-radius: $radius-md;
     
     @include respond-to('md') {
-        padding: $space-1 $space-2;
+        padding: $space-0-5 $space-1-5;
     }
     
     &.loading,
     &.error {
         color: $text-muted;
-        font-size: $text-xs;
+        font-size: $text-2xs;
     }
 }
 
 .status-indicator {
     display: flex;
     align-items: center;
-    gap: $space-2;
-    font-size: $text-xs;
+    gap: $space-1-5;
+    font-size: $text-2xs;
     font-weight: $weight-medium;
     text-transform: uppercase;
     letter-spacing: $tracking-wider;
-    color: $text-secondary;
+    color: $text-tertiary;
     
     &.online .status-dot {
         background: $success;
@@ -51,8 +44,8 @@
 }
 
 .status-dot {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: $radius-full;
     background: $warning;
     flex-shrink: 0;
@@ -60,17 +53,16 @@
 
 .peer-count {
     color: $text-muted;
-    font-size: $text-xs;
-    margin-left: $space-0-5;
+    font-size: $text-2xs;
 }
 
 .node-id {
     font-family: $font-mono;
-    font-size: $text-xs;
-    color: $text-tertiary;
-    letter-spacing: $tracking-wide;
+    font-size: $text-2xs;
+    color: $text-muted;
+    letter-spacing: $tracking-normal;
     
-    @include respond-to('lg') {
+    @include respond-to('xl') {
         display: none;
     }
 }

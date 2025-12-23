@@ -216,6 +216,19 @@
     transition: all $transition-base;
 }
 
+@mixin card-bordered {
+    background: $bg-card;
+    border: 1px solid $border-card;
+    border-radius: $radius-lg;
+    box-shadow: none;
+    transition: all $transition-base;
+    
+    &:hover {
+        border-color: $border-hover;
+        box-shadow: $shadow-card;
+    }
+}
+
 @mixin card-hover {
     &:hover {
         border-color: $border-hover;
@@ -235,6 +248,18 @@
     
     &:active {
         transform: translateY(0);
+        box-shadow: $shadow-card;
+    }
+}
+
+@mixin card-list-item {
+    background: $bg-card;
+    border: 1px solid $border-secondary;
+    border-radius: $radius-lg;
+    transition: all $transition-base;
+    
+    &:hover {
+        border-color: $border-primary;
         box-shadow: $shadow-card;
     }
 }

@@ -1,0 +1,383 @@
+// ========================================
+// Component - Cards
+// Refined Card Designs for Toned-Down Theme
+// ========================================
+
+@use '../abstracts' as *;
+
+// ----------------------------------------
+// Base Card Component
+// ----------------------------------------
+.card {
+    background: $bg-card;
+    border: 1px solid $border-card;
+    border-radius: $radius-xl;
+    box-shadow: $shadow-card;
+    transition: all $transition-base;
+    overflow: hidden;
+    
+    &:hover {
+        box-shadow: $shadow-card-hover;
+        border-color: $border-hover;
+        transform: translateY(-1px);
+    }
+    
+    &.active {
+        box-shadow: $shadow-card-active;
+        border-color: $border-primary;
+        transform: translateY(0);
+    }
+    
+    &.clickable {
+        cursor: pointer;
+        
+        &:active {
+            transform: translateY(0);
+            box-shadow: $shadow-card-active;
+        }
+    }
+}
+
+// ----------------------------------------
+// Card Sections
+// ----------------------------------------
+.card-header {
+    padding: $space-5 $space-6;
+    border-bottom: 1px solid $border-subtle;
+    background: $bg-elevated;
+    
+    @include respond-to('sm') {
+        padding: $space-4 $space-5;
+    }
+    
+    .card-title {
+        font-size: $text-md;
+        font-weight: $weight-semibold;
+        color: $text-primary;
+        letter-spacing: $tracking-tight;
+        margin: 0;
+    }
+    
+    .card-subtitle {
+        font-size: $text-sm;
+        color: $text-secondary;
+        margin-top: $space-1;
+    }
+}
+
+.card-body {
+    padding: $space-6;
+    
+    @include respond-to('sm') {
+        padding: $space-5;
+    }
+    
+    &.compact {
+        padding: $space-4 $space-6;
+        
+        @include respond-to('sm') {
+            padding: $space-3 $space-5;
+        }
+    }
+    
+    &.spacious {
+        padding: $space-8 $space-6;
+        
+        @include respond-to('sm') {
+            padding: $space-6 $space-5;
+        }
+    }
+}
+
+.card-footer {
+    padding: $space-4 $space-6;
+    border-top: 1px solid $border-subtle;
+    background: $bg-elevated;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-3;
+    
+    @include respond-to('sm') {
+        padding: $space-3 $space-5;
+    }
+    
+    &.centered {
+        justify-content: center;
+    }
+    
+    &.end {
+        justify-content: flex-end;
+    }
+}
+
+// ----------------------------------------
+// Card Variants
+// ----------------------------------------
+.card-elevated {
+    box-shadow: $shadow-lg;
+    border-color: $border-primary;
+    
+    &:hover {
+        box-shadow: $shadow-xl;
+        transform: translateY(-2px);
+    }
+}
+
+.card-subtle {
+    border-color: $border-subtle;
+    box-shadow: $shadow-xs;
+    
+    &:hover {
+        border-color: $border-secondary;
+        box-shadow: $shadow-sm;
+        transform: none;
+    }
+}
+
+.card-outlined {
+    border-color: $border-primary;
+    box-shadow: none;
+    background: $bg-elevated;
+    
+    &:hover {
+        border-color: $border-hover;
+        box-shadow: $shadow-sm;
+    }
+}
+
+// ----------------------------------------
+// Card Sizes
+// ----------------------------------------
+.card-small {
+    .card-header {
+        padding: $space-3 $space-4;
+    }
+    
+    .card-body {
+        padding: $space-4;
+    }
+    
+    .card-footer {
+        padding: $space-2-5 $space-4;
+    }
+}
+
+.card-large {
+    .card-header {
+        padding: $space-6 $space-8;
+    }
+    
+    .card-body {
+        padding: $space-8;
+    }
+    
+    .card-footer {
+        padding: $space-5 $space-8;
+    }
+}
+
+// ----------------------------------------
+// Card with Icon
+// ----------------------------------------
+.card-icon {
+    @include flex-center;
+    width: 48px;
+    height: 48px;
+    border-radius: $radius-lg;
+    background: $bg-secondary;
+    color: $text-tertiary;
+    margin-bottom: $space-4;
+    
+    &.accent {
+        background: $accent-soft;
+        color: $accent;
+    }
+    
+    &.success {
+        background: $success-soft;
+        color: $success;
+    }
+    
+    &.warning {
+        background: $warning-soft;
+        color: $warning;
+    }
+    
+    &.error {
+        background: $error-soft;
+        color: $error;
+    }
+    
+    svg {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+// ----------------------------------------
+// Card Grid Layout
+// ----------------------------------------
+.card-grid {
+    display: grid;
+    gap: $space-5;
+    
+    &.cols-2 {
+        grid-template-columns: repeat(2, 1fr);
+        
+        @include respond-to('md') {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    &.cols-3 {
+        grid-template-columns: repeat(3, 1fr);
+        
+        @include respond-to('lg') {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        @include respond-to('md') {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    &.cols-4 {
+        grid-template-columns: repeat(4, 1fr);
+        
+        @include respond-to('xl') {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        @include respond-to('lg') {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        @include respond-to('md') {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    &.auto-fit {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+    
+    &.auto-fill {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    }
+}
+
+// ----------------------------------------
+// Stats Card
+// ----------------------------------------
+.card-stats {
+    text-align: center;
+    
+    .stats-value {
+        font-size: $text-3xl;
+        font-weight: $weight-semibold;
+        color: $text-primary;
+        margin-bottom: $space-2;
+        line-height: $leading-none;
+    }
+    
+    .stats-label {
+        font-size: $text-sm;
+        color: $text-secondary;
+        margin-bottom: $space-4;
+    }
+    
+    .stats-change {
+        font-size: $text-xs;
+        font-weight: $weight-medium;
+        
+        &.positive {
+            color: $success;
+        }
+        
+        &.negative {
+            color: $error;
+        }
+        
+        &.neutral {
+            color: $text-muted;
+        }
+    }
+}
+
+// ----------------------------------------
+// Interactive Card States
+// ----------------------------------------
+.card-interactive {
+    position: relative;
+    
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: $radius-xl;
+        background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.1));
+        opacity: 0;
+        transition: opacity $transition-base;
+        pointer-events: none;
+    }
+    
+    &:hover::before {
+        opacity: 1;
+    }
+}
+
+.card-loading {
+    pointer-events: none;
+    opacity: 0.6;
+    
+    &::after {
+        content: '';
+        position: absolute;
+        top: $space-4;
+        right: $space-4;
+        width: 16px;
+        height: 16px;
+        border: 2px solid $border-secondary;
+        border-top-color: $accent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+}
+
+.card-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    filter: grayscale(0.5);
+}
+
+// ----------------------------------------
+// Card Animations
+// ----------------------------------------
+@keyframes cardSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes cardFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.card-animate-in {
+    animation: cardSlideIn $duration-slow $ease-out;
+}
+
+.card-animate-fade {
+    animation: cardFadeIn $duration-base $ease-out;
+}

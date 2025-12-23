@@ -2,6 +2,7 @@
 // Components - Forward all partials
 // ========================================
 
+@forward 'cards';
 @forward 'buttons';
 @forward 'modal';
 @forward 'share-modal';
@@ -13,3 +14,4 @@
 @forward 'context-menu';
 @forward 'conflict-panel';
 @forward 'presence-panel';
+@forward 'titlebar';

@@ -25,30 +25,32 @@
         text-transform: uppercase;
     }
     
-    input[type="text"],
+input[type="text"],
     input[type="email"],
     input[type="password"],
     input[type="number"] {
         width: 100%;
-        padding: $space-2-5 $space-4;
-        background: $bg-card;
+        padding: $space-3 $space-4;
+        background: $bg-elevated;
         border: 1px solid $border-card;
-        border-radius: $radius-md;
+        border-radius: $radius-lg;
         color: $text-primary;
         font-size: $text-sm;
         font-family: inherit;
         transition: all $transition-base;
-        min-height: 40px;
+        min-height: 44px;
         box-shadow: $shadow-xs;
         
         &:hover:not(:focus):not(:disabled) {
             border-color: $border-hover;
+            background: $bg-card;
         }
         
         &:focus {
             outline: none;
-            border-color: $text-primary;
-            box-shadow: $glow-focus;
+            border-color: $accent;
+            box-shadow: 0 0 0 3px rgba($accent, 0.15);
+            background: $bg-card;
         }
         
         &::placeholder {
@@ -56,35 +58,38 @@
         }
         
         &:disabled {
-            background: $bg-tertiary;
+            background: $bg-secondary;
             color: $text-disabled;
             cursor: not-allowed;
             box-shadow: none;
+            border-color: $border-subtle;
         }
     }
     
-    select {
+select {
         width: 100%;
-        padding: $space-2-5 $space-4;
-        background: $bg-card;
+        padding: $space-3 $space-4;
+        background: $bg-elevated;
         border: 1px solid $border-card;
-        border-radius: $radius-md;
+        border-radius: $radius-lg;
         color: $text-primary;
         font-size: $text-sm;
         font-family: inherit;
         cursor: pointer;
-        min-height: 40px;
+        min-height: 44px;
         transition: all $transition-base;
         box-shadow: $shadow-xs;
         
         &:hover:not(:focus) {
             border-color: $border-hover;
+            background: $bg-card;
         }
         
         &:focus {
             outline: none;
-            border-color: $text-primary;
-            box-shadow: $glow-focus;
+            border-color: $accent;
+            box-shadow: 0 0 0 3px rgba($accent, 0.15);
+            background: $bg-card;
         }
     }
     

@@ -8,21 +8,21 @@
 // ----------------------------------------
 
 // Backgrounds - Clean whites with contrast
-$bg-primary: #ffffff;
-$bg-secondary: #f8fafc;  // Slightly blue-tinted for depth
-$bg-tertiary: #f1f5f9;   // Cards stand out from white
+$bg-primary: #ffffff;    // Pure white
+$bg-secondary: #f5f7f9;  // Slightly tinted for depth
+$bg-tertiary: #eef1f4;   // More visible selection
 $bg-elevated: #ffffff;
-$bg-hover: #e2e8f0;      // More visible hover
-$bg-active: #cbd5e1;     // Clear active state
-$bg-card: #ffffff;       // Pure white cards on tinted bg
-$bg-app: #f8fafc;        // App background (not pure white)
+$bg-hover: #e8ecf0;      // More visible hover
+$bg-active: #dce2e8;     // Clear active state
+$bg-card: #ffffff;       // Pure white cards
+$bg-app: #f5f7f9;        // App background toned down
 
-// Text Hierarchy - Dark text on light background
-$text-primary: #0a0a0a;
-$text-secondary: #404040;
-$text-tertiary: #737373;
-$text-muted: #a3a3a3;
-$text-disabled: #d4d4d4;
+// Text Hierarchy - Softer text for toned-down theme
+$text-primary: #1a1a1a;   // Slightly softer black
+$text-secondary: #4a4a4a;  // Warmer gray
+$text-tertiary: #6b7280;  // More professional gray
+$text-muted: #9ca3af;     // Consistent with borders
+$text-disabled: #d1d5db;   // Softer disabled state
 
 // Accent - Vibrant pink/magenta highlight
 $accent: #ff69f5;
@@ -48,13 +48,14 @@ $info-soft: rgba(96, 165, 250, 0.15);
 $info-border: rgba(96, 165, 250, 0.3);
 
 // ----------------------------------------
-// Borders & Dividers - More visible borders
+// Borders & Dividers - High contrast for light theme
 // ----------------------------------------
-$border-primary: #e2e8f0;   // Slightly more visible
-$border-secondary: #f1f5f9;
+$border-primary: #c4c9cf;   // Strong visibility for light theme
+$border-secondary: #d4d9df; // Secondary borders
 $border-focus: #0a0a0a;
-$border-hover: #cbd5e1;     // Clearer hover border
-$border-card: #e2e8f0;      // Card borders
+$border-hover: #9ca3af;     // Clearer hover border
+$border-card: #c4c9cf;      // Card borders - visible on white
+$border-subtle: #e2e6eb;    // Subtle dividers
 
 // ----------------------------------------
 // Shadows - Refined depth for cards
@@ -65,9 +66,10 @@ $shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.0
 $shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
 $shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
 
-// Card-specific shadow
-$shadow-card: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-$shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+// Card-specific shadow - Refined for toned-down theme
+$shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+$shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
+$shadow-card-active: 0 4px 12px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.03);
 
 // Glow effects for focus states
 $glow-focus: 0 0 0 2px rgba(255, 105, 245, 0.3);

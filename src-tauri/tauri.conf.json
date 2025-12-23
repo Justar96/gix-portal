@@ -15,10 +15,12 @@
         "title": "Gix - P2P Drive Share",
         "width": 1200,
         "height": 800,
+        "minWidth": 800,
+        "minHeight": 500,
         "resizable": true,
         "fullscreen": false,
         "visible": true,
-        "decorations": true,
+        "decorations": false,
         "transparent": false
       }
     ],

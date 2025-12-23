@@ -79,8 +79,8 @@ export function CreateDriveModal({ onClose, onCreated }: CreateDriveModalProps) 
       >
         <div className="modal-header">
           <h2>Create Drive</h2>
-          <button className="btn-close" onClick={onClose}>
-            <X size={18} />
+          <button className="modal-close" onClick={onClose}>
+            <X size={16} />
           </button>
         </div>
 

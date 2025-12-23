@@ -8,8 +8,8 @@
 .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(248, 250, 252, 0.85);
-    backdrop-filter: blur(12px);
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
     @include flex-center;
     z-index: $z-modal;
     padding: $space-6;
@@ -22,39 +22,89 @@
 
 .modal {
     background: $bg-card;
-    border: 1px solid $border-card;
+    border: 1px solid $border-primary;
     border-radius: $radius-xl;
     width: 100%;
-    max-width: 440px;
-    box-shadow: $shadow-xl;
+    max-width: 480px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     animation: slideUp $duration-base $ease-out;
+    position: relative;
     
     @include respond-to('sm') {
         max-width: 100%;
+        border-radius: $radius-lg;
     }
 }
 
 .modal-header {
     @include flex-between;
     padding: $space-5 $space-6;
-    border-bottom: 1px solid $border-primary;
+    border-bottom: 1px solid $border-secondary;
+    background: $bg-elevated;
+    position: relative;
     
     @include respond-to('sm') {
-        padding: $space-4 $space-5;
+        padding: $space-5 $space-6;
     }
     
     h2 {
-        font-size: $text-md;
+        font-size: $text-lg;
         font-weight: $weight-semibold;
         letter-spacing: $tracking-tight;
+        color: $text-primary;
+        margin: 0;
+    }
+    
+    .modal-close {
+        @include button-reset;
+        @include flex-center;
+        width: 32px;
+        height: 32px;
+        border-radius: $radius-md;
+        color: $text-muted;
+        transition: all $transition-fast;
+        
+        &:hover {
+            background: $bg-hover;
+            color: $text-primary;
+        }
+        
+        svg {
+            width: 16px;
+            height: 16px;
+        }
     }
 }
 
 .modal-body {
     padding: $space-6;
+    max-height: 60vh;
+    overflow-y: auto;
+    @include custom-scrollbar;
     
     @include respond-to('sm') {
         padding: $space-5;
+    }
+    
+    &.scroll-indicator {
+        position: relative;
+        
+        &::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(to bottom, transparent, $bg-card);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity $transition-base;
+        }
+        
+        &.scrollable::after {
+            opacity: 1;
+        }
     }
 }
 
@@ -63,9 +113,18 @@
     justify-content: flex-end;
     gap: $space-3;
     padding: $space-4 $space-6;
-    border-top: 1px solid $border-primary;
+    border-top: 1px solid $border-secondary;
+    background: $bg-secondary;
     
     @include respond-to('sm') {
-        padding: $space-4 $space-5;
+        padding: $space-4 $space-6;
+    }
+    
+    &.centered {
+        justify-content: center;
+    }
+    
+    &.space-between {
+        justify-content: space-between;
     }
 }

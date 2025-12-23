@@ -6,59 +6,72 @@
 @use '../abstracts' as *;
 
 // ----------------------------------------
-// Primary Button - Solid black
+// Primary Button - Refined with accent
 // ----------------------------------------
 .btn-primary {
     @include button-base;
-    padding: $space-2-5 $space-5;
-    background: $text-primary;
-    border: 1px solid $text-primary;
-    border-radius: $radius-md;
+    padding: $space-3 $space-6;
+    background: $accent;
+    border: 1px solid $accent;
+    border-radius: $radius-lg;
     color: $bg-primary;
     font-size: $text-sm;
     font-weight: $weight-medium;
-    min-height: 36px;
+    min-height: 44px;
+    transition: all $transition-base;
+    box-shadow: $shadow-sm;
     
     &:hover:not(:disabled) {
-        background: $text-secondary;
-        border-color: $text-secondary;
+        background: rgba($accent, 0.9);
+        border-color: rgba($accent, 0.9);
+        transform: translateY(-1px);
+        box-shadow: $shadow-md;
     }
     
     &:active:not(:disabled) {
-        transform: scale(0.98);
+        transform: translateY(0);
+        box-shadow: $shadow-sm;
     }
     
     @include respond-to('sm') {
-        padding: $space-2 $space-4;
+        padding: $space-2-5 $space-5;
         font-size: $text-xs;
+        min-height: 40px;
     }
 }
 
 // ----------------------------------------
-// Secondary Button - Bordered outline
+// Secondary Button - Refined outline
 // ----------------------------------------
 .btn-secondary {
     @include button-base;
-    padding: $space-2-5 $space-5;
-    background: $bg-primary;
-    border: 1px solid $border-primary;
-    border-radius: $radius-md;
+    padding: $space-3 $space-6;
+    background: $bg-card;
+    border: 1px solid $border-card;
+    border-radius: $radius-lg;
     color: $text-primary;
     font-size: $text-sm;
     font-weight: $weight-medium;
-    min-height: 36px;
+    min-height: 44px;
+    transition: all $transition-base;
+    box-shadow: $shadow-xs;
     
     &:hover:not(:disabled) {
-        background: $bg-tertiary;
+        background: $bg-elevated;
+        border-color: $border-hover;
+        transform: translateY(-1px);
+        box-shadow: $shadow-sm;
     }
     
     &:active:not(:disabled) {
-        background: $bg-active;
+        transform: translateY(0);
+        background: $bg-tertiary;
     }
     
     @include respond-to('sm') {
-        padding: $space-2 $space-4;
+        padding: $space-2-5 $space-5;
         font-size: $text-xs;
+        min-height: 40px;
     }
 }
 

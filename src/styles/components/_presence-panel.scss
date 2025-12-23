@@ -11,7 +11,7 @@
 .presence-panel {
     @include flex-column;
     background: $bg-card;
-    border-left: 1px solid $border-card;
+    border-left: 1px solid $border-primary;
     width: 220px;
     flex-shrink: 0;
     overflow-y: auto;

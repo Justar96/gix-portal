@@ -16,31 +16,148 @@
 }
 
 // ----------------------------------------
-// Browser Header
+// Browser Toolbar
 // ----------------------------------------
-.browser-header {
+.browser-toolbar {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: $space-3;
-    padding: $space-3 $space-5;
-    background: $bg-primary;
-    border-bottom: 1px solid $border-primary;
+    padding: $space-2 $space-4;
+    background: $bg-secondary;
+    border-bottom: 1px solid $border-secondary;
     flex-shrink: 0;
-    min-height: 48px;
-    
-    @include respond-to('lg') {
-        padding: $space-3 $space-4;
-    }
+    min-height: 44px;
     
     @include respond-to('sm') {
         padding: $space-2 $space-3;
-        gap: $space-2;
+        flex-wrap: wrap;
+    }
+}
+
+.toolbar-left,
+.toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background: $border-secondary;
+    margin: 0 $space-1;
+}
+
+.selection-count {
+    font-size: $text-xs;
+    color: $text-secondary;
+    font-weight: $weight-medium;
+    padding: $space-1 $space-2;
+    background: $accent-subtle;
+    border-radius: $radius-sm;
+    white-space: nowrap;
+}
+
+// Search box
+.search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    
+    .search-icon {
+        position: absolute;
+        left: $space-2-5;
+        color: $text-muted;
+        pointer-events: none;
+    }
+    
+    .search-input {
+        width: 180px;
+        padding: $space-1-5 $space-3;
+        padding-left: $space-8;
+        padding-right: $space-8;
+        font-size: $text-xs;
+        border: 1px solid $border-secondary;
+        border-radius: $radius-md;
+        background: $bg-card;
+        color: $text-primary;
+        transition: all $transition-fast;
+        
+        &:focus {
+            outline: none;
+            border-color: $accent;
+            box-shadow: $glow-focus;
+        }
+        
+        &::placeholder {
+            color: $text-muted;
+        }
+        
+        @include respond-to('sm') {
+            width: 140px;
+        }
+    }
+    
+    .btn-clear {
+        position: absolute;
+        right: $space-1;
+        padding: $space-1;
+        color: $text-muted;
+        
+        &:hover {
+            color: $text-primary;
+        }
+    }
+}
+
+// View toggle
+.view-toggle {
+    display: flex;
+    align-items: center;
+    gap: $space-0-5;
+    padding: $space-0-5;
+    background: $bg-tertiary;
+    border-radius: $radius-md;
+    
+    .btn-icon {
+        padding: $space-1-5;
+        border-radius: $radius-sm;
+        
+        &.active {
+            background: $bg-card;
+            color: $text-primary;
+            box-shadow: $shadow-sm;
+        }
     }
 }
 
 // ----------------------------------------
-// Breadcrumbs
+// Browser Header (Breadcrumbs)
 // ----------------------------------------
+.browser-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-2;
+    padding: $space-2 $space-4;
+    background: $bg-card;
+    border-bottom: 1px solid $border-primary;
+    flex-shrink: 0;
+    min-height: 36px;
+    
+    @include respond-to('sm') {
+        padding: $space-2 $space-3;
+        gap: $space-1-5;
+    }
+}
+
+.file-count {
+    font-size: $text-xs;
+    color: $text-muted;
+    white-space: nowrap;
+}
+
 .breadcrumbs {
     flex: 1;
     display: flex;
@@ -55,10 +172,10 @@
     @include interactive;
     @include truncate;
     color: $text-tertiary;
-    padding: $space-1 $space-2;
+    padding: $space-0-5 $space-1-5;
     border-radius: $radius-sm;
-    font-size: $text-sm;
-    max-width: 200px;
+    font-size: $text-xs;
+    max-width: 180px;
     
     &:hover:not(:disabled) {
         background: $bg-hover;
@@ -68,11 +185,6 @@
     &:last-child {
         color: $text-primary;
         font-weight: $weight-medium;
-    }
-    
-    @include respond-to('sm') {
-        font-size: $text-xs;
-        padding: $space-1;
     }
 }
 
@@ -122,18 +234,16 @@
 // File table header (virtualized)
 .file-table-header {
     display: flex;
-    padding: $space-3 $space-5;
+    align-items: center;
+    padding: $space-2 $space-4;
     background: $bg-secondary;
     border-bottom: 1px solid $border-primary;
-    font-size: $text-xs;
-    font-weight: $weight-medium;
+    font-size: $text-2xs;
+    font-weight: $weight-semibold;
     text-transform: uppercase;
     letter-spacing: $tracking-wider;
     color: $text-tertiary;
-    
-    @include respond-to('lg') {
-        padding: $space-3 $space-4;
-    }
+    min-height: 32px;
     
     @include respond-to('sm') {
         padding: $space-2 $space-3;
@@ -150,14 +260,12 @@
 .file-row {
     display: flex;
     align-items: center;
-    padding: $space-3 $space-5;
+    padding: $space-2-5 $space-4;
+    background: $bg-card;
     border-bottom: 1px solid $border-secondary;
     cursor: pointer;
-    transition: background $transition-base;
-    
-    @include respond-to('lg') {
-        padding: $space-3 $space-4;
-    }
+    transition: background $transition-fast;
+    min-height: 44px;
     
     @include respond-to('sm') {
         padding: $space-2 $space-3;
@@ -169,14 +277,20 @@
     
     &.selected {
         background: $bg-hover;
+        border-left: 3px solid $text-primary;
+        padding-left: calc($space-4 - 3px);
     }
     
     &.locked-other {
         background: $warning-soft;
+        border-left: 3px solid $warning;
+        padding-left: calc($space-4 - 3px);
     }
     
     &.locked-mine {
         background: $accent-subtle;
+        border-left: 3px solid $accent;
+        padding-left: calc($space-4 - 3px);
     }
     
     &.directory .file-name {
@@ -259,41 +373,47 @@
     }
 }
 
-// Column widths
+// Column widths - Flex-based layout
 .col-name {
-    width: 50%;
-    min-width: 200px;
-    
-    @include respond-to('md') {
-        width: 60%;
-    }
+    flex: 1;
+    min-width: 0; // Allow text truncation
+    padding-right: $space-4;
 }
 
 .col-size {
-    width: 100px;
+    flex: 0 0 90px;
     text-align: right;
+    font-size: $text-xs;
     color: $text-muted;
+    font-variant-numeric: tabular-nums;
+    padding-right: $space-4;
     
-    @include respond-to('md') {
-        width: 80px;
+    @include respond-to('sm') {
+        flex: 0 0 70px;
     }
 }
 
 .col-modified {
-    width: 160px;
+    flex: 0 0 140px;
+    font-size: $text-xs;
     color: $text-muted;
+    padding-right: $space-4;
     
     @include respond-to('lg') {
         display: none;
     }
+    
+    @include respond-to('md') {
+        flex: 0 0 120px;
+    }
 }
 
 .col-actions {
-    width: 60px;
+    flex: 0 0 48px;
     text-align: right;
     
     @include respond-to('sm') {
-        width: 40px;
+        flex: 0 0 36px;
     }
 }
 
@@ -362,7 +482,8 @@
     opacity: 0;
     transition: opacity $transition-base;
     
-    .file-table tbody tr:hover & {
+    .file-table tbody tr:hover &,
+    .file-row:hover & {
         opacity: 1;
     }
 }
@@ -389,8 +510,8 @@
     top: calc(100% + 4px);
     right: 0;
     z-index: $z-dropdown;
-    background: $bg-card;
-    border: 1px solid $border-card;
+    background-color: $bg-card;
+    border: 1px solid $border-primary;
     border-radius: $radius-lg;
     box-shadow: $shadow-xl;
     overflow: hidden;
@@ -405,14 +526,253 @@
         text-align: left;
         font-size: $text-sm;
         color: $text-primary;
-        transition: background $transition-base;
+        background-color: $bg-card;
+        transition: background-color $transition-base;
         
         &:hover {
-            background: $bg-hover;
+            background-color: $bg-hover;
         }
         
         &:first-child {
             border-bottom: 1px solid $border-secondary;
         }
+    }
+}
+
+// Checkbox Column
+.col-checkbox {
+    flex: 0 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    input[type="checkbox"] {
+        width: 14px;
+        height: 14px;
+        cursor: pointer;
+        accent-color: $accent;
+    }
+}
+
+// Sortable Headers
+.sortable {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: $space-1;
+    
+    &:hover {
+        color: $text-primary;
+    }
+    
+    &.sorted {
+        color: $text-primary;
+    }
+}
+
+.sort-icon {
+    flex-shrink: 0;
+    transition: transform $transition-fast;
+    
+    &.desc {
+        transform: rotate(180deg);
+    }
+}
+
+// More Button
+.btn-more {
+    opacity: 0;
+    transition: opacity $transition-fast;
+    
+    .file-row:hover & {
+        opacity: 1;
+    }
+}
+
+// Rename Input
+.rename-input {
+    flex: 1;
+    min-width: 0;
+    padding: $space-1 $space-2;
+    font-size: $text-sm;
+    border: 1px solid $accent;
+    border-radius: $radius-sm;
+    background: $bg-card;
+    color: $text-primary;
+    outline: none;
+    box-shadow: $glow-focus;
+}
+
+// File Context Menu
+.file-context-menu {
+    position: fixed;
+    z-index: $z-popover;
+    background: $bg-card;
+    border: 1px solid $border-primary;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-xl;
+    min-width: 180px;
+    max-width: 220px;
+    padding: $space-1 0;
+    animation: slideUp $duration-fast $ease-out;
+    overflow-y: auto;
+    @include custom-scrollbar;
+    
+    button {
+        @include button-reset;
+        display: flex;
+        align-items: center;
+        gap: $space-3;
+        width: 100%;
+        padding: $space-2 $space-4;
+        font-size: $text-sm;
+        color: $text-primary;
+        text-align: left;
+        transition: background $transition-fast;
+        
+        &:hover {
+            background: $bg-hover;
+        }
+        
+        &.danger {
+            color: $error;
+            
+            &:hover {
+                background: $error-soft;
+            }
+        }
+        
+        svg {
+            flex-shrink: 0;
+            color: $text-muted;
+        }
+        
+        &.danger svg {
+            color: $error;
+        }
+        
+        .shortcut {
+            margin-left: auto;
+            font-size: $text-2xs;
+            color: $text-muted;
+            background: $bg-tertiary;
+            padding: $space-0-5 $space-1-5;
+            border-radius: $radius-sm;
+        }
+    }
+}
+
+.context-divider {
+    height: 1px;
+    background: $border-secondary;
+    margin: $space-1 0;
+}
+
+// Grid View
+.file-grid-container {
+    flex: 1;
+    overflow: hidden;
+    transition: opacity $transition-base;
+    
+    &.stale {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+}
+
+.file-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: $space-3;
+    padding: $space-4;
+    overflow-y: auto;
+    height: 100%;
+    @include custom-scrollbar;
+    
+    @include respond-to('sm') {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: $space-2;
+        padding: $space-3;
+    }
+}
+
+.file-grid-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-3;
+    border-radius: $radius-lg;
+    cursor: pointer;
+    transition: all $transition-fast;
+    border: 2px solid transparent;
+    
+    &:hover {
+        background: $bg-tertiary;
+    }
+    
+    &.selected {
+        background: $bg-hover;
+        border-color: $accent;
+    }
+    
+    &.locked-other {
+        background: $warning-soft;
+        border-color: $warning;
+    }
+    
+    &.locked-mine {
+        background: $accent-subtle;
+        border-color: $accent;
+    }
+}
+
+.grid-item-icon {
+    @include flex-center;
+    width: 40px;
+    height: 40px;
+    color: $text-muted;
+    
+    svg {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .directory & svg {
+        color: $accent-muted;
+    }
+}
+
+.grid-item-name {
+    @include truncate;
+    width: 100%;
+    text-align: center;
+    font-size: $text-xs;
+    color: $text-primary;
+    
+    .directory & {
+        font-weight: $weight-medium;
+    }
+}
+
+// Danger Button
+.btn-danger {
+    color: $error !important;
+    
+    &:hover {
+        background: $error-soft !important;
+    }
+}
+
+// Animations
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
