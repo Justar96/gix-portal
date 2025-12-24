@@ -16,7 +16,7 @@ use commands::{
     release_lock, rename_drive, resolve_conflict, revoke_permission, start_sync, start_watching,
     stop_sync, stop_watching, subscribe_drive_events, upload_file, verify_invite, SecurityStore,
 };
-use core::{ConflictManager, DriveEvent, DriveEventDto, DriveId, LockManager, PresenceManager};
+use core::{ConflictManager, DriveEvent, DriveEventDto, DriveId, LockManager, PresenceManager, RateLimiter, SharedRateLimiter};
 use state::AppState;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager};
@@ -63,11 +63,15 @@ pub fn run() {
 
             let app_handle = app.handle().clone();
 
-            // Get data directory
-            let data_dir = app
-                .path()
-                .app_data_dir()
-                .expect("Failed to get app data directory");
+            // Get data directory - use match instead of expect for production safety
+            let data_dir = match app.path().app_data_dir() {
+                Ok(dir) => dir,
+                Err(e) => {
+                    tracing::error!("Failed to get app data directory: {}", e);
+                    // Use a fallback directory in temp
+                    std::env::temp_dir().join("gix-portal")
+                }
+            };
 
             tracing::info!("Data directory: {:?}", data_dir);
 
@@ -103,26 +107,45 @@ pub fn run() {
                             });
                         }
 
+                        // Get node ID for managers - handle gracefully if not available
+                        let node_id = match state.identity_manager.node_id().await {
+                            Some(id) => id,
+                            None => {
+                                tracing::error!("Node ID not available during initialization");
+                                return;
+                            }
+                        };
+
                         // Initialize SecurityStore for Phase 3
                         let security_store = Arc::new(SecurityStore::new());
-                        app_handle.manage(security_store);
+                        app_handle.manage(security_store.clone());
+
+                        // Initialize rate limiter for abuse prevention
+                        let rate_limiter: SharedRateLimiter = Arc::new(RateLimiter::new());
+                        app_handle.manage(rate_limiter);
+                        tracing::info!("Rate limiter initialized");
 
                         // Initialize LockManager for Phase 4
-                        let node_id = state
-                            .identity_manager
-                            .node_id()
-                            .await
-                            .expect("Node ID should be available");
                         let lock_manager = Arc::new(LockManager::new(node_id));
-                        app_handle.manage(lock_manager);
+                        app_handle.manage(lock_manager.clone());
 
                         // Initialize ConflictManager for Phase 4
                         let conflict_manager = Arc::new(ConflictManager::new());
-                        app_handle.manage(conflict_manager);
+                        app_handle.manage(conflict_manager.clone());
 
                         // Initialize PresenceManager for Phase 4
                         let presence_manager = Arc::new(PresenceManager::new(node_id));
-                        app_handle.manage(presence_manager);
+                        app_handle.manage(presence_manager.clone());
+
+                        // Start cleanup manager for resource maintenance
+                        let cleanup_manager = core::CleanupManager::new();
+                        let _cleanup_handle = cleanup_manager.start(
+                            lock_manager,
+                            conflict_manager,
+                            presence_manager,
+                            security_store,
+                        );
+                        tracing::info!("Cleanup manager started");
 
                         app_handle.manage(state);
                         tracing::info!("Application state initialized successfully");

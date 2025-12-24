@@ -371,6 +371,36 @@ impl PresenceManager {
         let manager = self.get_drive_presence(drive_id).await;
         manager.add_activity(entry).await;
     }
+
+    /// Cleanup old activities across all drives
+    pub async fn cleanup_old_activities(&self, cutoff: DateTime<Utc>) -> usize {
+        let drives = self.drives.read().await;
+        let mut total = 0;
+        for manager in drives.values() {
+            let mut activities = manager.activities.write().await;
+            let before = activities.len();
+            activities.retain(|a| a.timestamp > cutoff);
+            total += before - activities.len();
+        }
+        total
+    }
+
+    /// Update idle status for all users across all drives
+    pub async fn update_idle_status(&self, _idle_threshold: Duration) -> usize {
+        let drives = self.drives.read().await;
+        let mut total = 0;
+        for manager in drives.values() {
+            manager.check_idle_users().await;
+            // Count how many were marked idle/offline
+            let users = manager.online_users().await;
+            for user in users {
+                if user.status != PresenceStatus::Online {
+                    total += 1;
+                }
+            }
+        }
+        total
+    }
 }
 
 #[cfg(test)]

@@ -126,18 +126,33 @@
 // ----------------------------------------
 // Sidebar
 // ----------------------------------------
+// ========================================
+// SIDEBAR RESPONSIVE BEHAVIOR
+// ========================================
+// >= 1280px: Full expanded (200px)
+// >= 1024px: Mini mode option (72px) - icons + short labels
+// >= 768px: Collapsed (48px) - icons only
+// < 768px: Mobile horizontal bar
+// ========================================
 .sidebar {
     width: 200px;
     background: $bg-primary;
     border-right: 1px solid $border-secondary;
     @include flex-column;
     flex-shrink: 0;
-    transition: width $duration-slow $ease-default;
-    
+    transition: width 350ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    .sidebar-content,
+    .drive-item,
+    .drive-name {
+        transition: opacity 200ms ease-in-out,
+                    transform 200ms ease-in-out;
+    }
+
     @include respond-to('lg') {
         width: 180px;
     }
-    
+
     @include respond-to('md') {
         width: 100%;
         height: auto;
@@ -145,23 +160,58 @@
         border-right: none;
         border-bottom: 1px solid $border-secondary;
     }
-    
-    // Collapsed state
+
+    // New: Mini state (icons + short labels)
+    &.mini {
+        width: 72px;
+
+        @include respond-to('md') {
+            width: 100%;
+            max-height: none;
+            height: auto;
+        }
+
+        .sidebar-title {
+            font-size: $text-2xs;
+            text-align: center;
+        }
+
+        .drive-item {
+            flex-direction: column;
+            align-items: center;
+            padding: $space-2;
+            gap: $space-1;
+
+            .drive-name {
+                font-size: $text-2xs;
+                text-align: center;
+                max-width: 60px;
+            }
+
+            .drive-stats {
+                opacity: 0;
+                max-height: 0;
+                overflow: hidden;
+            }
+        }
+    }
+
+    // Collapsed state (icons only)
     &.collapsed {
         width: 48px;
-        
+
         @include respond-to('md') {
             width: 100%;
             max-height: none;
             height: auto;
             flex-direction: row;
             align-items: center;
-            
+
             .sidebar-header {
                 border-bottom: none;
                 border-right: 1px solid $border-secondary;
             }
-            
+
             .sidebar-collapsed-content {
                 flex-direction: row;
                 padding: $space-1 $space-2;
@@ -169,10 +219,15 @@
                 overflow-y: hidden;
             }
         }
-        
+
         .sidebar-header {
             justify-content: center;
             padding: $space-2;
+        }
+
+        .sidebar-content {
+            opacity: 0;
+            transform: translateX(-8px);
         }
     }
 }

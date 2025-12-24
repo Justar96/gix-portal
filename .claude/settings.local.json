@@ -22,7 +22,9 @@
       "Bash(pnpm add:*)",
       "mcp__morph-mcp__edit_file",
       "Bash(bun tauri:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run:*)"
     ]
   }
 }

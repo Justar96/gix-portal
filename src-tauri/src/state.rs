@@ -52,7 +52,7 @@ impl AppState {
         let secret_key_bytes = identity_manager
             .secret_key_bytes()
             .await
-            .expect("Identity should be initialized");
+            .ok_or_else(|| anyhow::anyhow!("Identity not initialized after initialization"))?;
 
         // Initialize P2P endpoint
         let endpoint = Arc::new(P2PEndpoint::new(&secret_key_bytes));

@@ -1,4 +1,6 @@
 // Presence Panel styles
+@use '../abstracts' as *;
+
 .presence-panel {
   display: flex;
   flex-direction: column;
@@ -83,9 +85,9 @@
       font-size: 11px;
       font-weight: 600;
       padding: 3px 8px;
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.08) 100%);
+      background: linear-gradient(135deg, $accent-soft 0%, $accent-subtle 100%);
       border-radius: 10px;
-      color: #6366f1;
+      color: $accent;
       min-width: 24px;
       text-align: center;
     }
@@ -200,11 +202,11 @@
 
       .section-count {
         padding: 3px 8px;
-        background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.08) 100%);
+        background: linear-gradient(135deg, $accent-soft 0%, $accent-subtle 100%);
         border-radius: 10px;
         font-size: 10px;
         font-weight: 600;
-        color: #6366f1;
+        color: $accent;
       }
     }
 
@@ -261,8 +263,8 @@
     }
 
     &.is-self {
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.03) 100%);
-      border: 1px solid rgba(99, 102, 241, 0.15);
+      background: linear-gradient(135deg, $accent-subtle 0%, rgba($accent, 0.03) 100%);
+      border: 1px solid $accent-soft;
     }
 
     .status-dot {
@@ -309,9 +311,9 @@
       .self-badge {
         margin-left: 6px;
         padding: 2px 6px;
-        background: rgba(99, 102, 241, 0.15);
+        background: $accent-soft;
         border-radius: 4px;
-        color: #6366f1;
+        color: $accent;
         font-family: var(--font-sans);
         font-size: 9px;
         font-weight: 600;
@@ -355,11 +357,11 @@
     }
 
     &.is-self {
-      border-left-color: #6366f1;
-      background: rgba(99, 102, 241, 0.03);
+      border-left-color: $accent;
+      background: rgba($accent, 0.03);
 
       .activity-user {
-        color: #6366f1;
+        color: $accent;
       }
     }
 
@@ -379,7 +381,7 @@
       }
 
       .icon-modified {
-        color: #6366f1;
+        color: $accent;
       }
 
       .icon-deleted {

@@ -347,6 +347,19 @@ impl ConflictManager {
         }
         total
     }
+
+    /// Cleanup old resolved conflicts across all drives
+    pub async fn cleanup_old_resolved(&self, cutoff: DateTime<Utc>) -> usize {
+        let drives = self.drives.read().await;
+        let mut total = 0;
+        for manager in drives.values() {
+            let mut resolved = manager.resolved.write().await;
+            let before = resolved.len();
+            resolved.retain(|c| c.detected_at > cutoff);
+            total += before - resolved.len();
+        }
+        total
+    }
 }
 
 impl Default for ConflictManager {

@@ -388,6 +388,16 @@ impl LockManager {
         let manager = self.get_drive_locks(drive_id).await;
         manager.remove_remote_lock(path, holder).await;
     }
+
+    /// Cleanup expired locks across all drives
+    pub async fn cleanup_expired(&self) -> usize {
+        let drives = self.drives.read().await;
+        let mut total = 0;
+        for manager in drives.values() {
+            total += manager.cleanup_expired().await;
+        }
+        total
+    }
 }
 
 #[cfg(test)]

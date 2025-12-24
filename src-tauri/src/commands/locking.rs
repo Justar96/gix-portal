@@ -1,14 +1,25 @@
 //! Tauri commands for file locking
 //!
 //! Provides commands for acquiring, releasing, and querying file locks.
+//! 
+//! # Security
+//! - Validates drive IDs before any lock operations
+//! - Validates paths to prevent directory traversal attacks
 
+use crate::core::error::AppError;
+use crate::core::validation::{validate_drive_id, validate_path};
 use crate::core::{DriveEvent, FileLock, FileLockDto, LockManager, LockResult, LockType};
 use crate::state::AppState;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::State;
+
+/// Parse and validate drive ID
+fn parse_drive_id(drive_id: &str) -> Result<crate::core::drive::DriveId, String> {
+    validate_drive_id(drive_id).map_err(|e| e.to_string())?;
+    crate::core::drive::DriveId::from_hex(drive_id).map_err(|e| e.to_string())
+}
 
 /// DTO for lock acquisition result
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -20,6 +31,9 @@ pub struct AcquireLockResult {
 }
 
 /// Acquire a lock on a file
+/// 
+/// # Security
+/// - Validates path is within drive root
 #[tauri::command]
 pub async fn acquire_lock(
     drive_id: String,
@@ -28,13 +42,22 @@ pub async fn acquire_lock(
     state: State<'_, AppState>,
     lock_manager: State<'_, Arc<LockManager>>,
 ) -> Result<AcquireLockResult, String> {
-    let path = PathBuf::from(&path);
+    let id = parse_drive_id(&drive_id)?;
+    
+    // Validate path against drive root
+    let drives = state.drives.read().await;
+    let drive = drives.get(id.as_bytes()).ok_or_else(|| {
+        AppError::DriveNotFound { drive_id: drive_id.clone() }.to_string()
+    })?;
+    let validated_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
+    drop(drives);
+    
     let lock_type = match lock_type.as_str() {
         "exclusive" => LockType::Exclusive,
         _ => LockType::Advisory,
     };
 
-    let result = lock_manager.acquire_lock(&drive_id, path.clone(), lock_type).await;
+    let result = lock_manager.acquire_lock(&drive_id, validated_path.clone(), lock_type).await;
     let node_id = lock_manager.node_id();
 
     match result {
@@ -42,6 +65,13 @@ pub async fn acquire_lock(
             // Broadcast lock event via gossip
             broadcast_lock_acquired(&state, &drive_id, &lock).await;
 
+            tracing::info!(
+                drive_id = %drive_id,
+                path = %path,
+                lock_type = ?lock_type,
+                "Lock acquired"
+            );
+            
             Ok(AcquireLockResult {
                 success: true,
                 lock: Some(FileLockDto::from_lock(&lock, node_id)),
@@ -52,6 +82,13 @@ pub async fn acquire_lock(
         LockResult::AcquiredWithWarning { lock, warning } => {
             broadcast_lock_acquired(&state, &drive_id, &lock).await;
 
+            tracing::info!(
+                drive_id = %drive_id,
+                path = %path,
+                warning = %warning,
+                "Lock acquired with warning"
+            );
+            
             Ok(AcquireLockResult {
                 success: true,
                 lock: Some(FileLockDto::from_lock(&lock, node_id)),
@@ -60,6 +97,13 @@ pub async fn acquire_lock(
             })
         }
         LockResult::Denied { existing_lock, reason } => {
+            tracing::debug!(
+                drive_id = %drive_id,
+                path = %path,
+                reason = %reason,
+                "Lock denied"
+            );
+            
             Ok(AcquireLockResult {
                 success: false,
                 lock: Some(FileLockDto::from_lock(&existing_lock, node_id)),
@@ -78,11 +122,20 @@ pub async fn release_lock(
     state: State<'_, AppState>,
     lock_manager: State<'_, Arc<LockManager>>,
 ) -> Result<bool, String> {
-    let path = PathBuf::from(&path);
+    let id = parse_drive_id(&drive_id)?;
+    
+    // Validate path against drive root
+    let drives = state.drives.read().await;
+    let drive = drives.get(id.as_bytes()).ok_or_else(|| {
+        AppError::DriveNotFound { drive_id: drive_id.clone() }.to_string()
+    })?;
+    let validated_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
+    drop(drives);
 
-    if let Some(released) = lock_manager.release_lock(&drive_id, &path).await {
+    if let Some(released) = lock_manager.release_lock(&drive_id, &validated_path).await {
         // Broadcast lock release via gossip
         broadcast_lock_released(&state, &drive_id, &released).await;
+        tracing::info!(drive_id = %drive_id, path = %path, "Lock released");
         Ok(true)
     } else {
         Ok(false)
@@ -94,13 +147,23 @@ pub async fn release_lock(
 pub async fn get_lock_status(
     drive_id: String,
     path: String,
+    state: State<'_, AppState>,
     lock_manager: State<'_, Arc<LockManager>>,
 ) -> Result<Option<FileLockDto>, String> {
-    let path = PathBuf::from(&path);
+    let id = parse_drive_id(&drive_id)?;
+    
+    // Validate path against drive root
+    let drives = state.drives.read().await;
+    let drive = drives.get(id.as_bytes()).ok_or_else(|| {
+        AppError::DriveNotFound { drive_id: drive_id.clone() }.to_string()
+    })?;
+    let validated_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
+    drop(drives);
+    
     let node_id = lock_manager.node_id();
 
     Ok(lock_manager
-        .get_lock(&drive_id, &path)
+        .get_lock(&drive_id, &validated_path)
         .await
         .map(|lock| FileLockDto::from_lock(&lock, node_id)))
 }
@@ -111,6 +174,9 @@ pub async fn list_locks(
     drive_id: String,
     lock_manager: State<'_, Arc<LockManager>>,
 ) -> Result<Vec<FileLockDto>, String> {
+    // Validate drive_id format
+    validate_drive_id(&drive_id).map_err(|e| e.to_string())?;
+    
     let node_id = lock_manager.node_id();
     let locks = lock_manager.list_locks(&drive_id).await;
 
@@ -129,12 +195,32 @@ pub async fn extend_lock(
     state: State<'_, AppState>,
     lock_manager: State<'_, Arc<LockManager>>,
 ) -> Result<Option<FileLockDto>, String> {
-    let path = PathBuf::from(&path);
+    let id = parse_drive_id(&drive_id)?;
+    
+    // Validate path against drive root
+    let drives = state.drives.read().await;
+    let drive = drives.get(id.as_bytes()).ok_or_else(|| {
+        AppError::DriveNotFound { drive_id: drive_id.clone() }.to_string()
+    })?;
+    let validated_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
+    drop(drives);
+    
+    // Validate duration (1 minute to 24 hours)
+    if duration_mins < 1 || duration_mins > 1440 {
+        return Err(AppError::ValidationError("Lock duration must be between 1 and 1440 minutes".to_string()).to_string());
+    }
+    
     let node_id = lock_manager.node_id();
 
-    if let Some(lock) = lock_manager.extend_lock(&drive_id, &path, duration_mins).await {
+    if let Some(lock) = lock_manager.extend_lock(&drive_id, &validated_path, duration_mins).await {
         // Broadcast updated lock
         broadcast_lock_acquired(&state, &drive_id, &lock).await;
+        tracing::info!(
+            drive_id = %drive_id,
+            path = %path,
+            duration_mins = duration_mins,
+            "Lock extended"
+        );
         Ok(Some(FileLockDto::from_lock(&lock, node_id)))
     } else {
         Ok(None)
@@ -142,6 +228,9 @@ pub async fn extend_lock(
 }
 
 /// Force release a lock (admin only)
+/// 
+/// # Security
+/// - Should only be called by drive admin/owner
 #[tauri::command]
 pub async fn force_release_lock(
     drive_id: String,
@@ -149,11 +238,28 @@ pub async fn force_release_lock(
     state: State<'_, AppState>,
     lock_manager: State<'_, Arc<LockManager>>,
 ) -> Result<bool, String> {
-    let path = PathBuf::from(&path);
+    let id = parse_drive_id(&drive_id)?;
+    
+    // Validate path against drive root
+    let drives = state.drives.read().await;
+    let drive = drives.get(id.as_bytes()).ok_or_else(|| {
+        AppError::DriveNotFound { drive_id: drive_id.clone() }.to_string()
+    })?;
+    let validated_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
+    drop(drives);
+    
+    // TODO: Add ACL check to ensure caller is admin/owner
+    
     let manager = lock_manager.get_drive_locks(&drive_id).await;
 
-    if let Some(released) = manager.force_release(&path).await {
+    if let Some(released) = manager.force_release(&validated_path).await {
         broadcast_lock_released(&state, &drive_id, &released).await;
+        tracing::warn!(
+            drive_id = %drive_id,
+            path = %path,
+            holder = %released.holder,
+            "Lock force released"
+        );
         Ok(true)
     } else {
         Ok(false)

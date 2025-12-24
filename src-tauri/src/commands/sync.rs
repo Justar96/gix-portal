@@ -1,23 +1,17 @@
 //! Sync commands - Tauri commands for real-time synchronization
 //!
 //! These commands expose sync functionality to the frontend.
+//! All commands include proper input validation and error handling.
 
-use crate::core::DriveId;
+use crate::core::{validate_drive_id, validate_path, AppError, DriveId};
 use crate::network::SyncStatus;
 use crate::state::AppState;
 use tauri::State;
 
-/// Helper to parse and validate drive ID from hex string
+/// Helper to parse drive ID with proper validation
 fn parse_drive_id(drive_id: &str) -> Result<DriveId, String> {
-    let id_bytes = hex::decode(drive_id).map_err(|_| "Invalid drive ID format".to_string())?;
-
-    if id_bytes.len() != 32 {
-        return Err("Invalid drive ID length".to_string());
-    }
-
-    let mut id_arr = [0u8; 32];
-    id_arr.copy_from_slice(&id_bytes);
-    Ok(DriveId(id_arr))
+    let arr = validate_drive_id(drive_id).map_err(|e| e.to_string())?;
+    Ok(DriveId(arr))
 }
 
 /// Start syncing a drive
@@ -33,21 +27,24 @@ pub async fn start_sync(drive_id: String, state: State<'_, AppState>) -> Result<
     let sync_engine = state
         .sync_engine
         .as_ref()
-        .ok_or_else(|| "Sync engine not initialized".to_string())?;
+        .ok_or_else(|| AppError::SyncNotInitialized.to_string())?;
 
     // Get the drive from cache
     let drives = state.drives.read().await;
-    let drive = drives
-        .get(id.as_bytes())
-        .ok_or_else(|| "Drive not found".to_string())?;
+    let drive = drives.get(id.as_bytes()).ok_or_else(|| {
+        AppError::DriveNotFound {
+            drive_id: drive_id.clone(),
+        }
+        .to_string()
+    })?;
 
     // Initialize sync for this drive
     sync_engine
         .init_drive(drive)
         .await
-        .map_err(|e| format!("Failed to start sync: {}", e))?;
+        .map_err(|e| AppError::SyncFailed(format!("Failed to start sync: {}", e)).to_string())?;
 
-    tracing::info!("Started sync for drive: {}", drive_id);
+    tracing::info!(drive_id = %drive_id, "Started sync for drive");
     Ok(())
 }
 
@@ -64,11 +61,11 @@ pub async fn stop_sync(drive_id: String, state: State<'_, AppState>) -> Result<(
     let sync_engine = state
         .sync_engine
         .as_ref()
-        .ok_or_else(|| "Sync engine not initialized".to_string())?;
+        .ok_or_else(|| AppError::SyncNotInitialized.to_string())?;
 
     sync_engine.stop_sync(&id).await;
 
-    tracing::info!("Stopped sync for drive: {}", drive_id);
+    tracing::info!(drive_id = %drive_id, "Stopped sync for drive");
     Ok(())
 }
 
@@ -84,7 +81,7 @@ pub async fn get_sync_status(
     let sync_engine = state
         .sync_engine
         .as_ref()
-        .ok_or_else(|| "Sync engine not initialized".to_string())?;
+        .ok_or_else(|| AppError::SyncNotInitialized.to_string())?;
 
     let status = sync_engine.get_status(&id).await;
     Ok(status)
@@ -171,7 +168,7 @@ pub async fn is_watching(drive_id: String, state: State<'_, AppState>) -> Result
     let file_watcher = state
         .file_watcher
         .as_ref()
-        .ok_or_else(|| "File watcher not initialized".to_string())?;
+        .ok_or_else(|| AppError::WatcherNotInitialized.to_string())?;
 
     Ok(file_watcher.is_watching(&id).await)
 }
@@ -185,6 +182,10 @@ use crate::network::TransferState;
 /// Upload a file to the blob store
 ///
 /// This imports a local file into iroh-blobs, making it available to peers.
+///
+/// # Security
+/// - Validates file path is within drive root
+/// - Prevents directory traversal attacks
 #[tauri::command]
 pub async fn upload_file(
     drive_id: String,
@@ -196,33 +197,52 @@ pub async fn upload_file(
     let file_transfer = state
         .file_transfer
         .as_ref()
-        .ok_or_else(|| "File transfer not initialized".to_string())?;
+        .ok_or_else(|| AppError::TransferNotInitialized.to_string())?;
 
     // Get drive to determine relative path
     let drives = state.drives.read().await;
-    let drive = drives
-        .get(id.as_bytes())
-        .ok_or_else(|| "Drive not found".to_string())?;
+    let drive = drives.get(id.as_bytes()).ok_or_else(|| {
+        AppError::DriveNotFound {
+            drive_id: drive_id.clone(),
+        }
+        .to_string()
+    })?;
 
-    let local_path = std::path::PathBuf::from(&file_path);
-    let relative_path = local_path
+    // Validate the file path is within drive root (prevents path traversal)
+    let validated_path = validate_path(&drive.local_path, &file_path).map_err(|e| e.to_string())?;
+
+    let relative_path = validated_path
         .strip_prefix(&drive.local_path)
-        .map_err(|_| "File is not within drive folder".to_string())?
+        .map_err(|_| {
+            AppError::PathOutsideDrive {
+                path: file_path.clone(),
+            }
+            .to_string()
+        })?
         .to_path_buf();
 
     drop(drives);
 
     // Upload the file
     let hash = file_transfer
-        .upload_file(&id, &local_path, &relative_path)
+        .upload_file(&id, &validated_path, &relative_path)
         .await
-        .map_err(|e| format!("Upload failed: {}", e))?;
+        .map_err(|e| AppError::TransferFailed(format!("Upload failed: {}", e)).to_string())?;
 
-    tracing::info!("Uploaded file {} -> {}", file_path, hash.to_hex());
+    tracing::info!(
+        drive_id = %drive_id,
+        path = %file_path,
+        hash = %hash.to_hex(),
+        "Uploaded file"
+    );
     Ok(hash.to_hex().to_string())
 }
 
 /// Download a file from the blob store to local filesystem
+///
+/// # Security
+/// - Validates destination path is within drive root
+/// - Prevents directory traversal attacks
 #[tauri::command]
 pub async fn download_file(
     drive_id: String,
@@ -235,35 +255,45 @@ pub async fn download_file(
     let file_transfer = state
         .file_transfer
         .as_ref()
-        .ok_or_else(|| "File transfer not initialized".to_string())?;
+        .ok_or_else(|| AppError::TransferNotInitialized.to_string())?;
 
     // Parse the hash
     let blob_hash = hash
         .parse::<iroh_blobs::Hash>()
-        .map_err(|e| format!("Invalid hash: {}", e))?;
+        .map_err(|e| AppError::InvalidHash(format!("Invalid hash: {}", e)).to_string())?;
 
-    let dest_path = std::path::PathBuf::from(&destination_path);
-
-    // Get drive for relative path calculation
+    // Get drive for path validation
     let drives = state.drives.read().await;
-    let drive = drives
-        .get(id.as_bytes())
-        .ok_or_else(|| "Drive not found".to_string())?;
+    let drive = drives.get(id.as_bytes()).ok_or_else(|| {
+        AppError::DriveNotFound {
+            drive_id: drive_id.clone(),
+        }
+        .to_string()
+    })?;
 
-    let relative_path = dest_path
+    // Validate the destination path is within drive root
+    let validated_path =
+        validate_path(&drive.local_path, &destination_path).map_err(|e| e.to_string())?;
+
+    let relative_path = validated_path
         .strip_prefix(&drive.local_path)
         .map(|p| p.to_path_buf())
-        .unwrap_or_else(|_| dest_path.clone());
+        .unwrap_or_else(|_| validated_path.clone());
 
     drop(drives);
 
     // Download the file
     file_transfer
-        .download_file(&id, blob_hash, &dest_path, &relative_path)
+        .download_file(&id, blob_hash, &validated_path, &relative_path)
         .await
-        .map_err(|e| format!("Download failed: {}", e))?;
+        .map_err(|e| AppError::TransferFailed(format!("Download failed: {}", e)).to_string())?;
 
-    tracing::info!("Downloaded {} -> {}", hash, destination_path);
+    tracing::info!(
+        drive_id = %drive_id,
+        hash = %hash,
+        path = %destination_path,
+        "Downloaded file"
+    );
     Ok(())
 }
 
@@ -273,7 +303,7 @@ pub async fn list_transfers(state: State<'_, AppState>) -> Result<Vec<TransferSt
     let file_transfer = state
         .file_transfer
         .as_ref()
-        .ok_or_else(|| "File transfer not initialized".to_string())?;
+        .ok_or_else(|| AppError::TransferNotInitialized.to_string())?;
 
     Ok(file_transfer.list_transfers().await)
 }
@@ -287,7 +317,7 @@ pub async fn get_transfer(
     let file_transfer = state
         .file_transfer
         .as_ref()
-        .ok_or_else(|| "File transfer not initialized".to_string())?;
+        .ok_or_else(|| AppError::TransferNotInitialized.to_string())?;
 
     Ok(file_transfer.get_transfer(&transfer_id).await)
 }
@@ -301,13 +331,13 @@ pub async fn cancel_transfer(
     let file_transfer = state
         .file_transfer
         .as_ref()
-        .ok_or_else(|| "File transfer not initialized".to_string())?;
+        .ok_or_else(|| AppError::TransferNotInitialized.to_string())?;
 
     file_transfer
         .cancel_transfer(&transfer_id)
         .await
-        .map_err(|e| format!("Failed to cancel transfer: {}", e))?;
+        .map_err(|e| AppError::TransferFailed(format!("Failed to cancel: {}", e)).to_string())?;
 
-    tracing::info!("Cancelled transfer: {}", transfer_id);
+    tracing::info!(transfer_id = %transfer_id, "Cancelled transfer");
     Ok(())
 }

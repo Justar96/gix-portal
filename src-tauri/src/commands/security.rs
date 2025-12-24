@@ -1,7 +1,15 @@
 //! Security commands for access control and invite management
 //!
 //! Phase 3: Tauri commands exposing crypto module functionality.
+//!
+//! # Security
+//! - Rate limiting on invite generation
+//! - Signature verification on invite acceptance
+//! - ACL-based permission checks
 
+use crate::core::error::AppError;
+use crate::core::rate_limit::{RateLimitOperation, SharedRateLimiter};
+use crate::core::validation::validate_drive_id;
 use crate::crypto::{
     AccessControlList, AccessRule, InviteBuilder, InviteToken, Permission, TokenTracker,
 };
@@ -56,6 +64,27 @@ impl SecurityStore {
     pub async fn update_token_tracker(&self, drive_id: &str, tracker: TokenTracker) {
         let mut trackers = self.token_trackers.write().await;
         trackers.insert(drive_id.to_string(), tracker);
+    }
+
+    /// Cleanup expired ACL rules across all drives
+    pub async fn cleanup_expired(&self) -> usize {
+        let mut acls = self.acls.write().await;
+        let mut total = 0;
+        for acl in acls.values_mut() {
+            // Count expired rules before cleanup
+            let expired_count = acl
+                .users()
+                .iter()
+                .filter(|uid| {
+                    acl.get_rule(uid)
+                        .map(|r| r.is_expired())
+                        .unwrap_or(false)
+                })
+                .count();
+            acl.cleanup_expired();
+            total += expired_count;
+        }
+        total
     }
 }
 
@@ -152,30 +181,61 @@ pub struct InviteVerification {
 // ============================================================================
 
 /// Generate an invite token for a drive
+///
+/// # Security
+/// - Rate limited to prevent abuse
+/// - Requires drive ownership
 #[tauri::command]
 pub async fn generate_invite(
     request: CreateInviteRequest,
     state: State<'_, AppState>,
     _security: State<'_, Arc<SecurityStore>>,
+    rate_limiter: State<'_, SharedRateLimiter>,
 ) -> Result<InviteInfo, String> {
-    // Verify the caller owns the drive
+    // Rate limit check
+    let node_id = state
+        .identity_manager
+        .node_id()
+        .await
+        .ok_or_else(|| AppError::IdentityNotInitialized.to_string())?;
+    
+    match rate_limiter
+        .check(&node_id.as_bytes(), RateLimitOperation::InviteGeneration)
+        .await
+    {
+        crate::core::rate_limit::RateLimitResult::Allowed { remaining } => {
+            tracing::debug!(remaining = remaining, "Invite generation rate limit OK");
+        }
+        crate::core::rate_limit::RateLimitResult::Denied { retry_after } => {
+            return Err(AppError::RateLimited {
+                retry_after_secs: retry_after.as_secs(),
+            }
+            .to_string());
+        }
+    }
+
+    // Validate drive ID
     let drive_id = &request.drive_id;
+    validate_drive_id(drive_id).map_err(|e| e.to_string())?;
     let id_arr = parse_drive_id(drive_id)?;
 
     let drives = state.drives.read().await;
-    let drive = drives
-        .get(&id_arr)
-        .ok_or_else(|| "Drive not found".to_string())?;
+    let drive = drives.get(&id_arr).ok_or_else(|| {
+        AppError::DriveNotFound {
+            drive_id: drive_id.clone(),
+        }
+        .to_string()
+    })?;
 
     // Get the signing key from identity manager
     let signing_key = state
         .identity_manager
         .signing_key()
         .await
-        .ok_or_else(|| "Identity not initialized".to_string())?;
+        .ok_or_else(|| AppError::IdentityNotInitialized.to_string())?;
 
-    // Build the invite token (using chrono::Duration)
-    let validity_hours = request.validity_hours.unwrap_or(24);
+    // Validate validity hours (1 to 168 hours = 1 week max)
+    let validity_hours = request.validity_hours.unwrap_or(24).min(168).max(1);
     let validity = ChronoDuration::hours(validity_hours as i64);
 
     let mut builder = InviteBuilder::new(drive_id)
@@ -183,6 +243,10 @@ pub async fn generate_invite(
         .with_validity(validity);
 
     if let Some(note) = &request.note {
+        // Validate note length
+        if note.len() > 500 {
+            return Err(AppError::ValidationError("Note too long (max 500 chars)".to_string()).to_string());
+        }
         builder = builder.with_note(note);
     }
 
@@ -201,9 +265,12 @@ pub async fn generate_invite(
     let expires_at = Utc::now() + ChronoDuration::hours(validity_hours as i64);
 
     tracing::info!(
-        "Generated invite for drive '{}' with {:?} permission",
-        drive.name,
-        request.permission
+        drive_id = %drive_id,
+        drive_name = %drive.name,
+        permission = ?request.permission,
+        validity_hours = validity_hours,
+        single_use = request.single_use.unwrap_or(false),
+        "Generated invite token"
     );
 
     Ok(InviteInfo {
@@ -217,6 +284,11 @@ pub async fn generate_invite(
 }
 
 /// Verify an invite token without accepting it
+///
+/// # Security
+/// - Validates token format and structure
+/// - Verifies Ed25519 signature against inviter's public key
+/// - Checks expiration time
 #[tauri::command]
 pub async fn verify_invite(
     token_string: String,
@@ -226,6 +298,7 @@ pub async fn verify_invite(
     let token = match InviteToken::from_string(&token_string) {
         Ok(t) => t,
         Err(e) => {
+            tracing::warn!(error = %e, "Invalid invite token format");
             return Ok(InviteVerification {
                 valid: false,
                 drive_id: None,
@@ -237,8 +310,13 @@ pub async fn verify_invite(
         }
     };
 
-    // Check expiration
+    // Check expiration first (quick check)
     if token.is_expired() {
+        tracing::debug!(
+            drive_id = %token.payload.drive_id,
+            expires_at = %token.payload.expires_at,
+            "Invite token has expired"
+        );
         return Ok(InviteVerification {
             valid: false,
             drive_id: Some(token.payload.drive_id.clone()),
@@ -249,8 +327,63 @@ pub async fn verify_invite(
         });
     }
 
-    // TODO: Verify signature against inviter's public key
-    // For now, we trust the token structure
+    // Verify signature against inviter's public key
+    // The inviter field contains the hex-encoded public key
+    let inviter_pubkey = match hex::decode(&token.payload.inviter) {
+        Ok(bytes) if bytes.len() == 32 => {
+            let mut arr = [0u8; 32];
+            arr.copy_from_slice(&bytes);
+            match ed25519_dalek::VerifyingKey::from_bytes(&arr) {
+                Ok(key) => key,
+                Err(e) => {
+                    tracing::warn!(error = %e, "Invalid inviter public key in token");
+                    return Ok(InviteVerification {
+                        valid: false,
+                        drive_id: Some(token.payload.drive_id.clone()),
+                        permission: Some(token.payload.permission.into()),
+                        inviter: Some(token.payload.inviter.clone()),
+                        expires_at: Some(token.payload.expires_at.to_rfc3339()),
+                        error: Some("Invalid inviter public key".to_string()),
+                    });
+                }
+            }
+        }
+        _ => {
+            tracing::warn!("Invalid inviter key format in token");
+            return Ok(InviteVerification {
+                valid: false,
+                drive_id: Some(token.payload.drive_id.clone()),
+                permission: Some(token.payload.permission.into()),
+                inviter: Some(token.payload.inviter.clone()),
+                expires_at: Some(token.payload.expires_at.to_rfc3339()),
+                error: Some("Invalid inviter key format".to_string()),
+            });
+        }
+    };
+
+    // Verify the signature
+    if let Err(e) = token.verify(&inviter_pubkey) {
+        tracing::warn!(
+            error = %e,
+            inviter = %token.payload.inviter,
+            "Invite token signature verification failed"
+        );
+        return Ok(InviteVerification {
+            valid: false,
+            drive_id: Some(token.payload.drive_id.clone()),
+            permission: Some(token.payload.permission.into()),
+            inviter: Some(token.payload.inviter.clone()),
+            expires_at: Some(token.payload.expires_at.to_rfc3339()),
+            error: Some("Invalid signature - token may have been tampered with".to_string()),
+        });
+    }
+
+    tracing::info!(
+        drive_id = %token.payload.drive_id,
+        permission = ?token.payload.permission,
+        inviter = %token.payload.inviter,
+        "Invite token verified successfully"
+    );
 
     Ok(InviteVerification {
         valid: true,

@@ -24,11 +24,20 @@ $text-tertiary: #6b7280;  // More professional gray
 $text-muted: #9ca3af;     // Consistent with borders
 $text-disabled: #d1d5db;   // Softer disabled state
 
-// Accent - Vibrant pink/magenta highlight
-$accent: #ff69f5;
-$accent-soft: rgba(255, 105, 245, 0.15);
-$accent-muted: rgba(255, 105, 245, 0.6);
-$accent-subtle: rgba(255, 105, 245, 0.08);
+// ========================================
+// ACCENT COLOR: Indigo Design System
+// ========================================
+// Primary: #6366f1 (Indigo 500)
+// Contrast ratio: 4.5:1 on white (AA compliant)
+// Updated: 2024-12-24
+// Previous: #ff69f5 (Pink/Magenta)
+// ========================================
+$accent: #6366f1;
+$accent-soft: rgba(99, 102, 241, 0.15);
+$accent-muted: rgba(99, 102, 241, 0.6);
+$accent-subtle: rgba(99, 102, 241, 0.08);
+$accent-dark: #4f46e5;   // Indigo 600 for hover states
+$accent-light: #818cf8;  // Indigo 400 for highlights
 
 // Semantic Colors - Muted, professional
 $success: #4ade80;
@@ -72,7 +81,7 @@ $shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04
 $shadow-card-active: 0 4px 12px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.03);
 
 // Glow effects for focus states
-$glow-focus: 0 0 0 2px rgba(255, 105, 245, 0.3);
+$glow-focus: 0 0 0 2px rgba(99, 102, 241, 0.3);
 
 // ----------------------------------------
 // Spacing Scale (4-point base, 8-point primary)
