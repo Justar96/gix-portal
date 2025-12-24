@@ -9,11 +9,10 @@
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(8px);
     @include flex-center;
     z-index: $z-modal;
     padding: $space-6;
-    animation: fadeIn $duration-fast $ease-out;
     
     @include respond-to('sm') {
         padding: $space-4;
@@ -21,15 +20,24 @@
 }
 
 .modal {
-    background: $bg-card;
+    background: rgba($bg-card, 0.98);
     border: 1px solid $border-hover;
     border-radius: $radius-xl;
     width: 100%;
     max-width: 480px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    animation: slideUp $duration-base $ease-out;
+    box-shadow: $shadow-xl;
     position: relative;
     overflow: hidden;
+    
+    // Subtle inner sheen
+    &::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: $radius-xl;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        pointer-events: none;
+    }
     
     @include respond-to('sm') {
         max-width: 100%;

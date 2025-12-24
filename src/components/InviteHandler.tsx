@@ -2,22 +2,16 @@ import { useState, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Link2, X, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useDeepLink } from "../hooks";
+import type { InviteVerification, AcceptInviteResult } from "../types";
 import "../styles/components/_invite-handler.scss";
-
-interface InviteInfo {
-  drive_id: string;
-  drive_name: string;
-  permission: string;
-  created_by: string;
-  expires_at?: string;
-}
 
 interface InviteHandlerProps {
   onDriveJoined?: (driveId: string) => void;
 }
 
 export function InviteHandler({ onDriveJoined }: InviteHandlerProps) {
-  const [inviteInfo, setInviteInfo] = useState<InviteInfo | null>(null);
+  const [inviteInfo, setInviteInfo] = useState<InviteVerification | null>(null);
+  const [currentToken, setCurrentToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,11 +21,20 @@ export function InviteHandler({ onDriveJoined }: InviteHandlerProps) {
     setLoading(true);
     setError(null);
     setSuccess(false);
+    setCurrentToken(invite.token);
 
     try {
-      // Verify the invite token
-      const info = await invoke<InviteInfo>("verify_invite", { token: invite.token });
-      setInviteInfo(info);
+      // Verify the invite token first
+      const info = await invoke<InviteVerification>("verify_invite", {
+        tokenString: invite.token,
+      });
+      
+      if (!info.valid) {
+        setError(info.error || "Invalid invite token");
+        setInviteInfo(null);
+      } else {
+        setInviteInfo(info);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Invalid or expired invite";
       setError(message);
@@ -43,24 +46,28 @@ export function InviteHandler({ onDriveJoined }: InviteHandlerProps) {
   const { inviteLink, clearInvite } = useDeepLink(handleInvite);
 
   const handleAccept = async () => {
-    if (!inviteLink || !inviteInfo) return;
+    if (!currentToken || !inviteInfo) return;
 
     setJoining(true);
     setError(null);
 
     try {
       // Accept the invite and join the drive
-      await invoke("verify_invite", {
-        token: inviteLink.token,
-        accept: true,
+      const result = await invoke<AcceptInviteResult>("accept_invite", {
+        tokenString: currentToken,
       });
-      setSuccess(true);
-      onDriveJoined?.(inviteInfo.drive_id);
 
-      // Auto-close after success
-      setTimeout(() => {
-        handleClose();
-      }, 2000);
+      if (result.success) {
+        setSuccess(true);
+        onDriveJoined?.(result.drive_id);
+
+        // Auto-close after success
+        setTimeout(() => {
+          handleClose();
+        }, 2000);
+      } else {
+        setError(result.error || "Failed to join drive");
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to join drive";
       setError(message);
@@ -71,6 +78,7 @@ export function InviteHandler({ onDriveJoined }: InviteHandlerProps) {
 
   const handleClose = () => {
     setInviteInfo(null);
+    setCurrentToken(null);
     setError(null);
     setSuccess(false);
     clearInvite();
@@ -119,7 +127,7 @@ export function InviteHandler({ onDriveJoined }: InviteHandlerProps) {
               <div className="invite-details">
                 <div className="invite-detail-row">
                   <span className="detail-label">Drive</span>
-                  <span className="detail-value">{inviteInfo.drive_name}</span>
+                  <span className="detail-value">{inviteInfo.drive_id}</span>
                 </div>
                 <div className="invite-detail-row">
                   <span className="detail-label">Permission</span>
@@ -129,7 +137,7 @@ export function InviteHandler({ onDriveJoined }: InviteHandlerProps) {
                 </div>
                 <div className="invite-detail-row">
                   <span className="detail-label">Invited by</span>
-                  <span className="detail-value truncate">{inviteInfo.created_by}</span>
+                  <span className="detail-value truncate">{inviteInfo.inviter}</span>
                 </div>
                 {inviteInfo.expires_at && (
                   <div className="invite-detail-row">

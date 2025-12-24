@@ -16,7 +16,6 @@ import {
     FileEdit,
     Trash2,
     PanelRightClose,
-    PanelRight,
 } from "lucide-react";
 import type { DriveInfo, UserPresenceInfo, ActivityEntryInfo, ActivityType } from "../types";
 import { formatRelativeTime, getStatusColor, ACTIVITY_LABELS } from "../types";
@@ -41,7 +40,7 @@ export function PresencePanel({ drive, isOpen, onToggle, conflictCount = 0 }: Pr
         <div className={`presence-panel ${isOpen ? 'open' : 'closed'}`}>
             {/* Toggle Tab (shown when closed) */}
             {!isOpen && (
-                <button 
+                <button
                     className="presence-toggle-tab"
                     onClick={onToggle}
                     title="Show presence panel"

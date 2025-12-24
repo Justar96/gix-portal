@@ -7,19 +7,23 @@ mod storage;
 mod tray;
 
 use commands::{
-    acquire_lock, cancel_transfer, check_permission, create_drive, delete_drive, dismiss_conflict,
-    download_file, extend_lock, force_release_lock, generate_invite, get_conflict,
-    get_conflict_count, get_connection_status, get_drive, get_identity, get_lock_status,
-    get_online_count, get_online_users, get_recent_activity, get_sync_status, get_transfer,
-    grant_permission, is_watching, join_drive_presence, leave_drive_presence, list_conflicts,
-    list_drives, list_files, list_locks, list_permissions, list_transfers, presence_heartbeat,
-    release_lock, rename_drive, resolve_conflict, revoke_permission, start_sync, start_watching,
-    stop_sync, stop_watching, subscribe_drive_events, upload_file, verify_invite, SecurityStore,
+    accept_invite, acquire_lock, cancel_transfer, check_permission, create_drive, delete_drive,
+    delete_path, dismiss_conflict, download_file, extend_lock, force_release_lock, generate_invite,
+    get_conflict, get_conflict_count, get_connection_status, get_drive, get_identity,
+    get_lock_status, get_online_count, get_online_users, get_recent_activity, get_sync_status,
+    get_transfer, grant_permission, is_watching, join_drive_presence, leave_drive_presence,
+    list_conflicts, list_drives, list_files, list_locks, list_permissions, list_transfers,
+    presence_heartbeat, read_file, release_lock, rename_drive, rename_path, resolve_conflict,
+    revoke_permission, start_sync, start_watching, stop_sync, stop_watching,
+    subscribe_drive_events, upload_file, verify_invite, write_file, SecurityStore,
 };
-use core::{ConflictManager, DriveEvent, DriveEventDto, DriveId, LockManager, PresenceManager, RateLimiter, SharedRateLimiter};
+use core::{
+    ConflictManager, DriveEvent, DriveEventDto, DriveId, LockManager, PresenceManager, RateLimiter,
+    SharedRateLimiter,
+};
 use state::AppState;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, RunEvent};
 use tokio::sync::broadcast;
 
 use crate::network::SyncEngine;
@@ -75,86 +79,102 @@ pub fn run() {
 
             tracing::info!("Data directory: {:?}", data_dir);
 
-            // Initialize state asynchronously
-            tauri::async_runtime::spawn(async move {
-                match AppState::initialize(data_dir).await {
-                    Ok(state) => {
-                        // Spawn event forwarding task if event_broadcaster is available
-                        if let Some(ref broadcaster) = state.event_broadcaster {
-                            let event_rx = broadcaster.subscribe_frontend();
-                            let app_handle_for_events = app_handle.clone();
+            // Initialize state synchronously to ensure it's available before any commands run
+            // Using block_on since we're not in an async context but need to await the initialization
+            let state =
+                tauri::async_runtime::block_on(async { AppState::initialize(data_dir).await });
 
-                            tauri::async_runtime::spawn(async move {
-                                spawn_event_forwarder(app_handle_for_events, event_rx).await;
-                            });
-                        }
+            match state {
+                Ok(state) => {
+                    // Spawn event forwarding task if event_broadcaster is available
+                    if let Some(ref broadcaster) = state.event_broadcaster {
+                        let event_rx = broadcaster.subscribe_frontend();
+                        let app_handle_for_events = app_handle.clone();
 
-                        // Spawn file watcher event forwarding task
-                        if let (Some(ref watcher), Some(ref sync_engine)) =
-                            (&state.file_watcher, &state.sync_engine)
-                        {
-                            let watcher_rx = watcher.subscribe();
-                            let sync_engine_clone = sync_engine.clone();
-                            let app_handle_for_watcher = app_handle.clone();
-
-                            tauri::async_runtime::spawn(async move {
-                                spawn_watcher_forwarder(
-                                    app_handle_for_watcher,
-                                    watcher_rx,
-                                    sync_engine_clone,
-                                )
-                                .await;
-                            });
-                        }
-
-                        // Get node ID for managers - handle gracefully if not available
-                        let node_id = match state.identity_manager.node_id().await {
-                            Some(id) => id,
-                            None => {
-                                tracing::error!("Node ID not available during initialization");
-                                return;
-                            }
-                        };
-
-                        // Initialize SecurityStore for Phase 3
-                        let security_store = Arc::new(SecurityStore::new());
-                        app_handle.manage(security_store.clone());
-
-                        // Initialize rate limiter for abuse prevention
-                        let rate_limiter: SharedRateLimiter = Arc::new(RateLimiter::new());
-                        app_handle.manage(rate_limiter);
-                        tracing::info!("Rate limiter initialized");
-
-                        // Initialize LockManager for Phase 4
-                        let lock_manager = Arc::new(LockManager::new(node_id));
-                        app_handle.manage(lock_manager.clone());
-
-                        // Initialize ConflictManager for Phase 4
-                        let conflict_manager = Arc::new(ConflictManager::new());
-                        app_handle.manage(conflict_manager.clone());
-
-                        // Initialize PresenceManager for Phase 4
-                        let presence_manager = Arc::new(PresenceManager::new(node_id));
-                        app_handle.manage(presence_manager.clone());
-
-                        // Start cleanup manager for resource maintenance
-                        let cleanup_manager = core::CleanupManager::new();
-                        let _cleanup_handle = cleanup_manager.start(
-                            lock_manager,
-                            conflict_manager,
-                            presence_manager,
-                            security_store,
-                        );
-                        tracing::info!("Cleanup manager started");
-
-                        app_handle.manage(state);
-                        tracing::info!("Application state initialized successfully");
+                        tauri::async_runtime::spawn(async move {
+                            spawn_event_forwarder(app_handle_for_events, event_rx).await;
+                        });
                     }
-                    Err(e) => {
-                        tracing::error!("Failed to initialize application: {}", e);
+
+                    // Spawn file watcher event forwarding task
+                    if let (Some(ref watcher), Some(ref sync_engine)) =
+                        (&state.file_watcher, &state.sync_engine)
+                    {
+                        let watcher_rx = watcher.subscribe();
+                        let sync_engine_clone = sync_engine.clone();
+                        let app_handle_for_watcher = app_handle.clone();
+
+                        tauri::async_runtime::spawn(async move {
+                            spawn_watcher_forwarder(
+                                app_handle_for_watcher,
+                                watcher_rx,
+                                sync_engine_clone,
+                            )
+                            .await;
+                        });
                     }
+
+                    // Get node ID for managers - handle gracefully if not available
+                    let node_id = tauri::async_runtime::block_on(async {
+                        state.identity_manager.node_id().await
+                    });
+
+                    let node_id = match node_id {
+                        Some(id) => id,
+                        None => {
+                            tracing::error!("Node ID not available during initialization");
+                            // Still manage the state so basic operations work
+                            app_handle.manage(state);
+                            return Ok(());
+                        }
+                    };
+
+                    // Initialize SecurityStore for Phase 3 with database persistence
+                    let security_store = Arc::new(SecurityStore::new(state.db.clone()));
+                    // Load persisted ACLs from database
+                    if let Err(e) = security_store.load_from_db() {
+                        tracing::error!("Failed to load security data from database: {}", e);
+                    }
+                    app_handle.manage(security_store.clone());
+
+                    // Initialize rate limiter for abuse prevention
+                    let rate_limiter: SharedRateLimiter = Arc::new(RateLimiter::new());
+                    app_handle.manage(rate_limiter);
+                    tracing::info!("Rate limiter initialized");
+
+                    // Initialize LockManager for Phase 4
+                    let lock_manager = Arc::new(LockManager::new(node_id));
+                    app_handle.manage(lock_manager.clone());
+
+                    // Initialize ConflictManager for Phase 4
+                    let conflict_manager = Arc::new(ConflictManager::new());
+                    app_handle.manage(conflict_manager.clone());
+
+                    // Initialize PresenceManager for Phase 4
+                    let presence_manager = Arc::new(PresenceManager::new(node_id));
+                    app_handle.manage(presence_manager.clone());
+
+                    // Start cleanup manager for resource maintenance
+                    let cleanup_manager = core::CleanupManager::new();
+                    let _cleanup_handle = cleanup_manager.start(
+                        lock_manager,
+                        conflict_manager,
+                        presence_manager,
+                        security_store,
+                    );
+                    tracing::info!("Cleanup manager started");
+
+                    app_handle.manage(state);
+                    tracing::info!("Application state initialized successfully");
                 }
-            });
+                Err(e) => {
+                    tracing::error!("Failed to initialize application: {}", e);
+                    return Err(Box::new(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("Failed to initialize application: {}", e),
+                    )) as Box<dyn std::error::Error>);
+                }
+            }
 
             Ok(())
         })
@@ -167,6 +187,10 @@ pub fn run() {
             list_drives,
             get_drive,
             list_files,
+            read_file,
+            write_file,
+            delete_path,
+            rename_path,
             // Phase 2: Sync commands
             start_sync,
             stop_sync,
@@ -185,6 +209,7 @@ pub fn run() {
             // Phase 3: Security commands
             generate_invite,
             verify_invite,
+            accept_invite,
             list_permissions,
             grant_permission,
             revoke_permission,
@@ -210,8 +235,36 @@ pub fn run() {
             leave_drive_presence,
             presence_heartbeat,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app_handle, event| {
+            // Handle app lifecycle events for graceful shutdown
+            match event {
+                RunEvent::ExitRequested { api, .. } => {
+                    // This is called when exit is requested but before actual exit
+                    // We can't prevent exit here, but we can initiate shutdown early
+                    tracing::info!("Application exit requested, initiating graceful shutdown...");
+
+                    // Get app state and perform graceful shutdown
+                    if let Some(state) = app_handle.try_state::<AppState>() {
+                        // Use block_on to run the async shutdown within the event handler
+                        // This ensures all async resources are cleaned up before the runtime is destroyed
+                        tauri::async_runtime::block_on(async {
+                            state.shutdown().await;
+                        });
+                    }
+
+                    tracing::info!("Graceful shutdown complete");
+                    // Don't prevent exit
+                    let _ = api;
+                }
+                RunEvent::Exit => {
+                    // Exit is already happening, shutdown should have already run
+                    tracing::debug!("Application exiting");
+                }
+                _ => {}
+            }
+        });
 }
 
 /// Spawns a background task that forwards drive events to the frontend

@@ -6,8 +6,8 @@
 //! - Expired ACL rules
 //! - Stale presence data
 
-use crate::core::{ConflictManager, LockManager, PresenceManager};
 use crate::commands::SecurityStore;
+use crate::core::{ConflictManager, LockManager, PresenceManager};
 use chrono::{Duration, Utc};
 use std::sync::Arc;
 use tokio::time::{interval, Duration as TokioDuration};
@@ -27,7 +27,7 @@ pub struct CleanupConfig {
 impl Default for CleanupConfig {
     fn default() -> Self {
         Self {
-            interval_secs: 300, // 5 minutes
+            interval_secs: 300,          // 5 minutes
             max_activity_age_hours: 168, // 1 week
             max_resolved_conflict_age_days: 30,
             presence_idle_threshold_mins: 15,
@@ -61,19 +61,16 @@ impl CleanupManager {
         conflict_manager: Arc<ConflictManager>,
         presence_manager: Arc<PresenceManager>,
         security_store: Arc<SecurityStore>,
-    ) -> tokio::task::JoinHandle<()> {
+    ) -> tauri::async_runtime::JoinHandle<()> {
         let interval_secs = self.config.interval_secs;
         let max_activity_age = Duration::hours(self.config.max_activity_age_hours);
         let max_resolved_age = Duration::days(self.config.max_resolved_conflict_age_days);
         let idle_threshold = Duration::minutes(self.config.presence_idle_threshold_mins);
 
-        tokio::spawn(async move {
+        tauri::async_runtime::spawn(async move {
             let mut ticker = interval(TokioDuration::from_secs(interval_secs));
 
-            tracing::info!(
-                interval_secs = interval_secs,
-                "Cleanup manager started"
-            );
+            tracing::info!(interval_secs = interval_secs, "Cleanup manager started");
 
             loop {
                 ticker.tick().await;
@@ -85,13 +82,15 @@ impl CleanupManager {
                 cleaned.locks = cleanup_expired_locks(&lock_manager).await;
 
                 // Cleanup old activities
-                cleaned.activities = cleanup_old_activities(&presence_manager, max_activity_age).await;
+                cleaned.activities =
+                    cleanup_old_activities(&presence_manager, max_activity_age).await;
 
                 // Cleanup stale presence
                 cleaned.presence = cleanup_stale_presence(&presence_manager, idle_threshold).await;
 
                 // Cleanup old resolved conflicts
-                cleaned.conflicts = cleanup_old_conflicts(&conflict_manager, max_resolved_age).await;
+                cleaned.conflicts =
+                    cleanup_old_conflicts(&conflict_manager, max_resolved_age).await;
 
                 // Cleanup expired ACL rules
                 cleaned.acl_rules = cleanup_expired_acls(&security_store).await;

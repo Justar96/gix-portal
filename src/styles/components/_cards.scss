@@ -15,25 +15,40 @@
     box-shadow: $shadow-card;
     transition: all $transition-base;
     overflow: hidden;
+    position: relative;
+    
+    // Glassy highlight on top border
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+        opacity: 0.5;
+        pointer-events: none;
+    }
     
     &:hover {
         box-shadow: $shadow-card-hover;
         border-color: $border-hover;
-        transform: translateY(-1px);
     }
     
     &.active {
-        box-shadow: $shadow-card-active;
-        border-color: $border-primary;
-        transform: translateY(0);
+        box-shadow: 0 0 0 2px $accent-soft;
+        border-color: $accent;
     }
     
     &.clickable {
         cursor: pointer;
         
+        &:hover {
+            box-shadow: $shadow-lg;
+        }
+        
         &:active {
-            transform: translateY(0);
-            box-shadow: $shadow-card-active;
+            box-shadow: $shadow-md;
         }
     }
 }
@@ -44,7 +59,10 @@
 .card-header {
     padding: $space-5 $space-6;
     border-bottom: 1px solid $border-subtle;
-    background: $bg-elevated;
+    background: rgba($bg-elevated, 0.5); // Slight translucency
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     
     @include respond-to('sm') {
         padding: $space-4 $space-5;
@@ -61,7 +79,7 @@
     .card-subtitle {
         font-size: $text-sm;
         color: $text-secondary;
-        margin-top: $space-1;
+        margin-top: $space-0-5;
     }
 }
 
@@ -120,7 +138,6 @@
     
     &:hover {
         box-shadow: $shadow-xl;
-        transform: translateY(-2px);
     }
 }
 
@@ -309,20 +326,20 @@
 // Interactive Card States
 // ----------------------------------------
 .card-interactive {
-    position: relative;
+    @extend .card;
+    cursor: pointer;
     
-    &::before {
+    &::after {
         content: '';
         position: absolute;
         inset: 0;
-        border-radius: $radius-xl;
-        background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.1));
+        background: radial-gradient(circle at center, rgba($accent, 0.03), transparent 70%);
         opacity: 0;
-        transition: opacity $transition-base;
+        transition: opacity 0.3s ease;
         pointer-events: none;
     }
     
-    &:hover::before {
+    &:hover::after {
         opacity: 1;
     }
 }
@@ -351,33 +368,11 @@
     filter: grayscale(0.5);
 }
 
-// ----------------------------------------
-// Card Animations
-// ----------------------------------------
-@keyframes cardSlideIn {
+@keyframes spin {
     from {
-        opacity: 0;
-        transform: translateY(20px);
+        transform: rotate(0deg);
     }
     to {
-        opacity: 1;
-        transform: translateY(0);
+        transform: rotate(360deg);
     }
-}
-
-@keyframes cardFadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-.card-animate-in {
-    animation: cardSlideIn $duration-slow $ease-out;
-}
-
-.card-animate-fade {
-    animation: cardFadeIn $duration-base $ease-out;
 }

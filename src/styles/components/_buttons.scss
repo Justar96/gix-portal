@@ -18,19 +18,15 @@
     font-size: $text-sm;
     font-weight: $weight-medium;
     min-height: 44px;
-    transition: all $transition-base;
-    box-shadow: $shadow-sm;
+    transition: all $transition-fast;
     
     &:hover:not(:disabled) {
-        background: rgba($accent, 0.9);
-        border-color: rgba($accent, 0.9);
-        transform: translateY(-1px);
-        box-shadow: $shadow-md;
+        background: $accent-dark;
+        border-color: $accent-dark;
     }
     
     &:active:not(:disabled) {
-        transform: translateY(0);
-        box-shadow: $shadow-sm;
+        background: $accent-dark;
     }
     
     @include respond-to('sm') {
@@ -47,25 +43,22 @@
     @include button-base;
     padding: $space-3 $space-6;
     background: $bg-card;
-    border: 1px solid $border-card;
+    border: 1px solid $border-secondary;
     border-radius: $radius-lg;
     color: $text-primary;
     font-size: $text-sm;
     font-weight: $weight-medium;
     min-height: 44px;
-    transition: all $transition-base;
-    box-shadow: $shadow-xs;
+    transition: all $transition-fast;
     
     &:hover:not(:disabled) {
-        background: $bg-elevated;
+        background: $bg-hover;
         border-color: $border-hover;
-        transform: translateY(-1px);
-        box-shadow: $shadow-sm;
+        color: $text-primary;
     }
     
     &:active:not(:disabled) {
-        transform: translateY(0);
-        background: $bg-tertiary;
+        background: $bg-active;
     }
     
     @include respond-to('sm') {
@@ -80,17 +73,19 @@
 // ----------------------------------------
 .btn-icon {
     @include button-base;
-    width: 28px;
-    height: 28px;
+    width: 36px;
+    height: 36px;
     background: transparent;
-    border: none;
+    border: 1px solid transparent;
     border-radius: $radius-md;
     color: $text-tertiary;
     flex-shrink: 0;
+    transition: all $transition-fast;
     
     &:hover:not(:disabled) {
-        background: $bg-tertiary;
+        background: $bg-hover;
         color: $text-primary;
+        border-color: $border-subtle;
     }
     
     &:active:not(:disabled) {
@@ -99,18 +94,24 @@
     
     // Size variants
     &.btn-sm {
-        width: 24px;
-        height: 24px;
+        width: 28px;
+        height: 28px;
+        padding: 4px;
         
         svg {
-            width: 14px;
-            height: 14px;
+            width: 16px;
+            height: 16px;
         }
     }
     
     &.btn-lg {
-        width: 36px;
-        height: 36px;
+        width: 44px;
+        height: 44px;
+        
+        svg {
+            width: 24px;
+            height: 24px;
+        }
     }
     
     // Danger variant
@@ -118,6 +119,7 @@
         &:hover:not(:disabled) {
             background: $error-soft;
             color: $error;
+            border-color: $error-border;
         }
     }
 }

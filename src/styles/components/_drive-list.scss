@@ -11,24 +11,28 @@
 .drive-list {
     display: flex;
     flex-direction: column;
-    gap: $space-1;
-    padding: $space-1-5;
+    gap: $space-2; // Increased gap for better breathing room
+    padding: $space-2;
     
     &.empty {
         @include flex-column-center;
         text-align: center;
         color: $text-muted;
-        padding: $space-6 $space-3;
-        gap: $space-1;
+        padding: $space-8 $space-4;
+        gap: $space-2;
+        background: $bg-secondary;
+        border-radius: $radius-lg;
+        border: 1px dashed $border-secondary;
         
         p {
-            font-size: $text-xs;
-            color: $text-muted;
+            font-size: $text-sm;
+            color: $text-secondary;
+            font-weight: $weight-medium;
         }
         
         .hint {
-            font-size: $text-2xs;
-            color: $text-disabled;
+            font-size: $text-xs;
+            color: $text-muted;
         }
     }
 }
@@ -39,30 +43,31 @@
 .drive-item {
     display: flex;
     align-items: center;
-    gap: $space-3;
+    gap: $space-4;
     padding: $space-3 $space-4;
     background: $bg-card;
-    border: 1px solid $border-card;
-    border-radius: $radius-lg;
+    border: 1px solid transparent; // Transparent by default for cleaner look
+    border-radius: $radius-xl;
     cursor: pointer;
     transition: all $transition-base;
     position: relative;
+    overflow: hidden;
     
+    // Hover state
     &:hover {
         background: $bg-elevated;
         border-color: $border-hover;
-        box-shadow: $shadow-card-hover;
-        transform: translateY(-1px);
     }
     
     &.selected {
         background: $bg-elevated;
-        border-color: $border-primary;
-        box-shadow: $shadow-card-active;
+        border-color: $accent;
+        box-shadow: 0 0 0 2px $accent-soft;
         
         .drive-icon {
-            color: $accent;
-            background: $accent-soft;
+            color: white;
+            background: linear-gradient(135deg, $accent, $accent-dark);
+            box-shadow: 0 4px 12px rgba($accent, 0.3);
         }
         
         .drive-name {
@@ -72,8 +77,8 @@
     }
     
     @include respond-to('sm') {
-        padding: $space-2-5 $space-3;
-        gap: $space-2;
+        padding: $space-3;
+        gap: $space-3;
     }
 }
 
@@ -82,27 +87,17 @@
 // ----------------------------------------
 .drive-icon {
     @include flex-center;
-    width: 32px;
-    height: 32px;
-    border-radius: $radius-md;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
     background: $bg-secondary;
     color: $text-tertiary;
     flex-shrink: 0;
-    transition: all $transition-base;
+    transition: all $transition-fast;
     
     svg {
-        width: 16px;
-        height: 16px;
-    }
-    
-    .drive-item:hover & {
-        background: $bg-tertiary;
-        color: $text-secondary;
-    }
-    
-    .drive-item.selected & {
-        background: $accent-soft;
-        color: $accent;
+        width: 20px;
+        height: 20px;
     }
 }
 

@@ -14,6 +14,7 @@ use crate::crypto::{
     AccessControlList, AccessRule, InviteBuilder, InviteToken, Permission, TokenTracker,
 };
 use crate::state::AppState;
+use crate::storage::Database;
 use chrono::{Duration as ChronoDuration, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -21,9 +22,13 @@ use std::sync::Arc;
 use tauri::State;
 use tokio::sync::RwLock;
 
-/// In-memory store for ACLs and token trackers per drive
-/// TODO: Persist to database in future iteration
+/// Persistent store for ACLs and token trackers per drive
+///
+/// Data is stored in memory for fast access and persisted to the database
+/// on every update.
 pub struct SecurityStore {
+    /// Database for persistence
+    db: Arc<Database>,
     /// ACLs keyed by drive ID (hex string)
     acls: RwLock<HashMap<String, AccessControlList>>,
     /// Token trackers keyed by drive ID (hex string)
@@ -31,11 +36,53 @@ pub struct SecurityStore {
 }
 
 impl SecurityStore {
-    pub fn new() -> Self {
+    /// Create a new SecurityStore with database persistence
+    pub fn new(db: Arc<Database>) -> Self {
         Self {
+            db,
             acls: RwLock::new(HashMap::new()),
             token_trackers: RwLock::new(HashMap::new()),
         }
+    }
+
+    /// Load all ACLs and token trackers from database
+    pub fn load_from_db(&self) -> Result<(), String> {
+        // Load ACLs
+        let acl_entries = self.db.list_acls().map_err(|e| e.to_string())?;
+        let mut acls_guard = self.acls.blocking_write();
+        for (drive_id, data) in acl_entries {
+            match serde_json::from_slice::<AccessControlList>(&data) {
+                Ok(acl) => {
+                    tracing::debug!("Loaded ACL for drive {}", drive_id);
+                    acls_guard.insert(drive_id, acl);
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to deserialize ACL for drive: {}", e);
+                }
+            }
+        }
+        tracing::info!("Loaded {} ACLs from database", acls_guard.len());
+
+        // Load token trackers
+        let tracker_entries = self.db.list_token_trackers().map_err(|e| e.to_string())?;
+        let mut trackers_guard = self.token_trackers.blocking_write();
+        for (drive_id, data) in tracker_entries {
+            match serde_json::from_slice::<TokenTracker>(&data) {
+                Ok(tracker) => {
+                    tracing::debug!("Loaded token tracker for drive {}", drive_id);
+                    trackers_guard.insert(drive_id, tracker);
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to deserialize token tracker: {}", e);
+                }
+            }
+        }
+        tracing::info!(
+            "Loaded {} token trackers from database",
+            trackers_guard.len()
+        );
+
+        Ok(())
     }
 
     /// Get or create ACL for a drive
@@ -46,10 +93,25 @@ impl SecurityStore {
             .clone()
     }
 
-    /// Update ACL for a drive
+    /// Update ACL for a drive (persists to database)
     pub async fn update_acl(&self, drive_id: &str, acl: AccessControlList) {
-        let mut acls = self.acls.write().await;
-        acls.insert(drive_id.to_string(), acl);
+        // Update in memory
+        {
+            let mut acls = self.acls.write().await;
+            acls.insert(drive_id.to_string(), acl.clone());
+        }
+
+        // Persist to database
+        match serde_json::to_vec(&acl) {
+            Ok(data) => {
+                if let Err(e) = self.db.save_acl(drive_id, &data) {
+                    tracing::error!("Failed to persist ACL for drive {}: {}", drive_id, e);
+                }
+            }
+            Err(e) => {
+                tracing::error!("Failed to serialize ACL: {}", e);
+            }
+        }
     }
 
     /// Get token tracker for a drive
@@ -59,38 +121,78 @@ impl SecurityStore {
         trackers.get(drive_id).cloned().unwrap_or_default()
     }
 
-    /// Update token tracker for a drive
+    /// Update token tracker for a drive (persists to database)
     #[allow(dead_code)]
     pub async fn update_token_tracker(&self, drive_id: &str, tracker: TokenTracker) {
-        let mut trackers = self.token_trackers.write().await;
-        trackers.insert(drive_id.to_string(), tracker);
+        // Update in memory
+        {
+            let mut trackers = self.token_trackers.write().await;
+            trackers.insert(drive_id.to_string(), tracker.clone());
+        }
+
+        // Persist to database
+        match serde_json::to_vec(&tracker) {
+            Ok(data) => {
+                if let Err(e) = self.db.save_token_tracker(drive_id, &data) {
+                    tracing::error!(
+                        "Failed to persist token tracker for drive {}: {}",
+                        drive_id,
+                        e
+                    );
+                }
+            }
+            Err(e) => {
+                tracing::error!("Failed to serialize token tracker: {}", e);
+            }
+        }
     }
 
     /// Cleanup expired ACL rules across all drives
     pub async fn cleanup_expired(&self) -> usize {
         let mut acls = self.acls.write().await;
         let mut total = 0;
-        for acl in acls.values_mut() {
+        let mut modified_drives = Vec::new();
+
+        for (drive_id, acl) in acls.iter_mut() {
             // Count expired rules before cleanup
             let expired_count = acl
                 .users()
                 .iter()
-                .filter(|uid| {
-                    acl.get_rule(uid)
-                        .map(|r| r.is_expired())
-                        .unwrap_or(false)
-                })
+                .filter(|uid| acl.get_rule(uid).map(|r| r.is_expired()).unwrap_or(false))
                 .count();
-            acl.cleanup_expired();
-            total += expired_count;
+
+            if expired_count > 0 {
+                acl.cleanup_expired();
+                total += expired_count;
+                modified_drives.push((drive_id.clone(), acl.clone()));
+            }
         }
+
+        // Persist modified ACLs
+        for (drive_id, acl) in modified_drives {
+            if let Ok(data) = serde_json::to_vec(&acl) {
+                if let Err(e) = self.db.save_acl(&drive_id, &data) {
+                    tracing::error!("Failed to persist ACL after cleanup: {}", e);
+                }
+            }
+        }
+
         total
     }
-}
 
-impl Default for SecurityStore {
-    fn default() -> Self {
-        Self::new()
+    /// Delete ACL for a drive (when drive is deleted)
+    #[allow(dead_code)]
+    pub async fn delete_acl(&self, drive_id: &str) {
+        // Remove from memory
+        {
+            let mut acls = self.acls.write().await;
+            acls.remove(drive_id);
+        }
+
+        // Remove from database
+        if let Err(e) = self.db.delete_acl(drive_id) {
+            tracing::error!("Failed to delete ACL from database: {}", e);
+        }
     }
 }
 
@@ -198,7 +300,7 @@ pub async fn generate_invite(
         .node_id()
         .await
         .ok_or_else(|| AppError::IdentityNotInitialized.to_string())?;
-    
+
     match rate_limiter
         .check(&node_id.as_bytes(), RateLimitOperation::InviteGeneration)
         .await
@@ -245,7 +347,9 @@ pub async fn generate_invite(
     if let Some(note) = &request.note {
         // Validate note length
         if note.len() > 500 {
-            return Err(AppError::ValidationError("Note too long (max 500 chars)".to_string()).to_string());
+            return Err(
+                AppError::ValidationError("Note too long (max 500 chars)".to_string()).to_string(),
+            );
         }
         builder = builder.with_note(note);
     }
@@ -391,6 +495,203 @@ pub async fn verify_invite(
         permission: Some(token.payload.permission.into()),
         inviter: Some(token.payload.inviter.clone()),
         expires_at: Some(token.payload.expires_at.to_rfc3339()),
+        error: None,
+    })
+}
+
+/// Result of accepting an invite
+#[derive(Clone, Debug, Serialize)]
+pub struct AcceptInviteResult {
+    pub success: bool,
+    pub drive_id: String,
+    pub drive_name: String,
+    pub permission: PermissionLevel,
+    pub error: Option<String>,
+}
+
+/// Accept an invite token and join the drive
+///
+/// # Security
+/// - Verifies token signature and expiration
+/// - Grants permission from token to caller
+/// - Adds caller to drive's ACL
+#[tauri::command]
+pub async fn accept_invite(
+    token_string: String,
+    state: State<'_, AppState>,
+    security: State<'_, Arc<SecurityStore>>,
+) -> Result<AcceptInviteResult, String> {
+    // Parse the token
+    let token = match InviteToken::from_string(&token_string) {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::warn!(error = %e, "Invalid invite token format");
+            return Ok(AcceptInviteResult {
+                success: false,
+                drive_id: String::new(),
+                drive_name: String::new(),
+                permission: PermissionLevel::Read,
+                error: Some(format!("Invalid token format: {}", e)),
+            });
+        }
+    };
+
+    // Check expiration
+    if token.is_expired() {
+        tracing::debug!(
+            drive_id = %token.payload.drive_id,
+            expires_at = %token.payload.expires_at,
+            "Invite token has expired"
+        );
+        return Ok(AcceptInviteResult {
+            success: false,
+            drive_id: token.payload.drive_id.clone(),
+            drive_name: String::new(),
+            permission: token.payload.permission.into(),
+            error: Some("Token has expired".to_string()),
+        });
+    }
+
+    // Verify signature against inviter's public key
+    let inviter_pubkey = match hex::decode(&token.payload.inviter) {
+        Ok(bytes) if bytes.len() == 32 => {
+            let mut arr = [0u8; 32];
+            arr.copy_from_slice(&bytes);
+            match ed25519_dalek::VerifyingKey::from_bytes(&arr) {
+                Ok(key) => key,
+                Err(e) => {
+                    tracing::warn!(error = %e, "Invalid inviter public key in token");
+                    return Ok(AcceptInviteResult {
+                        success: false,
+                        drive_id: token.payload.drive_id.clone(),
+                        drive_name: String::new(),
+                        permission: token.payload.permission.into(),
+                        error: Some("Invalid inviter public key".to_string()),
+                    });
+                }
+            }
+        }
+        _ => {
+            tracing::warn!("Invalid inviter key format in token");
+            return Ok(AcceptInviteResult {
+                success: false,
+                drive_id: token.payload.drive_id.clone(),
+                drive_name: String::new(),
+                permission: token.payload.permission.into(),
+                error: Some("Invalid inviter key format".to_string()),
+            });
+        }
+    };
+
+    // Verify the signature
+    if let Err(e) = token.verify(&inviter_pubkey) {
+        tracing::warn!(
+            error = %e,
+            inviter = %token.payload.inviter,
+            "Invite token signature verification failed"
+        );
+        return Ok(AcceptInviteResult {
+            success: false,
+            drive_id: token.payload.drive_id.clone(),
+            drive_name: String::new(),
+            permission: token.payload.permission.into(),
+            error: Some("Invalid signature - token may have been tampered with".to_string()),
+        });
+    }
+
+    // Get the drive
+    let drive_id = &token.payload.drive_id;
+    let id_arr = match parse_drive_id(drive_id) {
+        Ok(arr) => arr,
+        Err(e) => {
+            return Ok(AcceptInviteResult {
+                success: false,
+                drive_id: drive_id.clone(),
+                drive_name: String::new(),
+                permission: token.payload.permission.into(),
+                error: Some(e),
+            });
+        }
+    };
+
+    let drives = state.drives.read().await;
+    let drive = match drives.get(&id_arr) {
+        Some(d) => d,
+        None => {
+            return Ok(AcceptInviteResult {
+                success: false,
+                drive_id: drive_id.clone(),
+                drive_name: String::new(),
+                permission: token.payload.permission.into(),
+                error: Some("Drive not found".to_string()),
+            });
+        }
+    };
+
+    let drive_name = drive.name.clone();
+    let owner_hex = drive.owner.to_hex();
+
+    // Get caller's node ID
+    let caller = state
+        .identity_manager
+        .node_id()
+        .await
+        .ok_or_else(|| "Identity not initialized".to_string())?;
+    let caller_hex = caller.to_hex();
+
+    // Don't allow owner to join their own drive
+    if caller_hex == owner_hex {
+        return Ok(AcceptInviteResult {
+            success: false,
+            drive_id: drive_id.clone(),
+            drive_name,
+            permission: token.payload.permission.into(),
+            error: Some("You already own this drive".to_string()),
+        });
+    }
+
+    // Get or create ACL and grant permission
+    let mut acl = security.get_or_create_acl(drive_id, &owner_hex).await;
+
+    // Check if user already has access
+    if acl.get_rule(&caller_hex).is_some() {
+        tracing::info!(
+            drive_id = %drive_id,
+            user = %caller_hex,
+            "User already has access to drive"
+        );
+        return Ok(AcceptInviteResult {
+            success: true,
+            drive_id: drive_id.clone(),
+            drive_name,
+            permission: token.payload.permission.into(),
+            error: None,
+        });
+    }
+
+    // Create access rule from token
+    let rule = AccessRule::new(token.payload.permission, &token.payload.inviter);
+
+    // Grant access
+    acl.grant(&caller_hex, rule);
+
+    // Save updated ACL
+    security.update_acl(drive_id, acl).await;
+
+    tracing::info!(
+        drive_id = %drive_id,
+        drive_name = %drive_name,
+        user = %caller_hex,
+        permission = ?token.payload.permission,
+        inviter = %token.payload.inviter,
+        "User accepted invite and joined drive"
+    );
+
+    Ok(AcceptInviteResult {
+        success: true,
+        drive_id: drive_id.clone(),
+        drive_name,
+        permission: token.payload.permission.into(),
         error: None,
     })
 }

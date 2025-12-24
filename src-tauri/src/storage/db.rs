@@ -5,6 +5,8 @@ use std::path::Path;
 // Table definitions
 const IDENTITY_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("identity");
 const DRIVES_TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("drives");
+const ACLS_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("acls");
+const TOKEN_TRACKERS_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("token_trackers");
 
 /// Database wrapper for persistent storage using redb
 pub struct Database {
@@ -21,6 +23,8 @@ impl Database {
         {
             let _ = write_txn.open_table(IDENTITY_TABLE)?;
             let _ = write_txn.open_table(DRIVES_TABLE)?;
+            let _ = write_txn.open_table(ACLS_TABLE)?;
+            let _ = write_txn.open_table(TOKEN_TRACKERS_TABLE)?;
         }
         write_txn.commit()?;
 
@@ -110,5 +114,96 @@ impl Database {
         };
         write_txn.commit()?;
         Ok(removed)
+    }
+
+    // ============================================================================
+    // ACL Operations
+    // ============================================================================
+
+    /// Save an ACL for a drive
+    pub fn save_acl(&self, drive_id: &str, data: &[u8]) -> Result<()> {
+        let write_txn = self.db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(ACLS_TABLE)?;
+            table.insert(drive_id, data)?;
+        }
+        write_txn.commit()?;
+        Ok(())
+    }
+
+    /// Get an ACL for a drive
+    pub fn get_acl(&self, drive_id: &str) -> Result<Option<Vec<u8>>> {
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(ACLS_TABLE)?;
+
+        match table.get(drive_id)? {
+            Some(guard) => Ok(Some(guard.value().to_vec())),
+            None => Ok(None),
+        }
+    }
+
+    /// Load all ACLs from database
+    pub fn list_acls(&self) -> Result<Vec<(String, Vec<u8>)>> {
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(ACLS_TABLE)?;
+
+        let mut acls = Vec::new();
+        for entry in table.iter()? {
+            let (key, value) = entry?;
+            acls.push((key.value().to_string(), value.value().to_vec()));
+        }
+        Ok(acls)
+    }
+
+    /// Delete an ACL
+    pub fn delete_acl(&self, drive_id: &str) -> Result<bool> {
+        let write_txn = self.db.begin_write()?;
+        let removed = {
+            let mut table = write_txn.open_table(ACLS_TABLE)?;
+            let result = table.remove(drive_id)?;
+            result.is_some()
+        };
+        write_txn.commit()?;
+        Ok(removed)
+    }
+
+    // ============================================================================
+    // Token Tracker Operations
+    // ============================================================================
+
+    /// Save a token tracker for a drive
+    pub fn save_token_tracker(&self, drive_id: &str, data: &[u8]) -> Result<()> {
+        let write_txn = self.db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(TOKEN_TRACKERS_TABLE)?;
+            table.insert(drive_id, data)?;
+        }
+        write_txn.commit()?;
+        Ok(())
+    }
+
+    /// Get a token tracker for a drive
+    #[allow(dead_code)]
+    pub fn get_token_tracker(&self, drive_id: &str) -> Result<Option<Vec<u8>>> {
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(TOKEN_TRACKERS_TABLE)?;
+
+        match table.get(drive_id)? {
+            Some(guard) => Ok(Some(guard.value().to_vec())),
+            None => Ok(None),
+        }
+    }
+
+    /// Load all token trackers from database
+    pub fn list_token_trackers(&self) -> Result<Vec<(String, Vec<u8>)>> {
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(TOKEN_TRACKERS_TABLE)?;
+
+        let mut trackers = Vec::new();
+        for entry in table.iter()? {
+            let (key, value) = entry?;
+            trackers.push((key.value().to_string(), value.value().to_vec()));
+        }
+        Ok(trackers)
     }
 }

@@ -6,10 +6,16 @@
 @use '../abstracts' as *;
 
 // ----------------------------------------
-// Share Modal Size
+// Share Modal Container
 // ----------------------------------------
 .share-modal {
-    max-width: 500px;
+    max-width: 520px;
+    background: $bg-card;
+
+    .modal-body {
+        background: $bg-elevated;
+        padding: 0;
+    }
 }
 
 // ----------------------------------------
@@ -17,37 +23,35 @@
 // ----------------------------------------
 .share-tabs {
     display: flex;
-    border-bottom: 1px solid $border-primary;
-    
+    padding: 0 $space-6;
+    background: $bg-card;
+    border-bottom: 1px solid $border-secondary;
+
     .tab {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: $space-2;
-        padding: $space-3 $space-4;
-        background: none;
-        border: none;
-        border-bottom: 2px solid transparent;
-        color: $text-tertiary;
+        @include button-reset;
+        padding: $space-3 $space-1;
+        margin-right: $space-6;
+        color: $text-secondary;
         font-size: $text-sm;
         font-weight: $weight-medium;
-        cursor: pointer;
-        transition: all $transition-base;
-        
+        border-bottom: 2px solid transparent;
+        transition: all $transition-fast;
+        display: flex;
+        align-items: center;
+        gap: $space-2;
+
         svg {
             width: 16px;
             height: 16px;
         }
-        
+
         &:hover {
             color: $text-primary;
-            background: $bg-hover;
         }
-        
+
         &.active {
-            color: $text-primary;
-            border-bottom-color: $text-primary;
+            color: $accent;
+            border-bottom-color: $accent;
         }
     }
 }
@@ -57,6 +61,7 @@
     display: flex;
     flex-direction: column;
     gap: $space-5;
+    padding: $space-6;
 }
 
 .invite-result {
@@ -73,17 +78,18 @@
     background: $bg-secondary;
     border: 1px solid $border-primary;
     border-radius: $radius-lg;
-    box-shadow: $shadow-sm;
-    
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05); // Inset shadow for depth
+
     code {
         flex: 1;
         font-family: $font-mono;
         font-size: $text-xs;
-        color: $text-secondary;
+        color: $text-primary;
         word-break: break-all;
         text-align: left;
         padding: 0;
-        background: none;
+        background: transparent;
+        line-height: 1.5;
     }
 }
 
@@ -91,26 +97,36 @@
     text-align: left;
     font-size: $text-sm;
     color: $text-secondary;
-    
+    background: $bg-tertiary;
+    padding: $space-4;
+    border-radius: $radius-lg;
+    border: 1px solid $border-subtle;
+
     p {
         margin: $space-2 0;
         line-height: $leading-relaxed;
+        display: flex;
+        justify-content: space-between;
     }
-    
+
     strong {
         color: $text-primary;
         font-weight: $weight-medium;
     }
-    
+
     .single-use-badge {
-        display: inline-block;
-        padding: $space-1 $space-2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: $space-2;
         background: $warning-soft;
         color: $warning;
-        border-radius: $radius-sm;
+        border-radius: $radius-md;
         font-size: $text-xs;
         font-weight: $weight-medium;
-        margin-top: $space-2;
+        margin-top: $space-3;
+        gap: $space-2;
+        border: 1px solid $warning-border;
     }
 }
 
@@ -125,7 +141,7 @@
 .permissions-list {
     @include flex-column;
     gap: $space-3;
-    
+
     .empty-state {
         text-align: center;
         color: $text-muted;
@@ -139,16 +155,16 @@
     align-items: center;
     justify-content: space-between;
     gap: $space-4;
-    padding: $space-4;
+    padding: $space-3 $space-4;
     background: $bg-card;
     border: 1px solid $border-secondary;
     border-radius: $radius-lg;
-    box-shadow: none;
-    transition: all $transition-base;
-    
+    box-shadow: $shadow-sm;
+    transition: all $transition-fast;
+
     &:hover {
         border-color: $border-hover;
-        box-shadow: $shadow-card-hover;
+        background: $bg-elevated;
     }
 }
 
@@ -157,25 +173,26 @@
     align-items: center;
     gap: $space-3;
     min-width: 0;
-    
+
     .user-icon {
         @include flex-center;
-        width: 36px;
-        height: 36px;
-        background: $bg-hover;
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, $bg-tertiary, $bg-secondary);
         color: $text-secondary;
         border-radius: $radius-full;
         flex-shrink: 0;
-        
+        border: 1px solid $border-subtle;
+
         svg {
-            width: 16px;
-            height: 16px;
+            width: 18px;
+            height: 18px;
         }
     }
-    
+
     .user-details {
         min-width: 0;
-        
+
         .node-id {
             font-size: $text-sm;
             font-weight: $weight-medium;
@@ -185,7 +202,7 @@
             gap: $space-2;
             color: $text-primary;
         }
-        
+
         .owner-badge {
             font-size: $text-2xs;
             padding: $space-0-5 $space-2;
@@ -197,7 +214,7 @@
             text-transform: uppercase;
             letter-spacing: $tracking-wide;
         }
-        
+
         .granted-info {
             font-size: $text-xs;
             color: $text-muted;
@@ -211,7 +228,7 @@
     align-items: center;
     gap: $space-3;
     flex-shrink: 0;
-    
+
     .permission-badge {
         padding: $space-1 $space-2-5;
         font-size: $text-2xs;
@@ -219,22 +236,22 @@
         border-radius: $radius-sm;
         text-transform: uppercase;
         letter-spacing: $tracking-wide;
-        
+
         &.read {
             background: $bg-hover;
             color: $text-tertiary;
         }
-        
+
         &.write {
             background: $success-soft;
             color: $success;
         }
-        
+
         &.manage {
             background: $warning-soft;
             color: $warning;
         }
-        
+
         &.admin {
             background: $info-soft;
             color: $info;

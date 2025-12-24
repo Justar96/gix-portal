@@ -7,22 +7,26 @@
 
 use crate::core::{send_with_backpressure, DriveEvent, DriveEventDto, DriveId};
 use anyhow::Result;
+use iroh::protocol::ProtocolHandler;
 use iroh::Endpoint;
 use iroh_gossip::net::Gossip;
 use iroh_gossip::proto::TopicId;
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 use tokio::task::JoinHandle;
 
 /// Manages gossip subscriptions per drive for real-time event broadcasting
 pub struct EventBroadcaster {
-    /// The gossip protocol instance
-    gossip: Arc<Gossip>,
+    /// The gossip protocol instance (wrapped in RwLock<Option<>> for safe shutdown)
+    gossip: RwLock<Option<Arc<Gossip>>>,
     /// Active topic subscriptions per drive
     subscriptions: RwLock<HashMap<DriveId, TopicSubscription>>,
     /// Channel to forward events to Tauri frontend
     frontend_tx: broadcast::Sender<DriveEventDto>,
+    /// Flag to indicate if shutdown has been called
+    shutdown_flag: AtomicBool,
 }
 
 /// Holds state for a single drive's gossip subscription
@@ -44,10 +48,18 @@ impl EventBroadcaster {
         tracing::info!("EventBroadcaster initialized");
 
         Ok(Self {
-            gossip: Arc::new(gossip),
+            gossip: RwLock::new(Some(Arc::new(gossip))),
             subscriptions: RwLock::new(HashMap::new()),
             frontend_tx,
+            shutdown_flag: AtomicBool::new(false),
         })
+    }
+
+    /// Get a reference to the gossip instance for operations
+    /// Returns None if shutdown has been called
+    async fn get_gossip(&self) -> Option<Arc<Gossip>> {
+        let guard = self.gossip.read().await;
+        guard.clone()
     }
 
     /// Subscribe to a drive's gossip topic
@@ -66,11 +78,16 @@ impl EventBroadcaster {
             }
         }
 
+        // Get gossip instance
+        let gossip = self
+            .get_gossip()
+            .await
+            .ok_or_else(|| anyhow::anyhow!("EventBroadcaster has been shut down"))?;
+
         // Subscribe to the topic with no bootstrap peers initially
         // Peers will be added when we connect to them
-        let topic = self.gossip.subscribe(topic_id, vec![])?;
+        let topic = gossip.subscribe(topic_id, vec![])?;
         let (_sender, mut receiver) = topic.split();
-
 
         // Spawn receiver task to forward events to frontend
         let frontend_tx = self.frontend_tx.clone();
@@ -104,7 +121,11 @@ impl EventBroadcaster {
                                         );
 
                                         // Forward to frontend with backpressure monitoring
-                                        send_with_backpressure(&frontend_tx, dto, "gossip_frontend");
+                                        send_with_backpressure(
+                                            &frontend_tx,
+                                            dto,
+                                            "gossip_frontend",
+                                        );
                                     }
                                     Err(e) => {
                                         tracing::warn!(
@@ -128,10 +149,7 @@ impl EventBroadcaster {
                                 tracing::debug!("Peer {} left drive {}", peer, drive_id_hex);
                             }
                             Event::Lagged => {
-                                tracing::warn!(
-                                    "Gossip receiver lagged for drive {}",
-                                    drive_id_hex
-                                );
+                                tracing::warn!("Gossip receiver lagged for drive {}", drive_id_hex);
                             }
                         }
                     }
@@ -174,8 +192,14 @@ impl EventBroadcaster {
         // Serialize the event
         let data = serde_json::to_vec(&event)?;
 
+        // Get gossip instance
+        let gossip = self
+            .get_gossip()
+            .await
+            .ok_or_else(|| anyhow::anyhow!("EventBroadcaster has been shut down"))?;
+
         // Get a sender for this topic
-        let topic = self.gossip.subscribe(topic_id, vec![])?;
+        let topic = gossip.subscribe(topic_id, vec![])?;
         let (sender, _receiver) = topic.split();
 
         // Broadcast the message
@@ -215,15 +239,52 @@ impl EventBroadcaster {
         TopicId::from_bytes(*drive_id.as_bytes())
     }
 
-    /// Get the underlying gossip instance for advanced use
-    pub fn gossip(&self) -> Arc<Gossip> {
-        self.gossip.clone()
+    /// Gracefully shutdown the EventBroadcaster
+    ///
+    /// This must be called before the Tokio runtime is destroyed to avoid
+    /// panics from async Drop implementations in iroh-gossip.
+    pub async fn shutdown(&self) {
+        if self.shutdown_flag.swap(true, Ordering::SeqCst) {
+            // Already shutting down or shut down
+            return;
+        }
+
+        tracing::info!("EventBroadcaster shutting down...");
+
+        // Abort all receiver tasks first
+        {
+            let mut subs = self.subscriptions.write().await;
+            for (drive_id, sub) in subs.drain() {
+                sub.receiver_task.abort();
+                tracing::debug!("Aborted receiver task for drive {}", drive_id);
+            }
+        }
+
+        // Shutdown the gossip protocol
+        // Note: Gossip::shutdown() is called through the inner Arc when it's dropped
+        // but we can explicitly quit to trigger a clean shutdown before runtime destruction
+        {
+            let mut gossip = self.gossip.write().await;
+            if let Some(g) = gossip.take() {
+                g.shutdown().await;
+            }
+        }
+
+        tracing::info!("EventBroadcaster shutdown complete");
+    }
+
+    /// Check if shutdown has been initiated
+    pub fn is_shutdown(&self) -> bool {
+        self.shutdown_flag.load(Ordering::SeqCst)
     }
 }
 
 impl Drop for EventBroadcaster {
     fn drop(&mut self) {
-        // Subscriptions will be cleaned up when tasks are dropped
+        // Only log if we haven't been gracefully shutdown
+        if !self.shutdown_flag.load(Ordering::SeqCst) {
+            tracing::warn!("EventBroadcaster dropped without graceful shutdown - this may cause panics if Tokio runtime is already gone");
+        }
         tracing::debug!("EventBroadcaster dropped");
     }
 }

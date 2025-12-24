@@ -30,6 +30,9 @@ pub enum AppError {
     #[error("Path is not a directory: {path}")]
     NotADirectory { path: String },
 
+    #[error("Path is not a file: {path}")]
+    NotAFile { path: String },
+
     #[error("Path traversal detected: {path}")]
     PathTraversal { path: String },
 
@@ -143,6 +146,7 @@ impl AppError {
             AppError::InvalidDriveId { .. } => "INVALID_DRIVE_ID",
             AppError::PathNotFound { .. } => "PATH_NOT_FOUND",
             AppError::NotADirectory { .. } => "NOT_A_DIRECTORY",
+            AppError::NotAFile { .. } => "NOT_A_FILE",
             AppError::PathTraversal { .. } => "PATH_TRAVERSAL",
             AppError::PathOutsideDrive { .. } => "PATH_OUTSIDE_DRIVE",
             AppError::InvalidPath { .. } => "INVALID_PATH",
@@ -253,7 +257,9 @@ mod tests {
         assert_eq!(err.code(), "DRIVE_NOT_FOUND");
         assert!(!err.is_retryable());
 
-        let err = AppError::RateLimited { retry_after_secs: 5 };
+        let err = AppError::RateLimited {
+            retry_after_secs: 5,
+        };
         assert_eq!(err.code(), "RATE_LIMITED");
         assert!(err.is_retryable());
     }

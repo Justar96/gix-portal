@@ -10,19 +10,19 @@ mod sync;
 pub use conflict::{
     dismiss_conflict, get_conflict, get_conflict_count, list_conflicts, resolve_conflict,
 };
-pub use presence::{
-    get_online_count, get_online_users, get_recent_activity, join_drive_presence,
-    leave_drive_presence, presence_heartbeat,
-};
 pub use drive::{create_drive, delete_drive, get_drive, list_drives, rename_drive};
-pub use files::list_files;
+pub use files::{delete_path, list_files, read_file, rename_path, write_file};
 pub use identity::{get_connection_status, get_identity};
 pub use locking::{
     acquire_lock, extend_lock, force_release_lock, get_lock_status, list_locks, release_lock,
 };
+pub use presence::{
+    get_online_count, get_online_users, get_recent_activity, join_drive_presence,
+    leave_drive_presence, presence_heartbeat,
+};
 pub use security::{
-    check_permission, generate_invite, grant_permission, list_permissions, revoke_permission,
-    verify_invite, SecurityStore,
+    accept_invite, check_permission, generate_invite, grant_permission, list_permissions,
+    revoke_permission, verify_invite, AcceptInviteResult, SecurityStore,
 };
 pub use sync::{
     cancel_transfer, download_file, get_sync_status, get_transfer, is_watching, list_transfers,

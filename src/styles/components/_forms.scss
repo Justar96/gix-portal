@@ -23,6 +23,11 @@
         margin-bottom: $space-2;
         letter-spacing: $tracking-wide;
         text-transform: uppercase;
+        transition: color $transition-fast;
+    }
+    
+    &:focus-within label {
+        color: $accent;
     }
     
 input[type="text"],
@@ -48,13 +53,18 @@ input[type="text"],
         
         &:focus {
             outline: none;
-            border-color: $border-focus;
-            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
+            border-color: $accent;
+            box-shadow: 0 0 0 3px $accent-soft;
             background: $bg-card;
         }
         
         &::placeholder {
             color: $text-muted;
+            transition: color $transition-base;
+        }
+        
+        &:focus::placeholder {
+            color: $text-disabled;
         }
         
         &:disabled {
@@ -100,10 +110,41 @@ select {
         gap: $space-3;
         
         input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            accent-color: $text-primary;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 1px solid $border-card;
+            border-radius: $radius-sm;
+            background: $bg-elevated;
             cursor: pointer;
+            position: relative;
+            transition: all $transition-fast;
+            
+            &:checked {
+                background: $accent;
+                border-color: $accent;
+                
+                &::after {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    width: 10px;
+                    height: 10px;
+                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'%3E%3C/polyline%3E%3C/svg%3E");
+                    background-size: contain;
+                    background-repeat: no-repeat;
+                    transform: translate(-50%, -50%);
+                }
+            }
+            
+            &:hover:not(:checked) {
+                border-color: $accent;
+            }
+            
+            &:focus-visible {
+                box-shadow: 0 0 0 2px $accent-soft;
+            }
         }
         
         label {
@@ -112,7 +153,13 @@ select {
             font-weight: $weight-normal;
             letter-spacing: $tracking-normal;
             text-transform: none;
+            color: $text-secondary;
             cursor: pointer;
+            transition: color $transition-fast;
+        }
+        
+        &:hover label {
+            color: $text-primary;
         }
     }
 }
@@ -123,26 +170,49 @@ select {
 .path-input {
     display: flex;
     gap: $space-2;
+    padding: 2px;
+    background: $bg-elevated;
+    border: 1px solid $border-card;
+    border-radius: $radius-lg;
+    transition: all $transition-base;
+    
+    &:focus-within {
+        border-color: $accent;
+        box-shadow: 0 0 0 3px $accent-soft;
+    }
     
     input {
         flex: 1;
         min-width: 0;
+        border: none;
+        background: transparent;
+        padding: $space-2 $space-3;
+        font-family: $font-mono;
+        font-size: $text-xs;
+        color: $text-primary;
+        box-shadow: none !important; // Override default input shadow
+        
+        &:focus {
+            box-shadow: none;
+            border: none;
+        }
     }
     
     button {
         @include button-base;
-        padding: $space-2-5 $space-4;
-        background: $bg-tertiary;
-        border: 1px solid $border-primary;
+        padding: $space-1 $space-3;
+        background: $bg-secondary;
+        border: 1px solid transparent;
         border-radius: $radius-md;
-        color: $text-primary;
-        font-size: $text-sm;
+        color: $text-secondary;
+        font-size: $text-xs;
         white-space: nowrap;
         flex-shrink: 0;
+        margin: 2px;
         
         &:hover:not(:disabled) {
             background: $bg-hover;
-            border-color: $border-hover;
+            color: $text-primary;
         }
     }
 }

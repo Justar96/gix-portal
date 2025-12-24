@@ -405,6 +405,25 @@ export function shortNodeId(nodeId: string): string {
     return `${nodeId.slice(0, 8)}...${nodeId.slice(-4)}`;
 }
 
+/** Result of accepting an invite */
+export interface AcceptInviteResult {
+    success: boolean;
+    drive_id: string;
+    drive_name: string;
+    permission: PermissionLevel;
+    error: string | null;
+}
+
+/** File content response from read_file */
+export interface FileContent {
+    /** Base64 encoded file content */
+    content: string;
+    /** File size in bytes */
+    size: number;
+    /** MIME type if detected */
+    mime_type: string | null;
+}
+
 // ============================================
 // Phase 4: Collaboration Types
 // ============================================
@@ -483,12 +502,12 @@ export function formatLockExpiry(expiresAt: string): string {
         const date = new Date(expiresAt);
         const now = new Date();
         const diffMs = date.getTime() - now.getTime();
-        
+
         if (diffMs < 0) return "Expired";
-        
+
         const diffMins = Math.floor(diffMs / (1000 * 60));
         if (diffMins < 60) return `${diffMins}m remaining`;
-        
+
         const diffHours = Math.floor(diffMins / 60);
         return `${diffHours}h ${diffMins % 60}m remaining`;
     } catch {

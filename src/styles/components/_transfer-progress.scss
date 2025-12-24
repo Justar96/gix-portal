@@ -1,119 +1,124 @@
 // Transfer Progress styles
+@use '../abstracts' as *;
+
 .transfer-progress {
   position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 340px;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1);
-  z-index: 100;
+  bottom: 24px;
+  right: 24px;
+  width: 360px;
+  background: rgba($bg-card, 0.95);
+  border: 1px solid $border-card;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-xl;
+  z-index: $z-overlay;
   overflow: hidden;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
 
   .transfer-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 14px 16px;
-    background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
-    border-bottom: 1px solid var(--border-color);
+    padding: $space-3 $space-4;
+    background: rgba($bg-elevated, 0.8);
+    border-bottom: 1px solid $border-subtle;
     cursor: pointer;
-    transition: background 0.15s ease;
+    transition: background $transition-fast;
 
     &:hover {
-      background: var(--bg-tertiary);
+      background: $bg-hover;
     }
 
     .transfer-title {
       display: flex;
       align-items: center;
-      gap: 10px;
-      font-size: 13px;
-      font-weight: 600;
+      gap: $space-2;
+      font-size: $text-sm;
+      font-weight: $weight-semibold;
+      color: $text-primary;
 
       svg {
-        color: #6366f1;
+        color: $accent;
+        width: 16px;
+        height: 16px;
       }
 
       .spinning {
-        color: #6366f1;
+        color: $accent;
+        animation: spin 1s linear infinite;
       }
     }
 
     .btn-icon {
-      color: var(--text-muted);
-      transition: transform 0.2s ease;
+      @include button-reset;
+      color: $text-muted;
+      padding: $space-1;
+      border-radius: $radius-sm;
+      transition: all $transition-fast;
+      
+      &:hover {
+        background: $bg-tertiary;
+        color: $text-primary;
+      }
     }
   }
 
   .transfer-list {
     max-height: 280px;
     overflow-y: auto;
-    padding: 8px;
-
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--border-color);
-      border-radius: 2px;
-    }
+    padding: $space-2;
+    @include custom-scrollbar;
   }
 
   .transfer-item {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px;
-    border-radius: 10px;
-    margin-bottom: 6px;
-    background: var(--bg-secondary);
-    transition: all 0.15s ease;
+    gap: $space-3;
+    padding: $space-3;
+    border-radius: $radius-lg;
+    margin-bottom: 2px;
+    background: transparent;
+    transition: all $transition-fast;
+    border: 1px solid transparent;
 
     &:last-child {
       margin-bottom: 0;
     }
 
     &:hover {
-      background: var(--bg-tertiary);
+      background: $bg-hover;
+      border-color: $border-subtle;
     }
 
     &.completed {
-      opacity: 0.7;
-
       .transfer-icon {
-        background: rgba(16, 185, 129, 0.1);
-        color: #10b981;
+        background: $success-soft;
+        color: $success;
       }
     }
 
     &.failed {
-      background: rgba(239, 68, 68, 0.05);
-      border: 1px solid rgba(239, 68, 68, 0.2);
+      background: $error-soft;
+      border-color: $error-border;
 
       .transfer-icon {
-        background: rgba(239, 68, 68, 0.1);
-        color: #ef4444;
+        background: rgba($error, 0.2);
+        color: $error;
       }
     }
 
     .transfer-icon {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      @include flex-center;
       width: 36px;
       height: 36px;
-      border-radius: 10px;
-      background: rgba(99, 102, 241, 0.1);
-      color: #6366f1;
+      border-radius: $radius-md;
+      background: $accent-soft;
+      color: $accent;
       flex-shrink: 0;
+      
+      svg {
+        width: 18px;
+        height: 18px;
+      }
     }
 
     .transfer-info {
@@ -121,60 +126,64 @@
       min-width: 0;
 
       .transfer-name {
-        font-size: 13px;
-        font-weight: 600;
+        font-size: $text-sm;
+        font-weight: $weight-medium;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        margin-bottom: 6px;
-        color: var(--text-primary);
+        margin-bottom: $space-1;
+        color: $text-primary;
       }
 
       .transfer-details {
         display: flex;
         align-items: center;
-        gap: 10px;
-        font-size: 11px;
-        color: var(--text-muted);
+        gap: $space-2;
+        font-size: $text-xs;
+        color: $text-secondary;
       }
 
       .transfer-size {
         flex-shrink: 0;
-        font-weight: 500;
+        font-weight: $weight-medium;
+        font-family: $font-mono;
       }
 
       .progress-bar {
         flex: 1;
-        height: 6px;
-        background: var(--bg-tertiary);
-        border-radius: 3px;
+        height: 4px;
+        background: $bg-tertiary;
+        border-radius: 2px;
         overflow: hidden;
+        margin: 0 $space-2;
 
         .progress-fill {
           height: 100%;
-          background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
-          border-radius: 3px;
+          background: linear-gradient(90deg, $accent, $accent-light);
+          border-radius: 2px;
           transition: width 0.3s ease;
-          box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
         }
       }
 
       .transfer-percent {
         flex-shrink: 0;
-        min-width: 36px;
+        min-width: 32px;
         text-align: right;
-        font-weight: 600;
-        color: #6366f1;
+        font-weight: $weight-semibold;
+        color: $accent;
+        font-family: $font-mono;
       }
 
       .transfer-complete {
         display: flex;
         align-items: center;
-        gap: 6px;
-        color: #10b981;
-        font-weight: 500;
+        gap: 4px;
+        color: $success;
+        font-weight: $weight-medium;
 
         svg {
+          width: 14px;
+          height: 14px;
           flex-shrink: 0;
         }
       }
@@ -183,8 +192,8 @@
         display: flex;
         align-items: center;
         gap: 6px;
-        color: #ef4444;
-        font-weight: 500;
+        color: $error;
+        font-weight: $weight-medium;
 
         svg {
           flex-shrink: 0;
@@ -192,7 +201,7 @@
       }
 
       .transfer-cancelled {
-        color: var(--text-muted);
+        color: $text-muted;
         font-style: italic;
       }
     }
@@ -207,13 +216,13 @@
       border-radius: 8px;
       background: transparent;
       border: none;
-      color: var(--text-muted);
+      color: $text-muted;
       cursor: pointer;
-      transition: all 0.15s ease;
+      transition: all $transition-fast;
 
       &:hover {
-        background: rgba(239, 68, 68, 0.1);
-        color: #ef4444;
+        background: rgba($error, 0.1);
+        color: $error;
       }
     }
   }

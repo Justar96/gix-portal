@@ -1,26 +1,7 @@
-// ========================================
-// Component - File Browser
-// Modern Light Theme with Bordered Design
-// ========================================
-
+// File Browser Component
 @use '../abstracts' as *;
 
-// ========================================
-// SPACING STANDARD: 8-Point Grid System
-// ========================================
-// Base unit: 8px
-// - Compact elements: $space-2 (8px)
-// - Standard padding: $space-4 (16px)
-// - Section spacing: $space-6 (24px)
-//
-// Responsive adjustments:
-// - Keep horizontal $space-4 for consistency
-// - Use $space-2-5 (10px) vertical on mobile when needed for touch targets
-// ========================================
-
-// ----------------------------------------
 // Main Container
-// ----------------------------------------
 .file-browser {
     @include flex-column;
     height: 100%;
@@ -28,9 +9,7 @@
     background: $bg-card;
 }
 
-// ----------------------------------------
-// Browser Toolbar
-// ----------------------------------------
+// Toolbar
 .browser-toolbar {
     display: flex;
     align-items: center;
@@ -38,12 +17,11 @@
     gap: $space-3;
     padding: $space-2 $space-4;
     background: $bg-secondary;
-    border-bottom: 1px solid $border-secondary;
+    border-bottom: 1px solid $border-subtle;
     flex-shrink: 0;
-    min-height: 44px;
+    min-height: 48px;
 
     @include respond-to('sm') {
-        padding: $space-2 $space-4;
         flex-wrap: wrap;
     }
 }
@@ -57,38 +35,21 @@
 
 .toolbar-divider {
     width: 1px;
-    height: 20px;
-    background: $border-secondary;
-    margin: 0 $space-1;
+    height: 18px;
+    background: $border-subtle;
 }
 
 .selection-count {
     font-size: $text-xs;
     color: $accent;
-    font-weight: $weight-semibold;
-    padding: $space-1 $space-3;
+    font-weight: $weight-medium;
+    padding: $space-0-5 $space-2;
     background: $accent-subtle;
-    border: 1px solid rgba($accent, 0.3);
-    border-radius: $radius-full;
+    border-radius: $radius-sm;
     white-space: nowrap;
-    display: flex;
-    align-items: center;
-    gap: $space-1-5;
-    
-    // Pulse animation for active selection
-    animation: selectionPulse 2s ease-in-out infinite;
 }
 
-@keyframes selectionPulse {
-    0%, 100% { 
-        box-shadow: 0 0 0 0 rgba($accent, 0.2);
-    }
-    50% { 
-        box-shadow: 0 0 0 4px rgba($accent, 0);
-    }
-}
-
-// Search box
+// Search
 .search-box {
     position: relative;
     display: flex;
@@ -96,27 +57,26 @@
     
     .search-icon {
         position: absolute;
-        left: $space-2-5;
+        left: $space-2;
         color: $text-muted;
         pointer-events: none;
     }
     
     .search-input {
-        width: 180px;
-        padding: $space-1-5 $space-3;
-        padding-left: $space-8;
-        padding-right: $space-8;
+        width: 160px;
+        padding: $space-1-5 $space-2-5;
+        padding-left: $space-7;
+        padding-right: $space-7;
         font-size: $text-xs;
-        border: 1px solid $border-secondary;
-        border-radius: $radius-md;
+        border: 1px solid $border-subtle;
+        border-radius: $radius-sm;
         background: $bg-card;
         color: $text-primary;
-        transition: all $transition-fast;
+        transition: border-color $transition-fast;
         
         &:focus {
             outline: none;
             border-color: $accent;
-            box-shadow: $glow-focus;
         }
         
         &::placeholder {
@@ -124,14 +84,14 @@
         }
         
         @include respond-to('sm') {
-            width: 140px;
+            width: 120px;
         }
     }
     
     .btn-clear {
         position: absolute;
         right: $space-1;
-        padding: $space-1;
+        padding: $space-0-5;
         color: $text-muted;
         
         &:hover {
@@ -140,30 +100,27 @@
     }
 }
 
-// View toggle
+// View Toggle
 .view-toggle {
     display: flex;
-    align-items: center;
     gap: $space-0-5;
     padding: $space-0-5;
     background: $bg-tertiary;
-    border-radius: $radius-md;
+    border-radius: $radius-sm;
     
     .btn-icon {
-        padding: $space-1-5;
+        padding: $space-1;
         border-radius: $radius-sm;
+        transition: background $transition-fast;
         
         &.active {
             background: $bg-card;
             color: $text-primary;
-            box-shadow: $shadow-sm;
         }
     }
 }
 
-// ----------------------------------------
-// Browser Header (Breadcrumbs)
-// ----------------------------------------
+// Breadcrumb Header
 .browser-header {
     display: flex;
     align-items: center;
@@ -171,18 +128,13 @@
     gap: $space-2;
     padding: $space-2 $space-4;
     background: $bg-card;
-    border-bottom: 1px solid $border-primary;
+    border-bottom: 1px solid $border-subtle;
     flex-shrink: 0;
-    min-height: 36px;
-
-    @include respond-to('sm') {
-        padding: $space-2 $space-4;
-        gap: $space-1-5;
-    }
+    min-height: 40px;
 }
 
 .file-count {
-    font-size: $text-xs;
+    font-size: $text-2xs;
     color: $text-muted;
     white-space: nowrap;
 }
@@ -191,23 +143,22 @@
     flex: 1;
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
     gap: $space-0-5;
     min-width: 0;
+    overflow: hidden;
 }
 
 .breadcrumb {
     @include button-reset;
-    @include interactive;
     @include truncate;
-    color: $text-tertiary;
-    padding: $space-0-5 $space-1-5;
+    color: $text-muted;
+    padding: $space-0-5 $space-1;
     border-radius: $radius-sm;
     font-size: $text-xs;
-    max-width: 180px;
+    max-width: 160px;
+    transition: color $transition-fast;
     
-    &:hover:not(:disabled) {
-        background: $bg-hover;
+    &:hover {
         color: $text-primary;
     }
     
@@ -219,19 +170,14 @@
 
 .separator {
     color: $text-disabled;
-    font-size: $text-xs;
-    user-select: none;
+    font-size: $text-2xs;
 }
 
-// Pending indicator for React transitions
 .pending-indicator {
     color: $text-muted;
-    font-size: $text-sm;
     margin-left: $space-2;
-    animation: pulse 1s ease-in-out infinite;
 }
 
-// Spinning animation for refresh icon during transitions
 .spinning {
     animation: spin 1s linear infinite;
 }
@@ -241,18 +187,12 @@
     to { transform: rotate(360deg); }
 }
 
-@keyframes pulse {
-    0%, 100% { opacity: 0.4; }
-    50% { opacity: 1; }
-}
-
-// File table container (virtualized layout)
+// Table Container
 .file-table-container {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    transition: opacity $transition-base;
     
     &.stale {
         opacity: 0.5;
@@ -260,24 +200,19 @@
     }
 }
 
-// File table header (virtualized)
+// Table Header
 .file-table-header {
     display: flex;
     align-items: center;
     padding: $space-2 $space-4;
     background: $bg-secondary;
-    border-bottom: 1px solid $border-primary;
-    border-left: 3px solid transparent; // Match row structure for alignment
+    border-bottom: 1px solid $border-subtle;
     font-size: $text-2xs;
-    font-weight: $weight-semibold;
+    font-weight: $weight-medium;
     text-transform: uppercase;
-    letter-spacing: $tracking-wider;
-    color: $text-tertiary;
+    letter-spacing: $tracking-wide;
+    color: $text-muted;
     min-height: 36px;
-
-    @include respond-to('sm') {
-        padding: $space-2 $space-4;
-    }
 }
 
 .file-table-body {
@@ -286,50 +221,39 @@
     @include custom-scrollbar;
 }
 
-// File row (virtualized)
+// File Row
 .file-row {
     display: flex;
     align-items: center;
-    padding: $space-3 $space-4;
+    padding: $space-2 $space-4;
     background: $bg-card;
-    border-bottom: 1px solid $border-secondary;
-    border-left: 3px solid transparent;
+    border-bottom: 1px solid $border-subtle;
     cursor: pointer;
-    transition: background $transition-fast, border-color $transition-fast;
+    transition: background $transition-fast;
     min-height: 44px;
-
-    @include respond-to('sm') {
-        padding: $space-2-5 $space-4;
-    }
     
     &:hover:not(.selected) {
-        background: $bg-tertiary;
+        background: $bg-hover;
     }
     
     &.selected {
         background: $accent-subtle;
-        border-left-color: $accent;
+        
+        .file-name {
+            color: $accent;
+        }
+        
+        .file-icon {
+            color: $accent;
+        }
     }
     
     &.locked-other {
         background: $warning-soft;
-        border-left-color: $warning;
     }
     
     &.locked-mine {
         background: $info-soft;
-        border-left-color: $info;
-    }
-    
-    // Combined states - selection takes priority for border
-    &.selected.locked-other {
-        background: $warning-soft;
-        border-left-color: $accent;
-    }
-    
-    &.selected.locked-mine {
-        background: $info-soft;
-        border-left-color: $accent;
     }
     
     &.directory .file-name {
@@ -337,136 +261,53 @@
     }
 }
 
-// File table (legacy support)
-.file-table {
-    width: 100%;
-    border-collapse: collapse;
-    
-    thead {
-        position: sticky;
-        top: 0;
-        z-index: 1;
-    }
-    
-    th {
-        @include text-label;
-        text-align: left;
-        padding: $space-3 $space-5;
-        background: $bg-secondary;
-        border-bottom: 1px solid $border-primary;
-        
-        @include respond-to('lg') {
-            padding: $space-3 $space-4;
-        }
-        
-        @include respond-to('sm') {
-            padding: $space-2 $space-3;
-        }
-    }
-    
-    td {
-        padding: $space-3 $space-5;
-        font-size: $text-sm;
-        border-bottom: 1px solid $border-secondary;
-        
-        @include respond-to('lg') {
-            padding: $space-3 $space-4;
-        }
-        
-        @include respond-to('sm') {
-            padding: $space-2 $space-3;
-        }
-    }
-    
-    tbody tr {
-        cursor: pointer;
-        transition: background $transition-base;
-        
-        &:hover {
-            background: $bg-hover;
-        }
-        
-        &.selected {
-            background: $bg-tertiary;
-        }
-        
-        &.locked-other {
-            background: $warning-soft;
-            
-            &:hover {
-                background: rgba($warning, 0.1);
-            }
-        }
-        
-        &.locked-mine {
-            background: $accent-subtle;
-            
-            &:hover {
-                background: rgba($accent, 0.08);
-            }
-        }
-    }
-    
-    .directory .file-name {
-        font-weight: $weight-medium;
-    }
-}
-
-// Column widths - Flex-based layout
+// Columns
 .col-name {
     flex: 1;
-    min-width: 0; // Allow text truncation
-    padding-right: $space-4;
+    min-width: 0;
+    padding-right: $space-3;
 }
 
 .col-size {
-    flex: 0 0 90px;
+    flex: 0 0 80px;
     text-align: right;
-    font-size: $text-xs;
+    font-size: $text-2xs;
     color: $text-muted;
     font-variant-numeric: tabular-nums;
-    padding-right: $space-4;
+    padding-right: $space-3;
     
     @include respond-to('sm') {
-        flex: 0 0 70px;
+        flex: 0 0 60px;
     }
 }
 
 .col-modified {
-    flex: 0 0 140px;
-    font-size: $text-xs;
+    flex: 0 0 120px;
+    font-size: $text-2xs;
     color: $text-muted;
-    padding-right: $space-4;
     
     @include respond-to('lg') {
         display: none;
     }
-    
-    @include respond-to('md') {
-        flex: 0 0 120px;
-    }
 }
 
 .col-actions {
-    flex: 0 0 48px;
+    flex: 0 0 40px;
     text-align: right;
-    
-    @include respond-to('sm') {
-        flex: 0 0 36px;
-    }
 }
 
-// File cell
+// File Cell
 .file-cell {
     display: flex;
     align-items: center;
-    gap: $space-3;
+    gap: $space-2;
     min-width: 0;
 }
 
 .file-icon {
     @include flex-center;
-    width: 18px;
+    width: 20px;
+    height: 20px;
     color: $text-muted;
     flex-shrink: 0;
     
@@ -482,32 +323,22 @@
     font-size: $text-sm;
 }
 
-// Lock indicators
+// Lock Indicators
 .lock-indicator {
     @include flex-center;
-    margin-left: $space-2;
+    margin-left: $space-1;
     flex-shrink: 0;
     
-    &.mine {
-        color: $info;
-    }
-    
-    &.other {
-        color: $warning;
-    }
+    &.mine { color: $info; }
+    &.other { color: $warning; }
 }
 
 .lock-icon {
-    &.mine {
-        color: $info;
-    }
-    
-    &.other {
-        color: $warning;
-    }
+    &.mine { color: $info; }
+    &.other { color: $warning; }
 }
 
-// Action buttons
+// Actions
 .action-buttons {
     display: flex;
     align-items: center;
@@ -519,9 +350,8 @@
 .btn-lock,
 .btn-unlock {
     opacity: 0;
-    transition: opacity $transition-base;
+    transition: opacity $transition-fast;
     
-    .file-table tbody tr:hover &,
     .file-row:hover & {
         opacity: 1;
     }
@@ -529,56 +359,47 @@
 
 .btn-unlock {
     color: $info;
-    
-    &:hover {
-        color: $text-primary;
-    }
+    &:hover { color: $text-primary; }
 }
 
 .btn-lock {
     color: $text-muted;
-    
-    &:hover {
-        color: $text-secondary;
-    }
+    &:hover { color: $text-secondary; }
 }
 
-// Lock menu dropdown
 .lock-menu {
     position: absolute;
     top: calc(100% + 4px);
     right: 0;
     z-index: $z-dropdown;
-    background-color: $bg-card;
+    background: $bg-card;
     border: 1px solid $border-primary;
-    border-radius: $radius-lg;
-    box-shadow: $shadow-xl;
+    border-radius: $radius-md;
+    box-shadow: $shadow-lg;
+    min-width: 140px;
     overflow: hidden;
-    min-width: 150px;
-    animation: slideUp $duration-fast $ease-out;
     
     button {
         @include button-reset;
         display: block;
         width: 100%;
-        padding: $space-2-5 $space-4;
+        padding: $space-2 $space-3;
         text-align: left;
-        font-size: $text-sm;
+        font-size: $text-xs;
         color: $text-primary;
-        background-color: $bg-card;
-        transition: background-color $transition-base;
+        transition: background $transition-fast;
         
         &:hover {
-            background-color: $bg-hover;
+            background: $bg-hover;
         }
         
-        &:first-child {
-            border-bottom: 1px solid $border-secondary;
+        &:not(:last-child) {
+            border-bottom: 1px solid $border-subtle;
         }
     }
 }
 
-// Checkbox Column
+// Checkbox
 .col-checkbox {
     flex: 0 0 36px;
     display: flex;
@@ -594,14 +415,13 @@
         border: 1.5px solid $border-primary;
         border-radius: $radius-sm;
         background: $bg-card;
-        transition: all $transition-fast;
+        transition: border-color $transition-fast, background $transition-fast;
         position: relative;
-        display: block;
         margin: 0;
+        display: block;
         
         &:hover {
-            border-color: $accent-muted;
-            background: $accent-subtle;
+            border-color: $accent;
         }
         
         &:checked {
@@ -621,14 +441,8 @@
             }
         }
         
-        &:focus-visible {
-            outline: none;
-            box-shadow: $glow-focus;
-        }
-        
-        // Indeterminate state for "select all" partial selection
         &:indeterminate {
-            background: $accent-muted;
+            background: $accent;
             border-color: $accent;
             
             &::after {
@@ -639,13 +453,12 @@
                 width: 8px;
                 height: 2px;
                 background: white;
-                border-radius: 1px;
             }
         }
     }
 }
 
-// Sortable Headers
+// Sortable
 .sortable {
     cursor: pointer;
     user-select: none;
@@ -653,25 +466,15 @@
     align-items: center;
     gap: $space-1;
     
-    &:hover {
-        color: $text-primary;
-    }
-    
-    &.sorted {
-        color: $text-primary;
-    }
+    &:hover { color: $text-primary; }
+    &.sorted { color: $text-primary; }
 }
 
 .sort-icon {
     flex-shrink: 0;
-    transition: transform $transition-fast;
-    
-    &.desc {
-        transform: rotate(180deg);
-    }
+    &.desc { transform: rotate(180deg); }
 }
 
-// More Button
 .btn-more {
     opacity: 0;
     transition: opacity $transition-fast;
@@ -681,7 +484,7 @@
     }
 }
 
-// Rename Input
+// Rename
 .rename-input {
     flex: 1;
     min-width: 0;
@@ -692,21 +495,19 @@
     background: $bg-card;
     color: $text-primary;
     outline: none;
-    box-shadow: $glow-focus;
 }
 
-// File Context Menu
+// Context Menu
 .file-context-menu {
     position: fixed;
     z-index: $z-popover;
     background: $bg-card;
     border: 1px solid $border-primary;
-    border-radius: $radius-lg;
-    box-shadow: $shadow-xl;
-    min-width: 180px;
-    max-width: 220px;
+    border-radius: $radius-md;
+    box-shadow: $shadow-lg;
+    min-width: 160px;
+    max-width: 200px;
     padding: $space-1 0;
-    animation: slideUp $duration-fast $ease-out;
     overflow-y: auto;
     @include custom-scrollbar;
     
@@ -714,10 +515,10 @@
         @include button-reset;
         display: flex;
         align-items: center;
-        gap: $space-3;
+        gap: $space-2;
         width: 100%;
-        padding: $space-2 $space-4;
-        font-size: $text-sm;
+        padding: $space-2 $space-3;
+        font-size: $text-xs;
         color: $text-primary;
         text-align: left;
         transition: background $transition-fast;
@@ -728,35 +529,29 @@
         
         &.danger {
             color: $error;
-            
-            &:hover {
-                background: $error-soft;
-            }
+            &:hover { background: $error-soft; }
         }
         
         svg {
             flex-shrink: 0;
             color: $text-muted;
+            width: 14px;
+            height: 14px;
         }
         
-        &.danger svg {
-            color: $error;
-        }
+        &.danger svg { color: $error; }
         
         .shortcut {
             margin-left: auto;
             font-size: $text-2xs;
             color: $text-muted;
-            background: $bg-tertiary;
-            padding: $space-0-5 $space-1-5;
-            border-radius: $radius-sm;
         }
     }
 }
 
 .context-divider {
     height: 1px;
-    background: $border-secondary;
+    background: $border-subtle;
     margin: $space-1 0;
 }
 
@@ -764,7 +559,6 @@
 .file-grid-container {
     flex: 1;
     overflow: hidden;
-    transition: opacity $transition-base;
     
     &.stale {
         opacity: 0.5;
@@ -774,48 +568,21 @@
 
 .file-grid {
     display: grid;
-    gap: $space-4;
-    padding: $space-4;
+    gap: $space-3;
+    padding: $space-3;
     overflow-y: auto;
     height: 100%;
     @include custom-scrollbar;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
 
-    // Default: Large desktop (1920px+)
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    // ~12 columns at 1920px - optimal density
-
-    // Ultrawide optimization (2560px+)
     @media (min-width: 2560px) {
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-        gap: $space-6;
-        // ~16 columns at 2560px - use extra space
-    }
-
-    // Standard desktop (1280-1919px)
-    @include respond-to('xl') {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        // ~10 columns at 1280px
     }
 
-    // Medium desktop (1024-1279px)
-    @include respond-to('lg') {
-        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-        // ~8-9 columns at 1024px
-    }
-
-    // Tablet (768-1023px)
-    @include respond-to('md') {
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-        gap: $space-3;
-        // ~7 columns at 768px
-    }
-
-    // Mobile (< 768px)
     @include respond-to('sm') {
         grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-        gap: $space-3;
-        padding: $space-3;
-        // ~4-5 columns at 640px
+        gap: $space-2;
+        padding: $space-2;
     }
 }
 
@@ -823,39 +590,30 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: $space-2;
-    padding: $space-4;
-    border-radius: $radius-lg;
+    gap: $space-1-5;
+    padding: $space-3;
+    border-radius: $radius-md;
     cursor: pointer;
-    transition: all $transition-fast;
-    border: 2px solid transparent;
+    transition: background $transition-fast;
+    border: 1px solid transparent;
     position: relative;
     
-    // Selection checkbox overlay (hidden by default)
     .grid-item-checkbox {
         position: absolute;
-        top: $space-2;
-        left: $space-2;
+        top: $space-1;
+        left: $space-1;
         opacity: 0;
         transition: opacity $transition-fast;
-        z-index: 1;
         
         input[type="checkbox"] {
             appearance: none;
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             cursor: pointer;
             border: 1.5px solid $border-primary;
             border-radius: $radius-sm;
             background: $bg-card;
-            transition: all $transition-fast;
             position: relative;
-            box-shadow: $shadow-sm;
-            
-            &:hover {
-                border-color: $accent-muted;
-                background: $accent-subtle;
-            }
             
             &:checked {
                 background: $accent;
@@ -864,12 +622,12 @@
                 &::after {
                     content: '';
                     position: absolute;
-                    left: 4.5px;
-                    top: 1.5px;
-                    width: 5px;
-                    height: 9px;
+                    left: 3.5px;
+                    top: 0.5px;
+                    width: 4px;
+                    height: 8px;
                     border: solid white;
-                    border-width: 0 2px 2px 0;
+                    border-width: 0 1.5px 1.5px 0;
                     transform: rotate(45deg);
                 }
             }
@@ -877,8 +635,7 @@
     }
     
     &:hover {
-        background: $bg-tertiary;
-        border-color: $border-secondary;
+        background: $bg-hover;
         
         .grid-item-checkbox {
             opacity: 1;
@@ -896,71 +653,30 @@
     
     &.locked-other {
         background: $warning-soft;
-        border-color: $warning;
-        
-        // Lock badge
-        &::before {
-            content: '';
-            position: absolute;
-            top: $space-2;
-            right: $space-2;
-            width: 8px;
-            height: 8px;
-            background: $warning;
-            border-radius: $radius-full;
-        }
     }
     
     &.locked-mine {
-        background: $accent-subtle;
-        border-color: $info;
-        
-        &::before {
-            content: '';
-            position: absolute;
-            top: $space-2;
-            right: $space-2;
-            width: 8px;
-            height: 8px;
-            background: $info;
-            border-radius: $radius-full;
-        }
-    }
-    
-    // Combined states
-    &.selected.locked-other {
-        border-color: $accent;
-    }
-    
-    &.selected.locked-mine {
-        border-color: $accent;
+        background: $info-soft;
     }
 }
 
 .grid-item-icon {
     @include flex-center;
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
     color: $text-muted;
-    background: $bg-tertiary;
-    border-radius: $radius-lg;
-    transition: all $transition-fast;
     
     svg {
-        width: 28px;
-        height: 28px;
+        width: 24px;
+        height: 24px;
     }
     
-    .directory & {
-        background: $accent-subtle;
-        
-        svg {
-            color: $accent-muted;
-        }
+    .directory & svg {
+        color: $accent;
     }
     
-    .selected & {
-        background: rgba($accent, 0.15);
+    .selected & svg {
+        color: $accent;
     }
 }
 
@@ -968,36 +684,15 @@
     @include truncate;
     width: 100%;
     text-align: center;
-    font-size: $text-xs;
+    font-size: $text-2xs;
     color: $text-primary;
-    padding: 0 $space-1;
     
     .directory & {
         font-weight: $weight-medium;
     }
-    
-    .selected & {
-        color: $text-primary;
-    }
 }
 
-// Danger Button
 .btn-danger {
     color: $error !important;
-    
-    &:hover {
-        background: $error-soft !important;
-    }
-}
-
-// Animations
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(4px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    &:hover { background: $error-soft !important; }
 }

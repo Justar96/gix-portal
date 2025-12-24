@@ -22,11 +22,13 @@
     @include flex-between;
     height: $header-height;
     padding: 0 $space-5;
-    background: $bg-primary;
+    background: rgba($bg-primary, 0.95);
+    backdrop-filter: blur(12px);
     border-bottom: 1px solid $border-secondary;
     flex-shrink: 0;
     z-index: $z-sticky;
-    
+    transition: background $transition-base;
+
     @include respond-to('md') {
         padding: 0 $space-4;
     }
@@ -36,22 +38,23 @@
     display: flex;
     align-items: center;
     gap: $space-3;
-    
+
     .logo {
         width: 32px;
         height: 32px;
         border-radius: $radius-md;
-        background: $text-primary;
+        background: linear-gradient(135deg, $text-primary, $text-secondary);
         @include flex-center;
         flex-shrink: 0;
-        
+        box-shadow: $shadow-sm;
+
         svg {
             color: $bg-primary;
             width: 16px;
             height: 16px;
         }
     }
-    
+
     .app-title {
         font-size: $text-lg;
         font-weight: $weight-semibold;
@@ -117,7 +120,7 @@
     flex: 1;
     overflow-y: hidden;
     overflow-x: visible; // Allow presence toggle tab to be visible
-    
+
     @include respond-to('md') {
         flex-direction: column;
     }
@@ -142,11 +145,25 @@
     flex-shrink: 0;
     transition: width 350ms cubic-bezier(0.4, 0, 0.2, 1);
 
+    // Add subtle shadow to sidebar edge
+    position: relative;
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: -1px;
+        bottom: 0;
+        width: 1px;
+        background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.05), transparent);
+        pointer-events: none;
+    }
+
     .sidebar-content,
     .drive-item,
     .drive-name {
         transition: opacity 200ms ease-in-out,
-                    transform 200ms ease-in-out;
+            transform 200ms ease-in-out;
     }
 
     @include respond-to('lg') {
@@ -240,6 +257,7 @@
     border-bottom: 1px solid $border-secondary;
     height: 40px;
     flex-shrink: 0;
+    background: rgba($bg-primary, 0.5); // Slight transparency
 }
 
 .sidebar-title {
@@ -251,6 +269,7 @@
     letter-spacing: $tracking-wider;
     white-space: nowrap;
     overflow: hidden;
+    padding-left: $space-2;
 }
 
 .sidebar-content {
@@ -260,19 +279,29 @@
 }
 
 .btn-add {
+    @include button-base;
+    width: 24px;
+    height: 24px;
+    border-radius: $radius-sm;
     color: $text-tertiary;
     margin-left: auto;
-    
+
     &:hover {
-        color: $text-primary;
+        background: $bg-hover;
+        color: $accent;
     }
 }
 
 .btn-collapse {
+    @include button-base;
+    width: 24px;
+    height: 24px;
+    border-radius: $radius-sm;
     color: $text-muted;
     flex-shrink: 0;
-    
+
     &:hover {
+        background: $bg-hover;
         color: $text-primary;
     }
 }
@@ -298,7 +327,7 @@
     border-radius: $radius-md;
     color: $text-tertiary;
     margin-bottom: $space-1;
-    
+
     &:hover {
         background: $bg-hover;
         color: $text-primary;
@@ -313,12 +342,12 @@
     border-radius: $radius-md;
     color: $text-tertiary;
     transition: all $transition-fast;
-    
+
     &:hover {
         background: $bg-hover;
         color: $text-primary;
     }
-    
+
     &.selected {
         background: $bg-tertiary;
         color: $text-primary;
@@ -339,7 +368,7 @@
     @include flex-column;
     overflow: hidden;
     background: $bg-primary;
-    
+
     @include respond-to('md') {
         min-height: 0;
         flex: 1;
@@ -354,7 +383,7 @@
     flex: 1;
     padding: $space-12 $space-6;
     text-align: center;
-    
+
     @include respond-to('md') {
         padding: $space-8 $space-4;
     }
@@ -367,7 +396,7 @@
     align-items: center;
     gap: 0;
     margin-bottom: $space-8;
-    
+
     @include respond-to('md') {
         margin-bottom: $space-6;
     }
@@ -381,32 +410,41 @@
     padding: $space-4 $space-6;
     border: 1px solid $border-primary;
     line-height: 1;
-    
+    transition: all $transition-fast;
+    background: $bg-card;
+
     &:not(:first-child) {
         margin-left: -1px;
     }
-    
+
+    &:hover {
+        box-shadow: $shadow-lg;
+        z-index: 10;
+        border-color: $accent;
+    }
+
     &.highlight {
         background: $accent;
         border-color: $accent;
         border-radius: $radius-full;
-        color: $text-primary;
+        color: white; // Changed from $text-primary for better contrast
+        box-shadow: 0 4px 12px rgba($accent, 0.4);
     }
-    
+
     &.row-start {
         margin-left: 0;
     }
-    
+
     @include respond-to('lg') {
         font-size: 2.5rem;
         padding: $space-3 $space-5;
     }
-    
+
     @include respond-to('md') {
         font-size: 2rem;
         padding: $space-2-5 $space-4;
     }
-    
+
     @include respond-to('sm') {
         font-size: 1.5rem;
         padding: $space-2 $space-3;
@@ -416,7 +454,7 @@
 .hero-row {
     display: flex;
     justify-content: center;
-    
+
     .hero-word:first-child {
         margin-left: 0;
     }
@@ -427,7 +465,7 @@
     color: $text-secondary;
     max-width: 560px;
     line-height: $leading-relaxed;
-    
+
     @include respond-to('md') {
         font-size: $text-base;
     }

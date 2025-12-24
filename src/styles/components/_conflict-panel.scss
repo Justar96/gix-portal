@@ -1,26 +1,29 @@
 // Conflict Panel styles
+@use '../abstracts' as *;
+
 .conflict-panel {
-  background: var(--bg-primary);
-  border: 1px solid var(--color-warning);
-  border-radius: 8px;
-  margin: 12px;
+  background: $bg-primary;
+  border: 1px solid $warning;
+  border-radius: $radius-lg;
+  margin: $space-3;
   overflow: hidden;
+  box-shadow: $shadow-md;
 
   .conflict-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 12px;
-    background: rgba(var(--color-warning-rgb), 0.1);
-    border-bottom: 1px solid var(--color-warning);
+    padding: $space-2-5 $space-3;
+    background: $warning-soft;
+    border-bottom: 1px solid rgba($warning, 0.3);
 
     .conflict-title {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--color-warning);
+      gap: $space-2;
+      font-size: $text-sm;
+      font-weight: $weight-semibold;
+      color: $warning;
 
       .warning-icon {
         flex-shrink: 0;
@@ -31,111 +34,119 @@
   .conflict-list {
     max-height: 300px;
     overflow-y: auto;
+    @include custom-scrollbar;
   }
 
   .conflict-item {
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid $border-subtle;
 
     &:last-child {
       border-bottom: none;
     }
 
     &.expanded {
-      background: var(--bg-secondary);
+      background: $bg-secondary;
     }
 
     .conflict-item-header {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 10px 12px;
+      gap: $space-2;
+      padding: $space-2-5 $space-3;
       cursor: pointer;
+      transition: background $transition-fast;
 
       &:hover {
-        background: var(--bg-secondary);
+        background: $bg-hover;
       }
 
       .expand-icon {
-        color: var(--text-muted);
+        color: $text-muted;
         flex-shrink: 0;
+        transition: transform $transition-fast;
       }
 
       .file-icon {
-        color: var(--text-secondary);
+        color: $text-secondary;
         flex-shrink: 0;
       }
 
       .conflict-path {
         flex: 1;
-        font-size: 13px;
-        font-weight: 500;
+        font-size: $text-sm;
+        font-weight: $weight-medium;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        color: $text-primary;
       }
 
       .conflict-time {
-        font-size: 11px;
-        color: var(--text-muted);
+        font-size: $text-xs;
+        color: $text-muted;
         flex-shrink: 0;
       }
 
       .btn-dismiss {
         opacity: 0.5;
         flex-shrink: 0;
+        color: $text-secondary;
 
         &:hover {
           opacity: 1;
+          color: $text-primary;
         }
       }
     }
 
     .conflict-details {
-      padding: 12px;
-      border-top: 1px solid var(--border-color);
+      padding: $space-3;
+      border-top: 1px solid $border-subtle;
       position: relative;
+      background: $bg-elevated;
 
       .conflict-versions {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 12px;
-        margin-bottom: 12px;
+        gap: $space-3;
+        margin-bottom: $space-3;
       }
 
       .version {
-        background: var(--bg-primary);
-        border: 1px solid var(--border-color);
-        border-radius: 6px;
-        padding: 10px;
+        background: $bg-primary;
+        border: 1px solid $border-primary;
+        border-radius: $radius-md;
+        padding: $space-2-5;
 
         &.local {
-          border-color: var(--color-primary);
+          border-color: $accent;
 
           .version-header {
-            color: var(--color-primary);
+            color: $accent;
           }
         }
 
         &.remote {
-          border-color: var(--color-success);
+          border-color: $success;
 
           .version-header {
-            color: var(--color-success);
+            color: $success;
           }
         }
 
         .version-header {
           display: flex;
           align-items: center;
-          gap: 6px;
-          font-size: 11px;
-          font-weight: 600;
+          gap: $space-1-5;
+          font-size: $text-xs;
+          font-weight: $weight-semibold;
           text-transform: uppercase;
-          margin-bottom: 8px;
+          margin-bottom: $space-2;
+          letter-spacing: $tracking-wide;
         }
 
         .version-info {
-          font-size: 11px;
+          font-size: $text-xs;
 
           .info-row {
             display: flex;
@@ -143,59 +154,63 @@
             padding: 2px 0;
 
             .label {
-              color: var(--text-muted);
+              color: $text-muted;
             }
 
             .value {
-              font-family: var(--font-mono);
-              font-size: 10px;
+              font-family: $font-mono;
+              font-size: $text-2xs;
+              color: $text-secondary;
             }
           }
         }
 
         .version-preview {
-          margin-top: 8px;
-          padding: 8px;
-          background: var(--bg-tertiary);
-          border-radius: 4px;
-          font-family: var(--font-mono);
-          font-size: 10px;
+          margin-top: $space-2;
+          padding: $space-2;
+          background: $bg-tertiary;
+          border-radius: $radius-sm;
+          font-family: $font-mono;
+          font-size: $text-2xs;
           line-height: 1.4;
           max-height: 80px;
           overflow: auto;
           white-space: pre-wrap;
           word-break: break-all;
+          color: $text-secondary;
+          @include custom-scrollbar;
         }
       }
 
       .resolution-options {
         .options-label {
-          font-size: 11px;
-          font-weight: 600;
-          color: var(--text-secondary);
-          margin-bottom: 8px;
+          font-size: $text-xs;
+          font-weight: $weight-semibold;
+          color: $text-secondary;
+          margin-bottom: $space-2;
         }
 
         .options-buttons {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: $space-2;
         }
 
         .btn-resolution {
           display: flex;
           align-items: center;
-          gap: 6px;
-          padding: 6px 12px;
-          border: 1px solid var(--border-color);
-          border-radius: 4px;
-          background: var(--bg-primary);
-          font-size: 12px;
+          gap: $space-1-5;
+          padding: $space-1-5 $space-3;
+          border: 1px solid $border-primary;
+          border-radius: $radius-sm;
+          background: $bg-primary;
+          font-size: $text-sm;
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: all $transition-fast;
+          color: $text-secondary;
 
           &:hover:not(:disabled) {
-            background: var(--bg-tertiary);
+            background: $bg-tertiary;
           }
 
           &:disabled {
@@ -203,10 +218,25 @@
             cursor: not-allowed;
           }
 
-          &.keeplocal:hover { border-color: var(--color-primary); color: var(--color-primary); }
-          &.keepremote:hover { border-color: var(--color-success); color: var(--color-success); }
-          &.keepboth:hover { border-color: var(--color-warning); color: var(--color-warning); }
-          &.manualmerge:hover { border-color: var(--color-info); color: var(--color-info); }
+          &.keeplocal:hover {
+            border-color: $accent;
+            color: $accent;
+          }
+
+          &.keepremote:hover {
+            border-color: $success;
+            color: $success;
+          }
+
+          &.keepboth:hover {
+            border-color: $warning;
+            color: $warning;
+          }
+
+          &.manualmerge:hover {
+            border-color: $info;
+            color: $info;
+          }
         }
       }
 
@@ -216,9 +246,12 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
-        background: rgba(var(--bg-primary-rgb), 0.9);
-        font-size: 13px;
+        gap: $space-2;
+        background: rgba($bg-primary, 0.9);
+        font-size: $text-sm;
+        font-weight: $weight-medium;
+        color: $text-primary;
+        backdrop-filter: blur(2px);
       }
     }
   }
@@ -227,6 +260,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 16px;
+    padding: $space-4;
+    color: $text-muted;
   }
 }

@@ -1,23 +1,27 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { FolderOpen, Plus, PanelLeftClose, PanelLeft } from "lucide-react";
+import { FolderOpen, Plus, PanelLeftClose, PanelLeft, Link } from "lucide-react";
 import { Titlebar } from "./components/Titlebar";
 import { IdentityBadge } from "./components/IdentityBadge";
 import { DriveList } from "./components/DriveList";
 import { CreateDriveModal } from "./components/CreateDriveModal";
+import { JoinDriveModal } from "./components/JoinDriveModal";
 import { DriveWorkspace } from "./components/DriveWorkspace";
 import { UpdateNotification } from "./components/UpdateNotification";
 import { InviteHandler } from "./components/InviteHandler";
+import { WelcomeModal, useWelcomeModal } from "./components/WelcomeModal";
 import type { DriveInfo } from "./types";
 import "./styles/main.scss";
 
 function App() {
   const [drives, setDrives] = useState<DriveInfo[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const [selectedDrive, setSelectedDrive] = useState<DriveInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  
+  const { showWelcome, setShowWelcome } = useWelcomeModal();
+
   // Use ref to track selected drive ID without causing re-renders
   const selectedDriveIdRef = useRef<string | null>(null);
   selectedDriveIdRef.current = selectedDrive?.id ?? null;
@@ -86,6 +90,13 @@ function App() {
               <>
                 <span className="sidebar-title">Drives</span>
                 <button
+                  className="btn-icon btn-join"
+                  onClick={() => setShowJoinModal(true)}
+                  title="Join drive with invite"
+                >
+                  <Link size={14} />
+                </button>
+                <button
                   className="btn-icon btn-add"
                   onClick={() => setShowCreateModal(true)}
                   title="Create new drive"
@@ -112,7 +123,7 @@ function App() {
               )}
             </div>
           )}
-          
+
           {sidebarCollapsed && (
             <div className="sidebar-collapsed-content">
               <button
@@ -180,11 +191,23 @@ function App() {
         />
       )}
 
+      {showJoinModal && (
+        <JoinDriveModal
+          onClose={() => setShowJoinModal(false)}
+          onJoined={handleDriveJoined}
+        />
+      )}
+
       {/* Update notification */}
       <UpdateNotification />
 
       {/* Deep link invite handler */}
       <InviteHandler onDriveJoined={handleDriveJoined} />
+
+      {/* Welcome modal for first-time users */}
+      {showWelcome && (
+        <WelcomeModal onClose={() => setShowWelcome(false)} />
+      )}
     </div>
   );
 }

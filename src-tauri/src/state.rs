@@ -181,4 +181,22 @@ impl AppState {
             file_transfer,
         )
     }
+
+    /// Gracefully shutdown all async components
+    ///
+    /// This must be called before the Tokio runtime is destroyed to avoid
+    /// panics from async Drop implementations in iroh-gossip and other async libs.
+    pub async fn shutdown(&self) {
+        tracing::info!("AppState shutting down...");
+
+        // Shutdown event broadcaster first (stops gossip tasks)
+        if let Some(ref broadcaster) = self.event_broadcaster {
+            broadcaster.shutdown().await;
+        }
+
+        // Shutdown P2P endpoint
+        self.endpoint.shutdown().await;
+
+        tracing::info!("AppState shutdown complete");
+    }
 }

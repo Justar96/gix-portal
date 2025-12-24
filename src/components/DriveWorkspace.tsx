@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Users, AlertTriangle, PanelRightClose, PanelRight } from "lucide-react";
 import type { DriveInfo } from "../types";
 import { FileBrowser } from "./FileBrowser";
 import { SyncStatusBar } from "./SyncStatusBar";
@@ -40,8 +39,8 @@ export function DriveWorkspace({ drive }: DriveWorkspaceProps) {
                 </div>
 
                 {/* Presence Panel (collapsible sidebar) */}
-                <PresencePanel 
-                    drive={drive} 
+                <PresencePanel
+                    drive={drive}
                     isOpen={showPresence}
                     onToggle={() => setShowPresence(!showPresence)}
                     conflictCount={conflictCount}

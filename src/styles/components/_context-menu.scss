@@ -13,21 +13,21 @@
 
 .context-menu {
     position: fixed;
-    min-width: 160px;
-    background: $bg-card;
+    min-width: 180px;
+    background: rgba($bg-card, 0.98);
+    backdrop-filter: blur(12px);
     border: 1px solid $border-primary;
     border-radius: $radius-lg;
     box-shadow: $shadow-xl;
     z-index: $z-popover;
     overflow: hidden;
-    padding: $space-1;
-    animation: slideUp $duration-fast $ease-out;
-    
+    padding: $space-1-5;
+
     button {
         @include button-reset;
         @include interactive;
         width: 100%;
-        padding: $space-2-5 $space-3;
+        padding: $space-2 $space-3;
         border-radius: $radius-md;
         color: $text-primary;
         text-align: left;
@@ -35,29 +35,34 @@
         display: flex;
         align-items: center;
         gap: $space-3;
-        
+        transition: all $transition-fast;
+
         svg {
             color: $text-tertiary;
             flex-shrink: 0;
+            width: 16px;
+            height: 16px;
+            transition: color $transition-fast;
         }
-        
+
         &:hover {
             background: $bg-hover;
-            
+
             svg {
-                color: $text-secondary;
+                color: $text-primary;
             }
         }
-        
+
         &.danger {
             color: $error;
-            
+
             svg {
                 color: $error;
             }
-            
+
             &:hover {
                 background: $error-soft;
+                color: $error;
             }
         }
     }
