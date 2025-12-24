@@ -2,10 +2,11 @@
 //!
 //! All file operations validate paths to prevent directory traversal attacks.
 //! All operations enforce ACL permission checks.
+//! Supports optional E2E encryption via EncryptionManager.
 
 use crate::commands::security::SecurityStore;
 use crate::core::{file, validate_drive_id, validate_path, AppError, FileEntryDto};
-use crate::crypto::Permission;
+use crate::crypto::{EncryptionManager, Permission};
 use crate::state::AppState;
 use std::sync::Arc;
 use tauri::State;
@@ -466,6 +467,208 @@ pub async fn rename_path(
         old_path = %old_path,
         new_path = %new_path,
         "Renamed path"
+    );
+
+    Ok(())
+}
+
+/// Read encrypted file content from a drive
+///
+/// # Security
+/// - Same validations as read_file
+/// - Decrypts content using the drive's encryption key
+#[tauri::command]
+pub async fn read_file_encrypted(
+    drive_id: String,
+    path: String,
+    state: State<'_, AppState>,
+    security: State<'_, Arc<SecurityStore>>,
+    encryption: State<'_, Arc<EncryptionManager>>,
+) -> Result<FileContent, String> {
+    use base64::Engine;
+
+    // Validate drive ID
+    let id_arr = validate_drive_id(&drive_id).map_err(|e| e.to_string())?;
+
+    // Get drive
+    let drives = state.drives.read().await;
+    let drive = drives.get(&id_arr).ok_or_else(|| {
+        AppError::DriveNotFound {
+            drive_id: drive_id.clone(),
+        }
+        .to_string()
+    })?;
+
+    // Get caller identity and check permission
+    let caller = state
+        .identity_manager
+        .node_id()
+        .await
+        .ok_or_else(|| AppError::IdentityNotInitialized.to_string())?;
+    let caller_hex = caller.to_hex();
+    let owner_hex = drive.owner.to_hex();
+
+    // Enforce ACL permission check
+    let acl = security.get_or_create_acl(&drive_id, &owner_hex).await;
+    if !acl.check_permission(&caller_hex, &path, Permission::Read) {
+        tracing::warn!(
+            drive_id = %drive_id,
+            user = %caller_hex,
+            path = %path,
+            "Access denied: insufficient permission to read file"
+        );
+        return Err(AppError::AccessDenied {
+            reason: "insufficient permission to read file".to_string(),
+        }
+        .to_string());
+    }
+
+    // Validate path is safe
+    let safe_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
+
+    // Ensure the path exists and is a file
+    if !safe_path.exists() {
+        return Err(AppError::PathNotFound { path: path.clone() }.to_string());
+    }
+    if safe_path.is_dir() {
+        return Err(AppError::NotAFile { path: path.clone() }.to_string());
+    }
+
+    // Read encrypted file content
+    let encrypted_content = std::fs::read(&safe_path)
+        .map_err(|e| format!("Failed to read file: {}", e))?;
+
+    // Decrypt the content
+    let content = encryption
+        .decrypt_file(&drive_id, &path, &encrypted_content)
+        .await
+        .map_err(|e| format!("Decryption failed: {}", e))?;
+
+    let size = content.len() as u64;
+
+    // Detect MIME type from extension
+    let mime_type = safe_path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| match ext.to_lowercase().as_str() {
+            "txt" | "md" | "rs" | "js" | "ts" | "py" | "json" | "toml" | "yaml" | "yml" => {
+                "text/plain"
+            }
+            "html" | "htm" => "text/html",
+            "css" => "text/css",
+            "png" => "image/png",
+            "jpg" | "jpeg" => "image/jpeg",
+            "gif" => "image/gif",
+            "svg" => "image/svg+xml",
+            "pdf" => "application/pdf",
+            "zip" => "application/zip",
+            _ => "application/octet-stream",
+        })
+        .map(String::from);
+
+    // Encode decrypted content as base64
+    let encoded = base64::engine::general_purpose::STANDARD.encode(&content);
+
+    tracing::debug!(
+        drive_id = %drive_id,
+        path = %path,
+        size = size,
+        "Read encrypted file content"
+    );
+
+    Ok(FileContent {
+        content: encoded,
+        size,
+        mime_type,
+    })
+}
+
+/// Write encrypted content to a file in a drive
+///
+/// # Security
+/// - Same validations as write_file
+/// - Encrypts content using the drive's encryption key
+#[tauri::command]
+pub async fn write_file_encrypted(
+    drive_id: String,
+    path: String,
+    content: String,
+    state: State<'_, AppState>,
+    security: State<'_, Arc<SecurityStore>>,
+    encryption: State<'_, Arc<EncryptionManager>>,
+) -> Result<(), String> {
+    use base64::Engine;
+
+    // Validate drive ID
+    let id_arr = validate_drive_id(&drive_id).map_err(|e| e.to_string())?;
+
+    // Get drive
+    let drives = state.drives.read().await;
+    let drive = drives.get(&id_arr).ok_or_else(|| {
+        AppError::DriveNotFound {
+            drive_id: drive_id.clone(),
+        }
+        .to_string()
+    })?;
+
+    // Get caller identity and check permission
+    let caller = state
+        .identity_manager
+        .node_id()
+        .await
+        .ok_or_else(|| AppError::IdentityNotInitialized.to_string())?;
+    let caller_hex = caller.to_hex();
+    let owner_hex = drive.owner.to_hex();
+
+    // Enforce ACL permission check (requires Write)
+    let acl = security.get_or_create_acl(&drive_id, &owner_hex).await;
+    if !acl.check_permission(&caller_hex, &path, Permission::Write) {
+        tracing::warn!(
+            drive_id = %drive_id,
+            user = %caller_hex,
+            path = %path,
+            "Access denied: insufficient permission to write file"
+        );
+        return Err(AppError::AccessDenied {
+            reason: "insufficient permission to write file".to_string(),
+        }
+        .to_string());
+    }
+
+    // Validate path is safe
+    let safe_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
+
+    if safe_path == drive.local_path {
+        return Err("Cannot write to drive root".to_string());
+    }
+
+    // Decode base64 content
+    let plaintext = base64::engine::general_purpose::STANDARD
+        .decode(&content)
+        .map_err(|e| format!("Invalid base64 content: {}", e))?;
+
+    // Encrypt the content
+    let encrypted_content = encryption
+        .encrypt_file(&drive_id, &path, &plaintext)
+        .await
+        .map_err(|e| format!("Encryption failed: {}", e))?;
+
+    // Create parent directories if needed
+    if let Some(parent) = safe_path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create directories: {}", e))?;
+    }
+
+    // Write encrypted content
+    std::fs::write(&safe_path, &encrypted_content)
+        .map_err(|e| format!("Failed to write file: {}", e))?;
+
+    tracing::info!(
+        drive_id = %drive_id,
+        path = %path,
+        size = plaintext.len(),
+        encrypted_size = encrypted_content.len(),
+        "Wrote encrypted file content"
     );
 
     Ok(())

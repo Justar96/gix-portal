@@ -8,13 +8,12 @@
   border-left: 1px solid $border-primary;
   width: 280px;
   flex-shrink: 0;
-  // Use visible overflow so the toggle tab can hang off the side
   overflow: visible;
   position: relative;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.3s ease;
-  z-index: 10; // Ensure it sits above if needed
+  z-index: 10;
 
   // Closed state
   &.closed {

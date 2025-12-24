@@ -16,9 +16,10 @@ import { useDriveEvents } from "../hooks";
 
 interface SyncStatusBarProps {
     drive: DriveInfo;
+    presencePanelOpen?: boolean;
 }
 
-export function SyncStatusBar({ drive }: SyncStatusBarProps) {
+export function SyncStatusBar({ drive, presencePanelOpen = true }: SyncStatusBarProps) {
     const { syncStatus, isSyncing, startSync, stopSync, error } = useDriveEvents({
         driveId: drive.id,
     });
@@ -73,7 +74,7 @@ export function SyncStatusBar({ drive }: SyncStatusBarProps) {
     };
 
     return (
-        <div className="sync-status-bar">
+        <div className={`sync-status-bar ${presencePanelOpen ? 'panel-open' : 'panel-closed'}`}>
             <div className="sync-status-left">
                 {/* Sync Status Indicator */}
                 <div className={`sync-indicator ${isSyncing ? "syncing" : "offline"}`}>

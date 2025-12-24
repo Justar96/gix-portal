@@ -35,6 +35,20 @@
     }
 }
 
+.empty-actions {
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    flex-wrap: wrap;
+    justify-content: center;
+    
+    @include respond-to('sm') {
+        flex-direction: column;
+        width: 100%;
+        max-width: 240px;
+    }
+}
+
 .empty-icon {
     @include flex-center;
     width: 56px;

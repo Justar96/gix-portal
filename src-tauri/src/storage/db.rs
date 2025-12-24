@@ -7,6 +7,8 @@ const IDENTITY_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("ident
 const DRIVES_TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("drives");
 const ACLS_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("acls");
 const TOKEN_TRACKERS_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("token_trackers");
+const KEY_EXCHANGE_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("key_exchange");
+const DRIVE_KEYS_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("drive_keys");
 
 /// Database wrapper for persistent storage using redb
 pub struct Database {
@@ -25,6 +27,8 @@ impl Database {
             let _ = write_txn.open_table(DRIVES_TABLE)?;
             let _ = write_txn.open_table(ACLS_TABLE)?;
             let _ = write_txn.open_table(TOKEN_TRACKERS_TABLE)?;
+            let _ = write_txn.open_table(KEY_EXCHANGE_TABLE)?;
+            let _ = write_txn.open_table(DRIVE_KEYS_TABLE)?;
         }
         write_txn.commit()?;
 
@@ -205,5 +209,79 @@ impl Database {
             trackers.push((key.value().to_string(), value.value().to_vec()));
         }
         Ok(trackers)
+    }
+
+    // ============================================================================
+    // Key Exchange Operations
+    // ============================================================================
+
+    /// Save the key exchange keypair secret key
+    pub fn save_key_exchange_keypair(&self, secret_key: &[u8; 32]) -> Result<()> {
+        let write_txn = self.db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(KEY_EXCHANGE_TABLE)?;
+            table.insert("secret_key", secret_key.as_slice())?;
+        }
+        write_txn.commit()?;
+        Ok(())
+    }
+
+    /// Get the key exchange keypair secret key
+    pub fn get_key_exchange_keypair(&self) -> Result<Option<[u8; 32]>> {
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(KEY_EXCHANGE_TABLE)?;
+
+        match table.get("secret_key")? {
+            Some(guard) => {
+                let bytes = guard.value();
+                if bytes.len() == 32 {
+                    let mut arr = [0u8; 32];
+                    arr.copy_from_slice(bytes);
+                    Ok(Some(arr))
+                } else {
+                    Ok(None)
+                }
+            }
+            None => Ok(None),
+        }
+    }
+
+    // ============================================================================
+    // Drive Key Operations
+    // ============================================================================
+
+    /// Save an encrypted drive key
+    pub fn save_drive_key(&self, drive_id: &str, wrapped_key: &[u8]) -> Result<()> {
+        let write_txn = self.db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(DRIVE_KEYS_TABLE)?;
+            table.insert(drive_id, wrapped_key)?;
+        }
+        write_txn.commit()?;
+        Ok(())
+    }
+
+    /// Get an encrypted drive key
+    pub fn get_drive_key(&self, drive_id: &str) -> Result<Option<Vec<u8>>> {
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(DRIVE_KEYS_TABLE)?;
+
+        match table.get(drive_id)? {
+            Some(guard) => Ok(Some(guard.value().to_vec())),
+            None => Ok(None),
+        }
+    }
+
+    /// Delete a drive key
+    #[allow(dead_code)]
+    pub fn delete_drive_key(&self, drive_id: &str) -> Result<bool> {
+        let write_txn = self.db.begin_write()?;
+        let removed = {
+            let mut table = write_txn.open_table(DRIVE_KEYS_TABLE)?;
+            let result = table.remove(drive_id)?;
+            result.is_some()
+        };
+        write_txn.commit()?;
+        Ok(removed)
     }
 }

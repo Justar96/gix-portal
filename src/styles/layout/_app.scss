@@ -79,6 +79,18 @@
     background: $bg-primary;
     border-bottom: 1px solid $border-secondary;
     flex-shrink: 0;
+    gap: $space-3;
+    transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    @include respond-to('lg') {
+        padding: 0 $space-3;
+    }
+    
+    @include respond-to('md') {
+        flex-wrap: wrap;
+        height: auto;
+        min-height: 40px;
+    }
 }
 
 .content-header-left {
@@ -86,6 +98,12 @@
     align-items: center;
     gap: $space-2;
     min-width: 0;
+    flex: 1;
+    
+    @include respond-to('md') {
+        flex: 1 1 100%;
+        order: 1;
+    }
 }
 
 .content-title {
@@ -103,6 +121,10 @@
     align-items: center;
     gap: $space-2;
     flex-shrink: 0;
+    
+    @include respond-to('md') {
+        order: 2;
+    }
 }
 
 .content-body {
@@ -278,17 +300,42 @@
     @include custom-scrollbar;
 }
 
-.btn-add {
+.btn-add,
+.btn-join {
     @include button-base;
-    width: 24px;
-    height: 24px;
-    border-radius: $radius-sm;
-    color: $text-tertiary;
-    margin-left: auto;
+    width: 28px;
+    height: 28px;
+    border-radius: $radius-md;
+    transition: all $transition-fast;
+    
+    svg {
+        transition: transform $transition-fast;
+    }
 
+    &:hover svg {
+        transform: scale(1.1);
+    }
+    
+    &:active svg {
+        transform: scale(0.9);
+    }
+}
+
+.btn-add {
+    color: $accent;
+    
     &:hover {
-        background: $bg-hover;
-        color: $accent;
+        background: $accent-subtle;
+        color: $accent-dark;
+    }
+}
+
+.btn-join {
+    color: $info;
+    
+    &:hover {
+        background: $info-soft;
+        color: $info;
     }
 }
 
@@ -368,10 +415,20 @@
     @include flex-column;
     overflow: hidden;
     background: $bg-primary;
+    position: relative;
 
     @include respond-to('md') {
         min-height: 0;
         flex: 1;
+    }
+    
+    // Adjust header when panel is open
+    &:has(.drive-workspace.panel-open) .content-header {
+        padding-right: calc($space-4 + 280px);
+        
+        @include respond-to('lg') {
+            padding-right: $space-3;
+        }
     }
 }
 

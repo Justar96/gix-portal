@@ -2,10 +2,16 @@
 //!
 //! Provides pub/sub for real-time drive events between peers.
 //! Each drive has its own gossip topic derived from its DriveId.
+//!
+//! All messages are cryptographically signed for authentication.
+//! Sender authorization is verified against ACLs when a security store is configured.
 
 #![allow(dead_code)]
 
-use crate::core::{send_with_backpressure, DriveEvent, DriveEventDto, DriveId};
+use crate::core::{
+    send_with_backpressure, DriveEvent, DriveEventDto, DriveId, SignedGossipMessage,
+};
+use crate::crypto::Identity;
 use anyhow::Result;
 use iroh::protocol::ProtocolHandler;
 use iroh::Endpoint;
@@ -17,6 +23,13 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 use tokio::task::JoinHandle;
 
+/// Maximum age of a gossip message before it's considered stale (5 minutes)
+const MAX_MESSAGE_AGE_MS: i64 = 5 * 60 * 1000;
+
+/// Type alias for the ACL checking callback
+/// Takes (drive_id, sender_node_id) and returns true if sender is authorized
+pub type AclChecker = Arc<dyn Fn(&str, &str) -> bool + Send + Sync>;
+
 /// Manages gossip subscriptions per drive for real-time event broadcasting
 pub struct EventBroadcaster {
     /// The gossip protocol instance (wrapped in RwLock<Option<>> for safe shutdown)
@@ -27,6 +40,10 @@ pub struct EventBroadcaster {
     frontend_tx: broadcast::Sender<DriveEventDto>,
     /// Flag to indicate if shutdown has been called
     shutdown_flag: AtomicBool,
+    /// Our identity for signing outbound messages
+    identity: Arc<Identity>,
+    /// Optional ACL checker for sender authorization
+    acl_checker: RwLock<Option<AclChecker>>,
 }
 
 /// Holds state for a single drive's gossip subscription
@@ -39,20 +56,33 @@ struct TopicSubscription {
 
 impl EventBroadcaster {
     /// Create a new EventBroadcaster from an Iroh endpoint
-    pub async fn new(endpoint: &Endpoint) -> Result<Self> {
+    pub async fn new(endpoint: &Endpoint, identity: Arc<Identity>) -> Result<Self> {
         let gossip = Gossip::builder().spawn(endpoint.clone()).await?;
 
         // Create broadcast channel for frontend events (buffer 256 events)
         let (frontend_tx, _) = broadcast::channel(256);
 
-        tracing::info!("EventBroadcaster initialized");
+        tracing::info!("EventBroadcaster initialized with message signing enabled");
 
         Ok(Self {
             gossip: RwLock::new(Some(Arc::new(gossip))),
             subscriptions: RwLock::new(HashMap::new()),
             frontend_tx,
             shutdown_flag: AtomicBool::new(false),
+            identity,
+            acl_checker: RwLock::new(None),
         })
+    }
+
+    /// Set the ACL checker for sender authorization
+    ///
+    /// This should be called after the SecurityStore is initialized.
+    /// When set, incoming gossip messages will only be processed if the
+    /// sender has at least Read permission on the drive.
+    pub async fn set_acl_checker(&self, checker: AclChecker) {
+        let mut guard = self.acl_checker.write().await;
+        *guard = Some(checker);
+        tracing::info!("ACL checker configured for gossip sender authorization");
     }
 
     /// Get a reference to the gossip instance for operations
@@ -89,6 +119,9 @@ impl EventBroadcaster {
         let topic = gossip.subscribe(topic_id, vec![])?;
         let (_sender, mut receiver) = topic.split();
 
+        // Clone ACL checker for the spawned task
+        let acl_checker = self.acl_checker.read().await.clone();
+
         // Spawn receiver task to forward events to frontend
         let frontend_tx = self.frontend_tx.clone();
         let drive_id_hex = drive_id.to_hex();
@@ -106,18 +139,55 @@ impl EventBroadcaster {
 
                         match event {
                             Event::Gossip(GossipEvent::Received(msg)) => {
-                                // Deserialize the DriveEvent
-                                match serde_json::from_slice::<DriveEvent>(&msg.content) {
-                                    Ok(drive_event) => {
+                                // Deserialize the signed message envelope
+                                match serde_json::from_slice::<SignedGossipMessage>(&msg.content) {
+                                    Ok(signed_msg) => {
+                                        // Verify the signature
+                                        if let Err(e) = signed_msg.verify() {
+                                            tracing::warn!(
+                                                "Rejected gossip message with invalid signature: {} from {:?}",
+                                                e,
+                                                msg.delivered_from
+                                            );
+                                            continue;
+                                        }
+
+                                        // Check for replay attack (stale messages)
+                                        if signed_msg.is_stale(MAX_MESSAGE_AGE_MS) {
+                                            tracing::warn!(
+                                                "Rejected stale gossip message from {} (age: {}ms)",
+                                                signed_msg.sender.short_string(),
+                                                chrono::Utc::now().timestamp_millis()
+                                                    - signed_msg.timestamp_ms
+                                            );
+                                            continue;
+                                        }
+
+                                        // SECURITY: Check if sender is authorized for this drive
+                                        if let Some(ref checker) = acl_checker {
+                                            let sender_hex = signed_msg.sender.to_hex();
+                                            if !checker(&drive_id_hex, &sender_hex) {
+                                                tracing::warn!(
+                                                    "Rejected gossip message from unauthorized sender {} for drive {}",
+                                                    signed_msg.sender.short_string(),
+                                                    drive_id_hex
+                                                );
+                                                continue;
+                                            }
+                                        }
+
+                                        // Message is authenticated and authorized - extract the event
+                                        let drive_event = signed_msg.event;
                                         let dto = DriveEventDto::from_event(
                                             &drive_id_for_task.to_hex(),
                                             &drive_event,
                                         );
 
                                         tracing::debug!(
-                                            "Received gossip event: {} for drive {}",
+                                            "Received authenticated gossip event: {} for drive {} from {}",
                                             dto.event_type,
-                                            drive_id_hex
+                                            drive_id_hex,
+                                            signed_msg.sender.short_string()
                                         );
 
                                         // Forward to frontend with backpressure monitoring
@@ -186,11 +256,16 @@ impl EventBroadcaster {
     }
 
     /// Broadcast an event to all peers subscribed to a drive
+    ///
+    /// Messages are automatically signed with our identity for authentication.
     pub async fn broadcast(&self, drive_id: &DriveId, event: DriveEvent) -> Result<()> {
         let topic_id = self.drive_to_topic(drive_id);
 
-        // Serialize the event
-        let data = serde_json::to_vec(&event)?;
+        // Create signed message envelope
+        let signed_msg = SignedGossipMessage::new(event.clone(), &self.identity);
+
+        // Serialize the signed message
+        let data = serde_json::to_vec(&signed_msg)?;
 
         // Get gossip instance
         let gossip = self
@@ -202,11 +277,11 @@ impl EventBroadcaster {
         let topic = gossip.subscribe(topic_id, vec![])?;
         let (sender, _receiver) = topic.split();
 
-        // Broadcast the message
+        // Broadcast the signed message
         sender.broadcast(data.into()).await?;
 
         tracing::debug!(
-            "Broadcast {} event for drive {}",
+            "Broadcast signed {} event for drive {}",
             event.event_type(),
             drive_id
         );

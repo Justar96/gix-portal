@@ -4,9 +4,12 @@
 //! - Notifying peers of file changes
 //! - Tracking user presence (join/leave)
 //! - Sync progress reporting
+//!
+//! All gossip messages are signed for authentication.
 
-use crate::crypto::NodeId;
+use crate::crypto::{Identity, NodeId};
 use chrono::{DateTime, Utc};
+use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -144,6 +147,111 @@ impl DriveEventDto {
         }
     }
 }
+
+/// Signed envelope for gossip messages
+///
+/// Wraps a DriveEvent with the sender's identity and a cryptographic signature
+/// to authenticate the message and prevent forgery/replay attacks.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SignedGossipMessage {
+    /// The actual event payload
+    pub event: DriveEvent,
+    /// Sender's public key (NodeId)
+    pub sender: NodeId,
+    /// Unix timestamp (milliseconds) when message was created
+    pub timestamp_ms: i64,
+    /// Ed25519 signature over (event || sender || timestamp_ms)
+    pub signature: Vec<u8>,
+}
+
+impl SignedGossipMessage {
+    /// Create a new signed gossip message
+    pub fn new(event: DriveEvent, identity: &Identity) -> Self {
+        let sender = identity.node_id();
+        let timestamp_ms = Utc::now().timestamp_millis();
+        
+        // Create the message to sign: serialized event + sender bytes + timestamp
+        let message_bytes = Self::create_signing_payload(&event, &sender, timestamp_ms);
+        let signature = identity.sign(&message_bytes);
+        
+        Self {
+            event,
+            sender,
+            timestamp_ms,
+            signature: signature.to_bytes().to_vec(),
+        }
+    }
+    
+    /// Verify the signature of this message
+    pub fn verify(&self) -> Result<(), GossipAuthError> {
+        // Reconstruct the signed payload
+        let message_bytes = Self::create_signing_payload(&self.event, &self.sender, self.timestamp_ms);
+        
+        // Parse the signature
+        let signature_bytes: [u8; 64] = self.signature
+            .clone()
+            .try_into()
+            .map_err(|_| GossipAuthError::InvalidSignature)?;
+        let signature = Signature::from_bytes(&signature_bytes);
+        
+        // Parse the sender's public key
+        let verifying_key = VerifyingKey::from_bytes(self.sender.as_bytes())
+            .map_err(|_| GossipAuthError::InvalidSenderKey)?;
+        
+        // Verify the signature
+        verifying_key
+            .verify(&message_bytes, &signature)
+            .map_err(|_| GossipAuthError::SignatureVerificationFailed)?;
+        
+        Ok(())
+    }
+    
+    /// Check if the message is too old (replay attack prevention)
+    /// Messages older than max_age_ms are considered stale
+    pub fn is_stale(&self, max_age_ms: i64) -> bool {
+        let now_ms = Utc::now().timestamp_millis();
+        now_ms - self.timestamp_ms > max_age_ms
+    }
+    
+    /// Create the payload that is signed
+    fn create_signing_payload(event: &DriveEvent, sender: &NodeId, timestamp_ms: i64) -> Vec<u8> {
+        let event_json = serde_json::to_vec(event).unwrap_or_default();
+        let mut payload = Vec::with_capacity(event_json.len() + 32 + 8);
+        payload.extend_from_slice(&event_json);
+        payload.extend_from_slice(sender.as_bytes());
+        payload.extend_from_slice(&timestamp_ms.to_le_bytes());
+        payload
+    }
+}
+
+/// Errors that can occur during gossip message authentication
+#[derive(Debug, Clone)]
+pub enum GossipAuthError {
+    /// The signature bytes are malformed
+    InvalidSignature,
+    /// The sender's public key is invalid
+    InvalidSenderKey,
+    /// Signature verification failed
+    SignatureVerificationFailed,
+    /// Message is too old (possible replay attack)
+    StaleMessage,
+    /// Sender is not authorized for this action
+    Unauthorized,
+}
+
+impl std::fmt::Display for GossipAuthError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            GossipAuthError::InvalidSignature => write!(f, "Invalid signature format"),
+            GossipAuthError::InvalidSenderKey => write!(f, "Invalid sender public key"),
+            GossipAuthError::SignatureVerificationFailed => write!(f, "Signature verification failed"),
+            GossipAuthError::StaleMessage => write!(f, "Message is too old"),
+            GossipAuthError::Unauthorized => write!(f, "Sender is not authorized"),
+        }
+    }
+}
+
+impl std::error::Error for GossipAuthError {}
 
 #[cfg(test)]
 mod tests {

@@ -115,14 +115,12 @@ impl SecurityStore {
     }
 
     /// Get token tracker for a drive
-    #[allow(dead_code)]
     pub async fn get_token_tracker(&self, drive_id: &str) -> TokenTracker {
         let trackers = self.token_trackers.read().await;
         trackers.get(drive_id).cloned().unwrap_or_default()
     }
 
     /// Update token tracker for a drive (persists to database)
-    #[allow(dead_code)]
     pub async fn update_token_tracker(&self, drive_id: &str, tracker: TokenTracker) {
         // Update in memory
         {
@@ -650,6 +648,25 @@ pub async fn accept_invite(
         });
     }
 
+    // SECURITY: Check if single-use token has already been used
+    if token.payload.single_use {
+        let tracker = security.get_token_tracker(drive_id).await;
+        if tracker.is_used(token.token_id()) {
+            tracing::warn!(
+                drive_id = %drive_id,
+                token_id = %token.token_id(),
+                "Attempted reuse of single-use invite token"
+            );
+            return Ok(AcceptInviteResult {
+                success: false,
+                drive_id: drive_id.clone(),
+                drive_name,
+                permission: token.payload.permission.into(),
+                error: Some("This single-use invite has already been used".to_string()),
+            });
+        }
+    }
+
     // Get or create ACL and grant permission
     let mut acl = security.get_or_create_acl(drive_id, &owner_hex).await;
 
@@ -677,6 +694,18 @@ pub async fn accept_invite(
 
     // Save updated ACL
     security.update_acl(drive_id, acl).await;
+
+    // SECURITY: Mark single-use token as used to prevent reuse
+    if token.payload.single_use {
+        let mut tracker = security.get_token_tracker(drive_id).await;
+        tracker.mark_used(token.token_id());
+        security.update_token_tracker(drive_id, tracker).await;
+        tracing::debug!(
+            drive_id = %drive_id,
+            token_id = %token.token_id(),
+            "Marked single-use token as used"
+        );
+    }
 
     tracing::info!(
         drive_id = %drive_id,

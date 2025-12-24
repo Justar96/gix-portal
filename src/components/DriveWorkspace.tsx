@@ -23,9 +23,9 @@ export function DriveWorkspace({ drive }: DriveWorkspaceProps) {
     const { conflictCount } = useConflicts({ driveId: drive.id });
 
     return (
-        <div className="drive-workspace">
+        <div className={`drive-workspace ${showPresence ? 'panel-open' : 'panel-closed'}`}>
             {/* Sync Status Bar */}
-            <SyncStatusBar drive={drive} />
+            <SyncStatusBar drive={drive} presencePanelOpen={showPresence} />
 
             {/* Main Content Area */}
             <div className="workspace-content">

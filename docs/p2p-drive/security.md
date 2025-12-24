@@ -1,5 +1,16 @@
 # Security Model
 
+> [!NOTE]
+> **Security Audit Status (December 2024)**
+> 
+> | Feature | Status |
+> |---------|--------|
+> | ACL Permission Checks | ✅ Implemented |
+> | Gossip Message Authentication | ✅ Implemented |
+> | E2E Encryption Integration | ✅ Implemented |
+> | Key Rotation on Revocation | ⏳ Planned |
+> | Token Revocation List | ⏳ Planned |
+
 ## Security Layers
 
 ```mermaid
@@ -34,16 +45,84 @@ graph TB
 
 ## Security Features Summary
 
-| Feature | Implementation | Description |
-|---------|---------------|-------------|
-| **Transport Encryption** | QUIC/TLS 1.3 | All P2P traffic encrypted in transit |
-| **Identity Verification** | Ed25519 signatures | Peers authenticated by public key |
-| **E2E Encryption** | ChaCha20-Poly1305 | File content encrypted at rest |
-| **Key Distribution** | X25519 key exchange | Per-user key wrapping |
-| **Permission Enforcement** | Local ACL checks | Every operation verified |
-| **Data Integrity** | BLAKE3 verified streaming | Tamper-proof transfers |
-| **Audit Trail** | Signed operation log | All changes tracked |
-| **Revocation** | Key rotation | Instant access removal |
+| Feature | Implementation | Status |
+|---------|---------------|--------|
+| **Transport Encryption** | QUIC/TLS 1.3 | ✅ Iroh default |
+| **Identity Verification** | Ed25519 signatures | ✅ Implemented |
+| **E2E Encryption** | ChaCha20-Poly1305 | ✅ Implemented |
+| **Key Distribution** | X25519 key exchange | ✅ Implemented |
+| **Permission Enforcement** | Local ACL checks | ✅ Implemented |
+| **Gossip Authentication** | Signed messages | ✅ Implemented |
+| **Data Integrity** | BLAKE3 verified streaming | ✅ Implemented |
+| **Key Rotation** | On user revocation | ⏳ Planned |
+| **Token Revocation** | Explicit revocation list | ⏳ Planned |
+
+---
+
+## Implementation Details
+
+### ACL Enforcement (Implemented)
+
+All file operation commands now enforce ACL permission checks:
+
+```rust
+// Example from commands/files.rs
+let acl = security.get_or_create_acl(&drive_id, &owner_hex).await;
+if !acl.check_permission(&caller_hex, &path, Permission::Read) {
+    return Err(AppError::AccessDenied {
+        reason: "insufficient permission".to_string(),
+    }.to_string());
+}
+```
+
+**Protected Commands:**
+- `list_files` - requires Read permission
+- `read_file` / `read_file_encrypted` - requires Read permission
+- `write_file` / `write_file_encrypted` - requires Write permission
+- `delete_path` - requires Write permission
+- `rename_path` - requires Write permission on both paths
+
+### Gossip Message Authentication (Implemented)
+
+All gossip messages are wrapped in a signed envelope:
+
+```rust
+// From core/events.rs
+pub struct SignedGossipMessage {
+    pub event: DriveEvent,      // The actual event
+    pub sender: NodeId,         // Sender's public key
+    pub timestamp_ms: i64,      // Unix timestamp (ms)
+    pub signature: Vec<u8>,     // Ed25519 signature
+}
+```
+
+**Protection Against:**
+- Message forgery (invalid signatures rejected)
+- Replay attacks (messages > 5 minutes old rejected)
+- Sender impersonation (signature tied to sender's key)
+
+### E2E Encryption (Implemented)
+
+Files can be encrypted at rest using the `EncryptionManager`:
+
+```rust
+// From crypto/encryption_manager.rs
+pub struct EncryptionManager {
+    exchange_keypair: KeyExchangePair,  // For receiving wrapped keys
+    cached_keys: RwLock<HashMap<String, DriveKey>>,
+    db: Arc<Database>,
+}
+```
+
+**Features:**
+- Per-drive master keys (256-bit)
+- Per-file key derivation via BLAKE3 KDF
+- ChaCha20-Poly1305 authenticated encryption
+- X25519 key wrapping for key sharing
+
+**New Tauri Commands:**
+- `read_file_encrypted` - Read and decrypt file
+- `write_file_encrypted` - Encrypt and write file
 
 ---
 

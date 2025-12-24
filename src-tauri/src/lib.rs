@@ -13,9 +13,10 @@ use commands::{
     get_lock_status, get_online_count, get_online_users, get_recent_activity, get_sync_status,
     get_transfer, grant_permission, is_watching, join_drive_presence, leave_drive_presence,
     list_conflicts, list_drives, list_files, list_locks, list_permissions, list_transfers,
-    presence_heartbeat, read_file, release_lock, rename_drive, rename_path, resolve_conflict,
-    revoke_permission, start_sync, start_watching, stop_sync, stop_watching,
-    subscribe_drive_events, upload_file, verify_invite, write_file, SecurityStore,
+    presence_heartbeat, read_file, read_file_encrypted, release_lock, rename_drive, rename_path,
+    resolve_conflict, revoke_permission, start_sync, start_watching, stop_sync, stop_watching,
+    subscribe_drive_events, upload_file, verify_invite, write_file, write_file_encrypted,
+    SecurityStore,
 };
 use core::{
     ConflictManager, DriveEvent, DriveEventDto, DriveId, LockManager, PresenceManager, RateLimiter,
@@ -137,6 +138,27 @@ pub fn run() {
                     }
                     app_handle.manage(security_store.clone());
 
+                    // Configure ACL checker for gossip sender authorization
+                    if let Some(ref broadcaster) = state.event_broadcaster {
+                        let security_for_acl = security_store.clone();
+                        let acl_checker: network::AclChecker =
+                            Arc::new(move |drive_id, sender_id| {
+                                // Check if sender has at least Read permission on the drive
+                                // Use blocking_read since we're in a sync closure
+                                let acl = futures_lite::future::block_on(
+                                    security_for_acl.get_or_create_acl(drive_id, ""),
+                                );
+                                use crate::crypto::Permission;
+                                acl.check_permission(sender_id, "/", Permission::Read)
+                            });
+
+                        // Set the ACL checker asynchronously
+                        let broadcaster_clone = broadcaster.clone();
+                        tauri::async_runtime::spawn(async move {
+                            broadcaster_clone.set_acl_checker(acl_checker).await;
+                        });
+                    }
+
                     // Initialize rate limiter for abuse prevention
                     let rate_limiter: SharedRateLimiter = Arc::new(RateLimiter::new());
                     app_handle.manage(rate_limiter);
@@ -164,6 +186,12 @@ pub fn run() {
                     );
                     tracing::info!("Cleanup manager started");
 
+                    // Register EncryptionManager for E2E encryption commands
+                    if let Some(ref em) = state.encryption_manager {
+                        app_handle.manage(em.clone());
+                        tracing::info!("EncryptionManager registered with Tauri");
+                    }
+
                     app_handle.manage(state);
                     tracing::info!("Application state initialized successfully");
                 }
@@ -189,6 +217,8 @@ pub fn run() {
             list_files,
             read_file,
             write_file,
+            read_file_encrypted,
+            write_file_encrypted,
             delete_path,
             rename_path,
             // Phase 2: Sync commands

@@ -75,4 +75,18 @@ impl IdentityManager {
         let guard = self.identity.read().await;
         guard.as_ref().map(|i| i.signing_key().clone())
     }
+
+    /// Get a clone of the identity for signing operations
+    ///
+    /// Returns None if identity is not initialized.
+    /// The returned Identity can be used for signing gossip messages.
+    pub async fn get_identity(&self) -> Option<Arc<Identity>> {
+        let guard = self.identity.read().await;
+        guard.as_ref().map(|i| {
+            // We need to create a new Identity from the secret key bytes
+            // because Identity doesn't implement Clone
+            let bytes = i.to_bytes();
+            Arc::new(Identity::from_bytes(&bytes).expect("Identity should always be valid"))
+        })
+    }
 }

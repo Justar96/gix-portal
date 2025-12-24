@@ -21,12 +21,11 @@ pub use cleanup::CleanupManager;
 pub use conflict::{ConflictManager, FileConflictDto, ResolutionStrategy};
 pub use drive::{DriveId, DriveInfo, SharedDrive};
 pub use error::AppError;
-pub use events::{DriveEvent, DriveEventDto};
+pub use events::{DriveEvent, DriveEventDto, SignedGossipMessage};
 pub use file::FileEntryDto;
 pub use identity::IdentityManager;
 pub use locking::{FileLock, FileLockDto, LockManager, LockResult, LockType};
 pub use presence::{ActivityEntryDto, PresenceManager, UserPresenceDto};
-pub use rate_limit::{RateLimitOperation, RateLimitResult, RateLimiter, SharedRateLimiter};
+pub use rate_limit::{RateLimiter, SharedRateLimiter};
 pub use validation::{validate_drive_id, validate_name, validate_path};
 pub use watcher::FileWatcherManager;
-

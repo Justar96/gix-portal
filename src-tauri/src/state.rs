@@ -1,4 +1,5 @@
 use crate::core::{FileWatcherManager, IdentityManager, SharedDrive};
+use crate::crypto::EncryptionManager;
 use crate::network::{DocsManager, EventBroadcaster, FileTransferManager, P2PEndpoint, SyncEngine};
 use crate::storage::Database;
 use std::collections::HashMap;
@@ -16,6 +17,8 @@ pub struct AppState {
     pub endpoint: Arc<P2PEndpoint>,
     /// In-memory cache of drives (keyed by DriveId bytes)
     pub drives: Arc<RwLock<HashMap<[u8; 32], SharedDrive>>>,
+    /// Encryption manager for E2E file encryption
+    pub encryption_manager: Option<Arc<EncryptionManager>>,
 
     // Phase 2 components
     /// Sync engine for coordinating real-time sync
@@ -81,11 +84,24 @@ impl AppState {
         let (sync_engine, event_broadcaster, docs_manager, file_watcher, file_transfer) =
             Self::initialize_sync_components(&endpoint, &identity_manager, &data_dir).await;
 
+        // Initialize EncryptionManager for E2E file encryption
+        let encryption_manager = match EncryptionManager::new(db.clone()) {
+            Ok(em) => {
+                tracing::info!("EncryptionManager initialized");
+                Some(Arc::new(em))
+            }
+            Err(e) => {
+                tracing::error!("Failed to initialize EncryptionManager: {}", e);
+                None
+            }
+        };
+
         Ok(Self {
             db,
             identity_manager,
             endpoint,
             drives,
+            encryption_manager,
             sync_engine,
             event_broadcaster,
             docs_manager,
@@ -127,8 +143,17 @@ impl AppState {
             }
         };
 
-        // Initialize EventBroadcaster
-        let event_broadcaster = match EventBroadcaster::new(&iroh_endpoint).await {
+        // Get identity for signing gossip messages
+        let identity = match identity_manager.get_identity().await {
+            Some(id) => id,
+            None => {
+                tracing::warn!("Cannot initialize sync: identity not available for signing");
+                return (None, None, None, None, None);
+            }
+        };
+
+        // Initialize EventBroadcaster with identity for message signing
+        let event_broadcaster = match EventBroadcaster::new(&iroh_endpoint, identity).await {
             Ok(eb) => Arc::new(eb),
             Err(e) => {
                 tracing::error!("Failed to initialize EventBroadcaster: {}", e);

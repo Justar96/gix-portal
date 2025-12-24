@@ -15,9 +15,18 @@
     display: flex;
     flex: 1;
     min-height: 0;
-    overflow-y: hidden;
-    overflow-x: visible; // Allow toggle tab to be visible outside panel bounds
+    overflow: hidden;
     position: relative;
+    transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  // Adjust main content when panel is open
+  &.panel-open .workspace-content {
+    padding-right: 280px;
+    
+    @include respond-to('lg') {
+      padding-right: 0;
+    }
   }
 
   .workspace-main {
@@ -34,10 +43,21 @@
   }
 }
 
-// Adjust presence panel when inside workspace
+// Adjust presence panel when inside workspace - make it reach top like sidebar
 .drive-workspace .presence-panel {
-  height: 100%;
+  position: fixed;
+  right: 0;
+  top: $header-height; // Start below titlebar, aligned with content area
+  bottom: 0;
+  height: auto;
   border-top: none;
+  border-left: 1px solid $border-primary;
+  z-index: 100;
+  
+  @include respond-to('lg') {
+    position: absolute;
+    top: 0;
+  }
 }
 
 // Adjust conflict panel when inside workspace

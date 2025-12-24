@@ -30,9 +30,20 @@ export function Titlebar() {
     appWindow.startDragging();
   }, []);
 
-  const handleMinimize = () => appWindow.minimize();
-  const handleMaximize = () => appWindow.toggleMaximize();
-  const handleClose = () => appWindow.close();
+  const handleMinimize = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    appWindow.minimize();
+  };
+  
+  const handleMaximize = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    appWindow.toggleMaximize();
+  };
+  
+  const handleClose = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    appWindow.close();
+  };
 
   return (
     <div className="titlebar" onMouseDown={handleDrag}>

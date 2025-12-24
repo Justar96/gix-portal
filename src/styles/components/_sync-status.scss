@@ -11,17 +11,55 @@
     background: $bg-secondary;
     border-bottom: 1px solid $border-subtle;
     font-size: $text-xs;
-    gap: $space-4;
+    gap: $space-3;
     min-height: $button-height;
+    position: relative;
+    transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    @include respond-to('lg') {
+        flex-wrap: wrap;
+        padding: $space-2 $space-3;
+    }
+    
+    .drive-workspace.panel-open & {
+        padding-right: calc($space-4 + 280px);
+        
+        @include respond-to('lg') {
+            padding-right: $space-3;
+        }
+    }
     
     .sync-status-left {
         @include flex-start;
-        gap: $space-4;
+        gap: $space-3;
+        flex: 1;
+        min-width: 0;
+        
+        @include respond-to('lg') {
+            gap: $space-2;
+        }
+        
+        @include respond-to('md') {
+            flex: 1 1 100%;
+            order: 1;
+        }
     }
     
     .sync-status-right {
         @include flex-start;
         gap: $space-2;
+        flex-shrink: 0;
+        padding-right: 0;
+        transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        
+        @include respond-to('lg') {
+            padding-right: 0;
+            order: 2;
+        }
+        
+        @include respond-to('md') {
+            flex: 1 1 auto;
+        }
     }
     
     .sync-indicator {

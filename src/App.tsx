@@ -92,16 +92,18 @@ function App() {
                 <button
                   className="btn-icon btn-join"
                   onClick={() => setShowJoinModal(true)}
-                  title="Join drive with invite"
+                  title="Join shared drive"
+                  aria-label="Join shared drive"
                 >
-                  <Link size={14} />
+                  <Link size={11} />
                 </button>
                 <button
                   className="btn-icon btn-add"
                   onClick={() => setShowCreateModal(true)}
                   title="Create new drive"
+                  aria-label="Create new drive"
                 >
-                  <Plus size={14} />
+                  <Plus size={16} />
                 </button>
               </>
             )}
@@ -171,13 +173,22 @@ function App() {
                 </div>
                 <h3>Welcome to Gix</h3>
                 <p>Create a drive to start sharing files peer-to-peer</p>
-                <button
-                  className="btn-primary"
-                  onClick={() => setShowCreateModal(true)}
-                >
-                  <Plus size={14} />
-                  Create Drive
-                </button>
+                <div className="empty-actions">
+                  <button
+                    className="btn-primary"
+                    onClick={() => setShowCreateModal(true)}
+                  >
+                    <Plus size={14} />
+                    Create Drive
+                  </button>
+                  <button
+                    className="btn-secondary"
+                    onClick={() => setShowJoinModal(true)}
+                  >
+                    <Link size={14} />
+                    Join Drive
+                  </button>
+                </div>
               </div>
             )}
           </div>
