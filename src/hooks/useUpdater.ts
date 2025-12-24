@@ -117,6 +117,7 @@ export function useUpdater(checkOnMount = true) {
       available: false,
       version: undefined,
       notes: undefined,
+      error: undefined,
     }));
   }, []);
 

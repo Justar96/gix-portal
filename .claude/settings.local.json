@@ -20,7 +20,9 @@
       "Bash(npm install:*)",
       "Bash(grep:*)",
       "Bash(pnpm add:*)",
-      "mcp__morph-mcp__edit_file"
+      "mcp__morph-mcp__edit_file",
+      "Bash(bun tauri:*)",
+      "Bash(timeout:*)"
     ]
   }
 }

@@ -683,6 +683,11 @@ export function FileBrowser({ drive }: FileBrowserProps) {
               <input
                 type="checkbox"
                 checked={selectedIndices.size === displayFiles.length && displayFiles.length > 0}
+                ref={(el) => {
+                  if (el) {
+                    el.indeterminate = selectedIndices.size > 0 && selectedIndices.size < displayFiles.length;
+                  }
+                }}
                 onChange={(e) => {
                   if (e.target.checked) {
                     const all = new Set<number>();
@@ -785,6 +790,17 @@ export function FileBrowser({ drive }: FileBrowserProps) {
                   onDoubleClick={() => navigateTo(file)}
                   onContextMenu={(e) => handleContextMenu(e, file, index)}
                 >
+                  <div className="grid-item-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => {}}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRowClick({ ...e, ctrlKey: true } as React.MouseEvent, index);
+                      }}
+                    />
+                  </div>
                   <div className="grid-item-icon">
                     {getFileIconComponent(file)}
                   </div>

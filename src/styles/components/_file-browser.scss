@@ -51,12 +51,28 @@
 
 .selection-count {
     font-size: $text-xs;
-    color: $text-secondary;
-    font-weight: $weight-medium;
-    padding: $space-1 $space-2;
+    color: $accent;
+    font-weight: $weight-semibold;
+    padding: $space-1 $space-3;
     background: $accent-subtle;
-    border-radius: $radius-sm;
+    border: 1px solid rgba($accent, 0.3);
+    border-radius: $radius-full;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: $space-1-5;
+    
+    // Pulse animation for active selection
+    animation: selectionPulse 2s ease-in-out infinite;
+}
+
+@keyframes selectionPulse {
+    0%, 100% { 
+        box-shadow: 0 0 0 0 rgba($accent, 0.2);
+    }
+    50% { 
+        box-shadow: 0 0 0 4px rgba($accent, 0);
+    }
 }
 
 // Search box
@@ -238,12 +254,13 @@
     padding: $space-2 $space-4;
     background: $bg-secondary;
     border-bottom: 1px solid $border-primary;
+    border-left: 3px solid transparent; // Match row structure for alignment
     font-size: $text-2xs;
     font-weight: $weight-semibold;
     text-transform: uppercase;
     letter-spacing: $tracking-wider;
     color: $text-tertiary;
-    min-height: 32px;
+    min-height: 36px;
     
     @include respond-to('sm') {
         padding: $space-2 $space-3;
@@ -263,34 +280,43 @@
     padding: $space-2-5 $space-4;
     background: $bg-card;
     border-bottom: 1px solid $border-secondary;
+    border-left: 3px solid transparent;
     cursor: pointer;
-    transition: background $transition-fast;
+    transition: background $transition-fast, border-color $transition-fast;
     min-height: 44px;
     
     @include respond-to('sm') {
         padding: $space-2 $space-3;
     }
     
-    &:hover {
+    &:hover:not(.selected) {
         background: $bg-tertiary;
     }
     
     &.selected {
-        background: $bg-hover;
-        border-left: 3px solid $text-primary;
-        padding-left: calc($space-4 - 3px);
+        background: $accent-subtle;
+        border-left-color: $accent;
     }
     
     &.locked-other {
         background: $warning-soft;
-        border-left: 3px solid $warning;
-        padding-left: calc($space-4 - 3px);
+        border-left-color: $warning;
     }
     
     &.locked-mine {
-        background: $accent-subtle;
-        border-left: 3px solid $accent;
-        padding-left: calc($space-4 - 3px);
+        background: $info-soft;
+        border-left-color: $info;
+    }
+    
+    // Combined states - selection takes priority for border
+    &.selected.locked-other {
+        background: $warning-soft;
+        border-left-color: $accent;
+    }
+    
+    &.selected.locked-mine {
+        background: $info-soft;
+        border-left-color: $accent;
     }
     
     &.directory .file-name {
@@ -541,16 +567,68 @@
 
 // Checkbox Column
 .col-checkbox {
-    flex: 0 0 32px;
+    flex: 0 0 36px;
     display: flex;
     align-items: center;
     justify-content: center;
+    align-self: center;
     
     input[type="checkbox"] {
-        width: 14px;
-        height: 14px;
+        appearance: none;
+        width: 16px;
+        height: 16px;
         cursor: pointer;
-        accent-color: $accent;
+        border: 1.5px solid $border-primary;
+        border-radius: $radius-sm;
+        background: $bg-card;
+        transition: all $transition-fast;
+        position: relative;
+        display: block;
+        margin: 0;
+        
+        &:hover {
+            border-color: $accent-muted;
+            background: $accent-subtle;
+        }
+        
+        &:checked {
+            background: $accent;
+            border-color: $accent;
+            
+            &::after {
+                content: '';
+                position: absolute;
+                left: 4px;
+                top: 1px;
+                width: 5px;
+                height: 9px;
+                border: solid white;
+                border-width: 0 2px 2px 0;
+                transform: rotate(45deg);
+            }
+        }
+        
+        &:focus-visible {
+            outline: none;
+            box-shadow: $glow-focus;
+        }
+        
+        // Indeterminate state for "select all" partial selection
+        &:indeterminate {
+            background: $accent-muted;
+            border-color: $accent;
+            
+            &::after {
+                content: '';
+                position: absolute;
+                left: 3px;
+                top: 6px;
+                width: 8px;
+                height: 2px;
+                background: white;
+                border-radius: 1px;
+            }
+        }
     }
 }
 
@@ -703,44 +781,143 @@
     align-items: center;
     gap: $space-2;
     padding: $space-3;
+    padding-top: $space-4;
     border-radius: $radius-lg;
     cursor: pointer;
     transition: all $transition-fast;
     border: 2px solid transparent;
+    position: relative;
+    
+    // Selection checkbox overlay (hidden by default)
+    .grid-item-checkbox {
+        position: absolute;
+        top: $space-2;
+        left: $space-2;
+        opacity: 0;
+        transition: opacity $transition-fast;
+        z-index: 1;
+        
+        input[type="checkbox"] {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            border: 1.5px solid $border-primary;
+            border-radius: $radius-sm;
+            background: $bg-card;
+            transition: all $transition-fast;
+            position: relative;
+            box-shadow: $shadow-sm;
+            
+            &:hover {
+                border-color: $accent-muted;
+                background: $accent-subtle;
+            }
+            
+            &:checked {
+                background: $accent;
+                border-color: $accent;
+                
+                &::after {
+                    content: '';
+                    position: absolute;
+                    left: 4.5px;
+                    top: 1.5px;
+                    width: 5px;
+                    height: 9px;
+                    border: solid white;
+                    border-width: 0 2px 2px 0;
+                    transform: rotate(45deg);
+                }
+            }
+        }
+    }
     
     &:hover {
         background: $bg-tertiary;
+        border-color: $border-secondary;
+        
+        .grid-item-checkbox {
+            opacity: 1;
+        }
     }
     
     &.selected {
-        background: $bg-hover;
+        background: $accent-subtle;
         border-color: $accent;
+        
+        .grid-item-checkbox {
+            opacity: 1;
+        }
     }
     
     &.locked-other {
         background: $warning-soft;
         border-color: $warning;
+        
+        // Lock badge
+        &::before {
+            content: '';
+            position: absolute;
+            top: $space-2;
+            right: $space-2;
+            width: 8px;
+            height: 8px;
+            background: $warning;
+            border-radius: $radius-full;
+        }
     }
     
     &.locked-mine {
         background: $accent-subtle;
+        border-color: $info;
+        
+        &::before {
+            content: '';
+            position: absolute;
+            top: $space-2;
+            right: $space-2;
+            width: 8px;
+            height: 8px;
+            background: $info;
+            border-radius: $radius-full;
+        }
+    }
+    
+    // Combined states
+    &.selected.locked-other {
+        border-color: $accent;
+    }
+    
+    &.selected.locked-mine {
         border-color: $accent;
     }
 }
 
 .grid-item-icon {
     @include flex-center;
-    width: 40px;
-    height: 40px;
+    width: 48px;
+    height: 48px;
     color: $text-muted;
+    background: $bg-tertiary;
+    border-radius: $radius-lg;
+    transition: all $transition-fast;
     
     svg {
-        width: 32px;
-        height: 32px;
+        width: 28px;
+        height: 28px;
     }
     
-    .directory & svg {
-        color: $accent-muted;
+    .directory & {
+        background: $accent-subtle;
+        
+        svg {
+            color: $accent-muted;
+        }
+    }
+    
+    .selected & {
+        background: rgba($accent, 0.15);
     }
 }
 
@@ -750,9 +927,14 @@
     text-align: center;
     font-size: $text-xs;
     color: $text-primary;
+    padding: 0 $space-1;
     
     .directory & {
         font-weight: $weight-medium;
+    }
+    
+    .selected & {
+        color: $text-primary;
     }
 }
 

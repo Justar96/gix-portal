@@ -1,0 +1,54 @@
+// Drive Workspace styles
+.drive-workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  background: var(--bg-primary);
+
+  .workspace-content {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow-y: hidden;
+    overflow-x: visible; // Allow toggle tab to be visible outside panel bounds
+    position: relative;
+  }
+
+  .workspace-main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+
+    .file-browser {
+      flex: 1;
+      min-height: 0;
+    }
+  }
+}
+
+// Adjust presence panel when inside workspace
+.drive-workspace .presence-panel {
+  height: 100%;
+  border-top: none;
+}
+
+// Adjust conflict panel when inside workspace
+.drive-workspace .conflict-panel {
+  margin: 0;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+}
+
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}

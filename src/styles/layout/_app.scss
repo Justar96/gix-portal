@@ -115,7 +115,8 @@
 .app-main {
     display: flex;
     flex: 1;
-    overflow: hidden;
+    overflow-y: hidden;
+    overflow-x: visible; // Allow presence toggle tab to be visible
     
     @include respond-to('md') {
         flex-direction: column;

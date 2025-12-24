@@ -15,6 +15,8 @@ import {
     FilePlus,
     FileEdit,
     Trash2,
+    PanelRightClose,
+    PanelRight,
 } from "lucide-react";
 import type { DriveInfo, UserPresenceInfo, ActivityEntryInfo, ActivityType } from "../types";
 import { formatRelativeTime, getStatusColor, ACTIVITY_LABELS } from "../types";
@@ -22,9 +24,12 @@ import { usePresence } from "../hooks";
 
 interface PresencePanelProps {
     drive: DriveInfo;
+    isOpen: boolean;
+    onToggle: () => void;
+    conflictCount?: number;
 }
 
-export function PresencePanel({ drive }: PresencePanelProps) {
+export function PresencePanel({ drive, isOpen, onToggle, conflictCount = 0 }: PresencePanelProps) {
     const { users, onlineCount, activities, isLoading } = usePresence({
         driveId: drive.id,
     });
@@ -33,73 +38,108 @@ export function PresencePanel({ drive }: PresencePanelProps) {
     const [showActivity, setShowActivity] = useState(true);
 
     return (
-        <div className="presence-panel">
-            {/* Online Users Section */}
-            <div className="presence-section">
-                <div
-                    className="section-header"
-                    onClick={() => setShowUsers(!showUsers)}
+        <div className={`presence-panel ${isOpen ? 'open' : 'closed'}`}>
+            {/* Toggle Tab (shown when closed) */}
+            {!isOpen && (
+                <button 
+                    className="presence-toggle-tab"
+                    onClick={onToggle}
+                    title="Show presence panel"
                 >
-                    <span className="expand-icon">
-                        {showUsers ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    </span>
-                    <Users size={14} />
-                    <span className="section-title">Online</span>
-                    <span className="section-count">{onlineCount}</span>
-                </div>
-
-                {showUsers && (
-                    <div className="section-content">
-                        {users.length === 0 ? (
-                            <div className="empty-section">
-                                <span>No users online</span>
-                            </div>
-                        ) : (
-                            <ul className="user-list">
-                                {users.map((user) => (
-                                    <UserItem key={user.node_id} user={user} />
-                                ))}
-                            </ul>
-                        )}
-                    </div>
-                )}
-            </div>
-
-            {/* Activity Feed Section */}
-            <div className="presence-section">
-                <div
-                    className="section-header"
-                    onClick={() => setShowActivity(!showActivity)}
-                >
-                    <span className="expand-icon">
-                        {showActivity ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                    </span>
-                    <Activity size={14} />
-                    <span className="section-title">Activity</span>
-                </div>
-
-                {showActivity && (
-                    <div className="section-content">
-                        {activities.length === 0 ? (
-                            <div className="empty-section">
-                                <span>No recent activity</span>
-                            </div>
-                        ) : (
-                            <ul className="activity-list">
-                                {activities.slice(0, 20).map((activity) => (
-                                    <ActivityItem key={activity.id} activity={activity} />
-                                ))}
-                            </ul>
-                        )}
-                    </div>
-                )}
-            </div>
-
-            {isLoading && (
-                <div className="presence-loading">
-                    <div className="loading-spinner" />
-                </div>
+                    <Users size={16} />
+                    <span className="online-count">{onlineCount}</span>
+                    {conflictCount > 0 && (
+                        <span className="conflict-indicator">
+                            <AlertTriangle size={10} />
+                        </span>
+                    )}
+                </button>
             )}
+
+            {/* Panel Content */}
+            <div className="presence-panel-content">
+                {/* Panel Header */}
+                <div className="presence-panel-header">
+                    <div className="header-title">
+                        <Users size={14} />
+                        <span>Presence</span>
+                    </div>
+                    <button
+                        className="btn-icon btn-collapse"
+                        onClick={onToggle}
+                        title="Hide presence panel"
+                    >
+                        <PanelRightClose size={14} />
+                    </button>
+                </div>
+
+                {/* Online Users Section */}
+                <div className="presence-section">
+                    <div
+                        className="section-header"
+                        onClick={() => setShowUsers(!showUsers)}
+                    >
+                        <span className="expand-icon">
+                            {showUsers ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        </span>
+                        <Users size={14} />
+                        <span className="section-title">Online</span>
+                        <span className="section-count">{onlineCount}</span>
+                    </div>
+
+                    {showUsers && (
+                        <div className="section-content">
+                            {users.length === 0 ? (
+                                <div className="empty-section">
+                                    <span>No users online</span>
+                                </div>
+                            ) : (
+                                <ul className="user-list">
+                                    {users.map((user) => (
+                                        <UserItem key={user.node_id} user={user} />
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Activity Feed Section */}
+                <div className="presence-section">
+                    <div
+                        className="section-header"
+                        onClick={() => setShowActivity(!showActivity)}
+                    >
+                        <span className="expand-icon">
+                            {showActivity ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        </span>
+                        <Activity size={14} />
+                        <span className="section-title">Activity</span>
+                    </div>
+
+                    {showActivity && (
+                        <div className="section-content">
+                            {activities.length === 0 ? (
+                                <div className="empty-section">
+                                    <span>No recent activity</span>
+                                </div>
+                            ) : (
+                                <ul className="activity-list">
+                                    {activities.slice(0, 20).map((activity) => (
+                                        <ActivityItem key={activity.id} activity={activity} />
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {isLoading && (
+                    <div className="presence-loading">
+                        <div className="loading-spinner" />
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

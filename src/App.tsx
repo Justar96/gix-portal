@@ -5,7 +5,7 @@ import { Titlebar } from "./components/Titlebar";
 import { IdentityBadge } from "./components/IdentityBadge";
 import { DriveList } from "./components/DriveList";
 import { CreateDriveModal } from "./components/CreateDriveModal";
-import { FileBrowser } from "./components/FileBrowser";
+import { DriveWorkspace } from "./components/DriveWorkspace";
 import { UpdateNotification } from "./components/UpdateNotification";
 import { InviteHandler } from "./components/InviteHandler";
 import type { DriveInfo } from "./types";
@@ -152,7 +152,7 @@ function App() {
           </header>
           <div className="content-body">
             {selectedDrive ? (
-              <FileBrowser drive={selectedDrive} />
+              <DriveWorkspace drive={selectedDrive} />
             ) : (
               <div className="empty-state">
                 <div className="empty-icon">
