@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { UserPresenceInfo, ActivityEntryInfo } from "../types";
 
@@ -50,10 +50,13 @@ export function usePresence({
     const [activities, setActivities] = useState<ActivityEntryInfo[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    
+    // Track if component is mounted
+    const mountedRef = useRef(true);
 
     // Fetch users and activities
     const refresh = useCallback(async () => {
-        if (!driveId) return;
+        if (!driveId || !mountedRef.current) return;
 
         try {
             const [usersData, activitiesData] = await Promise.all([
@@ -64,17 +67,23 @@ export function usePresence({
                 }),
             ]);
 
-            setUsers(usersData);
-            setActivities(activitiesData);
-            setError(null);
+            if (mountedRef.current) {
+                setUsers(usersData);
+                setActivities(activitiesData);
+                setError(null);
+            }
         } catch (err) {
-            console.warn("Failed to fetch presence data:", err);
-            setError(err instanceof Error ? err.message : String(err));
+            if (mountedRef.current) {
+                console.warn("Failed to fetch presence data:", err);
+                setError(err instanceof Error ? err.message : String(err));
+            }
         }
     }, [driveId]);
 
     // Join drive on mount, leave on unmount
     useEffect(() => {
+        mountedRef.current = true;
+        
         if (!driveId) return;
 
         const join = async () => {
@@ -85,13 +94,16 @@ export function usePresence({
             } catch (err) {
                 console.warn("Failed to join drive presence:", err);
             } finally {
-                setIsLoading(false);
+                if (mountedRef.current) {
+                    setIsLoading(false);
+                }
             }
         };
 
         join();
 
         return () => {
+            mountedRef.current = false;
             invoke("leave_drive_presence", { driveId }).catch(() => {});
         };
     }, [driveId, refresh]);

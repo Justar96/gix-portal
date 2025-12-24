@@ -5,7 +5,7 @@
 
 #![allow(dead_code)]
 
-use crate::core::{DriveEvent, DriveEventDto, DriveId};
+use crate::core::{send_with_backpressure, DriveEvent, DriveEventDto, DriveId};
 use anyhow::Result;
 use iroh::Endpoint;
 use iroh_gossip::net::Gossip;
@@ -103,8 +103,8 @@ impl EventBroadcaster {
                                             drive_id_hex
                                         );
 
-                                        // Forward to frontend (ignore if no receivers)
-                                        let _ = frontend_tx.send(dto);
+                                        // Forward to frontend with backpressure monitoring
+                                        send_with_backpressure(&frontend_tx, dto, "gossip_frontend");
                                     }
                                     Err(e) => {
                                         tracing::warn!(

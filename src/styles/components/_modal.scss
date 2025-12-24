@@ -22,13 +22,14 @@
 
 .modal {
     background: $bg-card;
-    border: 1px solid $border-primary;
+    border: 1px solid $border-hover;
     border-radius: $radius-xl;
     width: 100%;
     max-width: 480px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     animation: slideUp $duration-base $ease-out;
     position: relative;
+    overflow: hidden;
     
     @include respond-to('sm') {
         max-width: 100%;

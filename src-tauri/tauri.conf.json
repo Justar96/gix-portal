@@ -35,14 +35,36 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "msi"],
+    "targets": "all",
     "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
       "icons/icon.ico"
     ],
     "publisher": "Gix",
     "shortDescription": "P2P Realtime Drive Sharing",
     "longDescription": "A self-hosted peer-to-peer file sharing desktop application with enterprise-grade security.",
     "category": "Utility",
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": true
+      },
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libssl3"],
+        "section": "net"
+      },
+      "rpm": {
+        "release": "1"
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15",
+      "signingIdentity": null,
+      "providerShortName": null,
+      "entitlements": null
+    },
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
@@ -57,5 +79,20 @@
       }
     }
   },
-  "plugins": {}
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["gix"]
+      }
+    },
+    "updater": {
+      "pubkey": "",
+      "endpoints": [
+        "https://releases.gix.app/{{target}}/{{arch}}/{{current_version}}"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
 }

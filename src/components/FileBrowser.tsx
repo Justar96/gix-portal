@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useTransition, useDeferredValue, useRef } from "react";
+import { useEffect, useState, useCallback, useTransition, useMemo, useRef, memo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -72,6 +72,125 @@ function getFileIconComponent(entry: FileEntry) {
   return iconMap[category];
 }
 
+// Memoized file row component to prevent unnecessary re-renders
+interface FileRowProps {
+  file: FileEntry;
+  index: number;
+  isSelected: boolean;
+  isRenaming: boolean;
+  renameName: string;
+  lock: ReturnType<ReturnType<typeof useLocking>["getLockStatus"]>;
+  lockedByOther: boolean;
+  lockedByMe: boolean;
+  virtualRow: { size: number; start: number };
+  onRowClick: (e: React.MouseEvent, index: number) => void;
+  onDoubleClick: (file: FileEntry) => void;
+  onContextMenu: (e: React.MouseEvent, file: FileEntry, index: number) => void;
+  onRenameChange: (value: string) => void;
+  onRenameSubmit: (file: FileEntry) => void;
+  onRenameCancel: () => void;
+  renameInputRef: React.RefObject<HTMLInputElement>;
+}
+
+const FileRow = memo(function FileRow({
+  file,
+  index,
+  isSelected,
+  isRenaming,
+  renameName,
+  lock,
+  lockedByOther,
+  lockedByMe,
+  virtualRow,
+  onRowClick,
+  onDoubleClick,
+  onContextMenu,
+  onRenameChange,
+  onRenameSubmit,
+  onRenameCancel,
+  renameInputRef,
+}: FileRowProps) {
+  return (
+    <div
+      className={`file-row ${file.is_dir ? "directory" : "file"} ${isSelected ? "selected" : ""} ${lockedByOther ? "locked-other" : ""} ${lockedByMe ? "locked-mine" : ""}`}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: `${virtualRow.size}px`,
+        transform: `translateY(${virtualRow.start}px)`,
+      }}
+      onClick={(e) => onRowClick(e, index)}
+      onDoubleClick={() => onDoubleClick(file)}
+      onContextMenu={(e) => onContextMenu(e, file, index)}
+    >
+      <div className="col-checkbox">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => {}}
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
+      <div className="col-name">
+        <div className="file-cell">
+          <span className="file-icon">{getFileIconComponent(file)}</span>
+          {isRenaming ? (
+            <input
+              ref={renameInputRef}
+              className="rename-input"
+              value={renameName}
+              onChange={(e) => onRenameChange(e.target.value)}
+              onBlur={() => onRenameSubmit(file)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onRenameSubmit(file);
+                if (e.key === "Escape") onRenameCancel();
+                e.stopPropagation();
+              }}
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <span className="file-name">{file.name}</span>
+          )}
+          {lock && !file.is_dir && (
+            <span
+              className={`lock-indicator ${lockedByMe ? "mine" : "other"}`}
+              title={
+                lockedByMe
+                  ? `Locked by you (${formatLockExpiry(lock.expires_at)})`
+                  : `Locked by ${shortNodeId(lock.holder)} (${lock.lock_type})`
+              }
+            >
+              {lockedByMe ? (
+                <LockOpen size={12} className="lock-icon mine" />
+              ) : (
+                <Lock size={12} className="lock-icon other" />
+              )}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="col-size">
+        {file.is_dir ? "-" : formatBytes(file.size)}
+      </div>
+      <div className="col-modified">{formatDate(file.modified_at)}</div>
+      <div className="col-actions">
+        <button
+          className="btn-icon btn-more"
+          onClick={(e) => {
+            e.stopPropagation();
+            onContextMenu(e, file, index);
+          }}
+          title="More actions"
+        >
+          <MoreHorizontal size={14} />
+        </button>
+      </div>
+    </div>
+  );
+});
+
 export function FileBrowser({ drive }: FileBrowserProps) {
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [currentPath, setCurrentPath] = useState("/");
@@ -91,7 +210,6 @@ export function FileBrowser({ drive }: FileBrowserProps) {
 
   // React 18 concurrent features for smoother UI
   const [isPending, startTransition] = useTransition();
-  const deferredFiles = useDeferredValue(files);
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
@@ -105,9 +223,9 @@ export function FileBrowser({ drive }: FileBrowserProps) {
     releaseLock,
   } = useLocking({ driveId: drive.id });
 
-  // Filter and sort files
-  const processedFiles = useCallback(() => {
-    let result = [...deferredFiles];
+  // Memoized filter and sort - only recalculate when dependencies change
+  const displayFiles = useMemo(() => {
+    let result = [...files];
 
     // Filter by search query
     if (searchQuery.trim()) {
@@ -137,12 +255,10 @@ export function FileBrowser({ drive }: FileBrowserProps) {
     });
 
     return result;
-  }, [deferredFiles, searchQuery, sortField, sortDirection]);
+  }, [files, searchQuery, sortField, sortDirection]);
 
-  const displayFiles = processedFiles();
-
-  // Update virtualizer count based on processed files
-  const rowVirtualizerProcessed = useVirtualizer({
+  // Virtualizer for list view
+  const rowVirtualizer = useVirtualizer({
     count: displayFiles.length,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: () => viewMode === "grid" ? 100 : 36,
@@ -416,17 +532,19 @@ export function FileBrowser({ drive }: FileBrowserProps) {
     }
   };
 
-  // Show stale indicator when deferred value differs from current
-  const isStale = deferredFiles !== files;
-
-  // Close context menu on click outside
+  // Close context menu on click outside - use ref to avoid re-subscribing
+  const contextMenuRef = useRef<ContextMenuState | null>(null);
+  contextMenuRef.current = contextMenu;
+  
   useEffect(() => {
-    const handleClickOutside = () => closeContextMenu();
-    if (contextMenu) {
-      document.addEventListener("click", handleClickOutside);
-      return () => document.removeEventListener("click", handleClickOutside);
-    }
-  }, [contextMenu]);
+    const handleClickOutside = () => {
+      if (contextMenuRef.current) {
+        setContextMenu(null);
+      }
+    };
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
 
   // Focus rename input
   useEffect(() => {
@@ -558,7 +676,7 @@ export function FileBrowser({ drive }: FileBrowserProps) {
           )}
         </div>
       ) : viewMode === "list" ? (
-        <div className={`file-table-container ${isStale ? "stale" : ""}`}>
+        <div className={`file-table-container ${isPending ? "stale" : ""}`}>
           {/* Sortable table header */}
           <div className="file-table-header">
             <div className="col-checkbox">
@@ -611,12 +729,12 @@ export function FileBrowser({ drive }: FileBrowserProps) {
           <div ref={scrollContainerRef} className="file-table-body">
             <div
               style={{
-                height: `${rowVirtualizerProcessed.getTotalSize()}px`,
+                height: `${rowVirtualizer.getTotalSize()}px`,
                 width: "100%",
                 position: "relative",
               }}
             >
-              {rowVirtualizerProcessed.getVirtualItems().map((virtualRow) => {
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                 const index = virtualRow.index;
                 const file = displayFiles[index];
                 const lock = getLockStatus(file.path);
@@ -626,84 +744,25 @@ export function FileBrowser({ drive }: FileBrowserProps) {
                 const isRenaming = renameFile === file.path;
 
                 return (
-                  <div
+                  <FileRow
                     key={file.path}
-                    className={`file-row ${file.is_dir ? "directory" : "file"} ${isSelected ? "selected" : ""} ${lockedByOther ? "locked-other" : ""} ${lockedByMe ? "locked-mine" : ""}`}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: `${virtualRow.size}px`,
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
-                    onClick={(e) => handleRowClick(e, index)}
-                    onDoubleClick={() => navigateTo(file)}
-                    onContextMenu={(e) => handleContextMenu(e, file, index)}
-                  >
-                    <div className="col-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => {}}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                    <div className="col-name">
-                      <div className="file-cell">
-                        <span className="file-icon">{getFileIconComponent(file)}</span>
-                        {isRenaming ? (
-                          <input
-                            ref={renameInputRef}
-                            className="rename-input"
-                            value={renameName}
-                            onChange={(e) => setRenameName(e.target.value)}
-                            onBlur={() => handleSubmitRename(file)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") handleSubmitRename(file);
-                              if (e.key === "Escape") handleCancelRename();
-                              e.stopPropagation();
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        ) : (
-                          <span className="file-name">{file.name}</span>
-                        )}
-                        {lock && !file.is_dir && (
-                          <span
-                            className={`lock-indicator ${lockedByMe ? "mine" : "other"}`}
-                            title={
-                              lockedByMe
-                                ? `Locked by you (${formatLockExpiry(lock.expires_at)})`
-                                : `Locked by ${shortNodeId(lock.holder)} (${lock.lock_type})`
-                            }
-                          >
-                            {lockedByMe ? (
-                              <LockOpen size={12} className="lock-icon mine" />
-                            ) : (
-                              <Lock size={12} className="lock-icon other" />
-                            )}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="col-size">
-                      {file.is_dir ? "-" : formatBytes(file.size)}
-                    </div>
-                    <div className="col-modified">{formatDate(file.modified_at)}</div>
-                    <div className="col-actions">
-                      <button
-                        className="btn-icon btn-more"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleContextMenu(e, file, index);
-                        }}
-                        title="More actions"
-                      >
-                        <MoreHorizontal size={14} />
-                      </button>
-                    </div>
-                  </div>
+                    file={file}
+                    index={index}
+                    isSelected={isSelected}
+                    isRenaming={isRenaming}
+                    renameName={renameName}
+                    lock={lock}
+                    lockedByOther={lockedByOther}
+                    lockedByMe={lockedByMe}
+                    virtualRow={virtualRow}
+                    onRowClick={handleRowClick}
+                    onDoubleClick={navigateTo}
+                    onContextMenu={handleContextMenu}
+                    onRenameChange={setRenameName}
+                    onRenameSubmit={handleSubmitRename}
+                    onRenameCancel={handleCancelRename}
+                    renameInputRef={renameInputRef}
+                  />
                 );
               })}
             </div>
@@ -711,7 +770,7 @@ export function FileBrowser({ drive }: FileBrowserProps) {
         </div>
       ) : (
         // Grid view
-        <div className={`file-grid-container ${isStale ? "stale" : ""}`}>
+        <div className={`file-grid-container ${isPending ? "stale" : ""}`}>
           <div ref={scrollContainerRef} className="file-grid">
             {displayFiles.map((file, index) => {
               const isSelected = selectedIndices.has(index);

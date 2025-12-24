@@ -21,6 +21,8 @@ tauri-plugin-shell = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-single-instance = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-deep-link = "2"
 
 # Iroh P2P
 iroh = "0.35"
@@ -65,6 +67,14 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 chrono = { version = "0.4", features = ["serde"] }
 
+[dev-dependencies]
+criterion = { version = "0.5", features = ["async_tokio"] }
+tempfile = "3"
+
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
+
+[[bench]]
+name = "transfer_bench"
+harness = false

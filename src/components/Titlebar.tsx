@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Minus, Square, X, Copy } from "lucide-react";
+import { UpdateNotification } from "./UpdateNotification";
 
 const appWindow = getCurrentWindow();
 
@@ -39,6 +40,7 @@ export function Titlebar() {
         Gix
       </div>
       <div className="titlebar-controls">
+        <UpdateNotification compact />
         <button
           className="titlebar-btn titlebar-minimize"
           onClick={handleMinimize}

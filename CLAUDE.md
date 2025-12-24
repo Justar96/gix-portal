@@ -14,11 +14,11 @@ Warp Grep: warp-grep is a subagent that takes in a search string and tries to fi
 
 ```bash
 # Install dependencies
-pnpm install
+bun install
 cd src-tauri && cargo build
 
 # Run development
-pnpm tauri dev
+bun tauri dev
 
 # Run tests
 cd src-tauri && cargo test
@@ -27,11 +27,14 @@ cd src-tauri && cargo test
 cd src-tauri && cargo test test_name
 
 # Lint
-pnpm lint
+bun lint
 cd src-tauri && cargo clippy
 
 # Check Rust code (faster than full build)
 cd src-tauri && cargo check
+
+# Run benchmarks
+cd src-tauri && cargo bench
 ```
 
 ## Architecture
@@ -40,8 +43,10 @@ cd src-tauri && cargo check
 
 ```
 src-tauri/src/
+├── main.rs             # Binary entry point
 ├── lib.rs              # App entry, Tauri setup, event forwarders
 ├── state.rs            # AppState with identity, network, sync engine
+├── tray.rs             # System tray icon and menu
 ├── core/               # Core data structures & managers
 │   ├── drive.rs        # SharedDrive, DriveInfo
 │   ├── file.rs         # FileEntryDto
@@ -50,7 +55,8 @@ src-tauri/src/
 │   ├── watcher.rs      # FileWatcherManager (notify crate)
 │   ├── locking.rs      # FileLock, LockManager, DriveLockManager
 │   ├── conflict.rs     # FileConflict, ConflictManager
-│   └── presence.rs     # UserPresence, PresenceManager, ActivityEntry
+│   ├── presence.rs     # UserPresence, PresenceManager, ActivityEntry
+│   └── channel.rs      # Async channel utilities
 ├── network/            # P2P networking
 │   ├── endpoint.rs     # Iroh QUIC endpoint setup
 │   ├── gossip.rs       # iroh-gossip event broadcasting
@@ -90,13 +96,18 @@ src/
 │   ├── CreateDriveModal.tsx     # New drive dialog
 │   ├── ShareDriveModal.tsx      # Invite/permissions tabs
 │   ├── ConflictPanel.tsx        # Conflict resolution UI
-│   └── PresencePanel.tsx        # Online users & activity
+│   ├── PresencePanel.tsx        # Online users & activity
+│   ├── Titlebar.tsx             # Custom window titlebar
+│   ├── InviteHandler.tsx        # Deep link invite processing
+│   └── UpdateNotification.tsx   # Auto-update UI
 └── hooks/
     ├── useDriveEvents.ts        # Subscribe to drive-event Tauri events
     ├── useFileTransfer.ts       # Upload/download progress
     ├── useLocking.ts            # File lock management
     ├── useConflicts.ts          # Conflict state & resolution
-    └── usePresence.ts           # Online users & activity feed
+    ├── usePresence.ts           # Online users & activity feed
+    ├── useDeepLink.ts           # Handle gix:// deep links
+    └── useUpdater.ts            # App auto-update management
 ```
 
 ### Key Components
@@ -119,6 +130,18 @@ src/
 | Database | redb | Embedded key-value store |
 | Frontend | React 18 | UI with concurrent features |
 | Styling | SCSS | Component styles in `src/styles/` |
+
+### Tauri Plugins
+
+The app uses these Tauri v2 plugins:
+- `tauri-plugin-dialog` - Native file/folder dialogs
+- `tauri-plugin-fs` - File system access
+- `tauri-plugin-shell` - Shell command execution
+- `tauri-plugin-notification` - System notifications
+- `tauri-plugin-autostart` - Launch on system startup
+- `tauri-plugin-single-instance` - Prevent multiple instances
+- `tauri-plugin-updater` - Auto-update support
+- `tauri-plugin-deep-link` - Handle `gix://` URL scheme
 
 ## Code Conventions
 

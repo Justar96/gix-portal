@@ -19,7 +19,8 @@
       "Bash(cargo clean:*)",
       "Bash(npm install:*)",
       "Bash(grep:*)",
-      "Bash(pnpm add:*)"
+      "Bash(pnpm add:*)",
+      "mcp__morph-mcp__edit_file"
     ]
   }
 }

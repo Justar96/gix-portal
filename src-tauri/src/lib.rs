@@ -53,6 +53,8 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }))
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
             // Initialize system tray
             if let Err(e) = tray::init(app) {

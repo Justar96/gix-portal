@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { FolderOpen, Plus, PanelLeftClose, PanelLeft } from "lucide-react";
 import { Titlebar } from "./components/Titlebar";
@@ -6,6 +6,8 @@ import { IdentityBadge } from "./components/IdentityBadge";
 import { DriveList } from "./components/DriveList";
 import { CreateDriveModal } from "./components/CreateDriveModal";
 import { FileBrowser } from "./components/FileBrowser";
+import { UpdateNotification } from "./components/UpdateNotification";
+import { InviteHandler } from "./components/InviteHandler";
 import type { DriveInfo } from "./types";
 import "./styles/main.scss";
 
@@ -15,6 +17,10 @@ function App() {
   const [selectedDrive, setSelectedDrive] = useState<DriveInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  
+  // Use ref to track selected drive ID without causing re-renders
+  const selectedDriveIdRef = useRef<string | null>(null);
+  selectedDriveIdRef.current = selectedDrive?.id ?? null;
 
   const loadDrives = useCallback(async () => {
     try {
@@ -22,7 +28,8 @@ function App() {
       setDrives(driveList);
 
       // If selected drive was deleted, clear selection
-      if (selectedDrive && !driveList.find((d) => d.id === selectedDrive.id)) {
+      const currentSelectedId = selectedDriveIdRef.current;
+      if (currentSelectedId && !driveList.find((d) => d.id === currentSelectedId)) {
         setSelectedDrive(null);
       }
     } catch (error) {
@@ -30,25 +37,37 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [selectedDrive]);
+  }, []);
 
   useEffect(() => {
     // Wait a bit for the backend to initialize
-    const timer = setTimeout(() => {
-      loadDrives();
-    }, 1000);
+    const timer = setTimeout(loadDrives, 1000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [loadDrives]);
 
-  const handleDriveCreated = (drive: DriveInfo) => {
+  const handleDriveCreated = useCallback((drive: DriveInfo) => {
     setShowCreateModal(false);
     setDrives((prev) => [...prev, drive]);
     setSelectedDrive(drive);
-  };
+  }, []);
 
-  const handleSelectDrive = (drive: DriveInfo) => {
+  const handleSelectDrive = useCallback((drive: DriveInfo) => {
     setSelectedDrive(drive);
-  };
+  }, []);
+
+  const handleDriveJoined = useCallback(async (driveId: string) => {
+    // Reload drives and select the newly joined one
+    try {
+      const driveList = await invoke<DriveInfo[]>("list_drives");
+      setDrives(driveList);
+      const joinedDrive = driveList.find(d => d.id === driveId);
+      if (joinedDrive) {
+        setSelectedDrive(joinedDrive);
+      }
+    } catch (error) {
+      console.error("Failed to load drives after join:", error);
+    }
+  }, []);
 
   return (
     <div className="app">
@@ -160,6 +179,12 @@ function App() {
           onCreated={handleDriveCreated}
         />
       )}
+
+      {/* Update notification */}
+      <UpdateNotification />
+
+      {/* Deep link invite handler */}
+      <InviteHandler onDriveJoined={handleDriveJoined} />
     </div>
   );
 }

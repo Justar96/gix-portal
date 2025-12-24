@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import type { FileLockInfo, AcquireLockResult, LockType } from "../types";
@@ -63,6 +63,10 @@ export function useLocking({
     const [locks, setLocks] = useState<Map<string, FileLockInfo>>(new Map());
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    
+    // Use ref for callback to avoid re-subscribing to events
+    const onLockChangeRef = useRef(onLockChange);
+    onLockChangeRef.current = onLockChange;
 
     // Fetch initial locks
     const refreshLocks = useCallback(async () => {
@@ -88,9 +92,10 @@ export function useLocking({
         }
     }, [driveId]);
 
-    // Subscribe to lock events
+    // Subscribe to lock events - only re-subscribe when driveId changes
     useEffect(() => {
         let unlisten: UnlistenFn | null = null;
+        let mounted = true;
 
         const setup = async () => {
             // Listen for drive events (including lock events)
@@ -99,6 +104,8 @@ export function useLocking({
                 event_type: string;
                 payload: unknown;
             }>("drive-event", (event) => {
+                if (!mounted) return;
+                
                 const { drive_id, event_type, payload } = event.payload;
 
                 // Only process events for our drive
@@ -132,7 +139,7 @@ export function useLocking({
                         return next;
                     });
 
-                    onLockChange?.(lockData.path, newLock);
+                    onLockChangeRef.current?.(lockData.path, newLock);
                 } else if (event_type === "FileLockReleased") {
                     const data = payload as {
                         FileLockReleased: {
@@ -149,20 +156,23 @@ export function useLocking({
                         return next;
                     });
 
-                    onLockChange?.(lockData.path, null);
+                    onLockChangeRef.current?.(lockData.path, null);
                 }
             });
 
             // Initial fetch
-            await refreshLocks();
+            if (mounted) {
+                await refreshLocks();
+            }
         };
 
         setup();
 
         return () => {
+            mounted = false;
             unlisten?.();
         };
-    }, [driveId, onLockChange, refreshLocks]);
+    }, [driveId, refreshLocks]);
 
     // Acquire a lock
     const acquireLock = useCallback(

@@ -48,8 +48,8 @@ input[type="text"],
         
         &:focus {
             outline: none;
-            border-color: $accent;
-            box-shadow: 0 0 0 3px rgba($accent, 0.15);
+            border-color: $border-focus;
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
             background: $bg-card;
         }
         
@@ -87,8 +87,8 @@ select {
         
         &:focus {
             outline: none;
-            border-color: $accent;
-            box-shadow: 0 0 0 3px rgba($accent, 0.15);
+            border-color: $border-focus;
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
             background: $bg-card;
         }
     }

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { FileConflictInfo, ResolutionStrategy } from "../types";
 
@@ -51,6 +51,10 @@ export function useConflicts({
     const [conflicts, setConflicts] = useState<FileConflictInfo[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    
+    // Use ref for callback to avoid re-creating refreshConflicts
+    const onConflictChangeRef = useRef(onConflictChange);
+    onConflictChangeRef.current = onConflictChange;
 
     // Fetch conflicts from backend
     const refreshConflicts = useCallback(async () => {
@@ -64,14 +68,14 @@ export function useConflicts({
 
             setConflicts(conflictList);
             setError(null);
-            onConflictChange?.(conflictList);
+            onConflictChangeRef.current?.(conflictList);
         } catch (err) {
             console.warn("Failed to fetch conflicts:", err);
             setError(err instanceof Error ? err.message : String(err));
         } finally {
             setIsLoading(false);
         }
-    }, [driveId, onConflictChange]);
+    }, [driveId]);
 
     // Initial fetch and periodic refresh
     useEffect(() => {

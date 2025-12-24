@@ -1,0 +1,182 @@
+// ========================================
+// Component - Update Notification
+// Modern Light Theme with Bordered Design
+// ========================================
+
+@use '../abstracts' as *;
+
+// ----------------------------------------
+// Main Notification Toast
+// ----------------------------------------
+.update-notification {
+    position: fixed;
+    bottom: $space-5;
+    right: $space-5;
+    z-index: $z-tooltip;
+    background: $bg-card;
+    border: 1px solid $border-primary;
+    border-radius: $radius-xl;
+    box-shadow: $shadow-lg;
+    padding: $space-4;
+    max-width: 360px;
+    animation: slideInUp $duration-base $ease-out;
+
+    &.error {
+        border-color: $error-border;
+        
+        .update-icon {
+            background: $error-soft;
+            color: $error;
+        }
+    }
+}
+
+.update-notification-content {
+    display: flex;
+    align-items: flex-start;
+    gap: $space-3;
+}
+
+.update-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: $radius-lg;
+    background: $success-soft;
+    color: $success;
+    @include flex-center;
+
+    &.error {
+        background: $error-soft;
+        color: $error;
+    }
+}
+
+.update-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.update-title {
+    display: block;
+    font-weight: $weight-semibold;
+    font-size: $text-sm;
+    color: $text-primary;
+    margin-bottom: $space-1;
+}
+
+.update-message {
+    display: block;
+    font-size: $text-xs;
+    color: $text-secondary;
+    line-height: $leading-relaxed;
+}
+
+.update-progress-bar {
+    height: 4px;
+    background: $bg-tertiary;
+    border-radius: $radius-full;
+    overflow: hidden;
+    margin-top: $space-2;
+}
+
+.update-progress-fill {
+    height: 100%;
+    background: $text-primary;
+    border-radius: $radius-full;
+    transition: width $duration-base $ease-default;
+}
+
+.update-progress-text {
+    display: block;
+    font-size: $text-xs;
+    color: $text-muted;
+    margin-top: $space-1;
+}
+
+.update-actions {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    margin-top: $space-3;
+}
+
+.update-dismiss {
+    position: absolute;
+    top: $space-2;
+    right: $space-2;
+    @include button-reset;
+    padding: $space-1;
+    cursor: pointer;
+    color: $text-muted;
+    border-radius: $radius-sm;
+    transition: all $transition-fast;
+
+    &:hover {
+        background: $bg-hover;
+        color: $text-secondary;
+    }
+}
+
+// ----------------------------------------
+// Compact Version (Titlebar)
+// ----------------------------------------
+.update-notification-compact {
+    display: flex;
+    align-items: center;
+    gap: $space-1-5;
+
+    .update-btn-compact {
+        @include button-reset;
+        @include flex-center;
+        width: 28px;
+        height: 28px;
+        border-radius: $radius-md;
+        background: $text-primary;
+        color: $bg-primary;
+        cursor: pointer;
+        transition: background $transition-fast;
+
+        &:hover {
+            background: $text-secondary;
+        }
+    }
+
+    .update-progress-compact {
+        display: flex;
+        align-items: center;
+        gap: $space-1;
+        font-size: $text-xs;
+        color: $text-secondary;
+        padding: $space-1 $space-2;
+        background: $bg-tertiary;
+        border-radius: $radius-md;
+    }
+}
+
+// ----------------------------------------
+// Animations
+// ----------------------------------------
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}

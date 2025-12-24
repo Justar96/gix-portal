@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Copy, Check } from "lucide-react";
 import type { IdentityInfo, ConnectionInfo } from "../types";
@@ -8,25 +8,29 @@ export function IdentityBadge() {
   const [connection, setConnection] = useState<ConnectionInfo | null>(null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const mountedRef = useRef(true);
 
   const loadStatus = useCallback(async () => {
     try {
       const info = await invoke<IdentityInfo>("get_identity");
-      setIdentity(info);
+      if (mountedRef.current) setIdentity(info);
 
       const status = await invoke<ConnectionInfo>("get_connection_status");
-      setConnection(status);
+      if (mountedRef.current) setConnection(status);
     } catch (error) {
       console.error("Failed to load identity:", error);
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
+    
     // Retry loading identity with delay (backend may still be initializing)
     const attemptLoad = async () => {
       for (let i = 0; i < 10; i++) {
+        if (!mountedRef.current) break;
         try {
           await loadStatus();
           break;
@@ -40,15 +44,19 @@ export function IdentityBadge() {
 
     // Refresh connection status periodically
     const interval = setInterval(async () => {
+      if (!mountedRef.current) return;
       try {
         const status = await invoke<ConnectionInfo>("get_connection_status");
-        setConnection(status);
+        if (mountedRef.current) setConnection(status);
       } catch {
         // Ignore errors during polling
       }
     }, 5000);
 
-    return () => clearInterval(interval);
+    return () => {
+      mountedRef.current = false;
+      clearInterval(interval);
+    };
   }, [loadStatus]);
 
   const copyId = async () => {

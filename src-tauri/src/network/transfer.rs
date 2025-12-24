@@ -8,7 +8,7 @@
 
 #![allow(dead_code)]
 
-use crate::core::{DriveEvent, DriveId};
+use crate::core::{send_with_backpressure, DriveEvent, DriveId};
 use crate::crypto::NodeId;
 use anyhow::{Context, Result};
 use chrono::Utc;
@@ -194,7 +194,7 @@ impl FileTransferManager {
             path: relative_path.to_path_buf(),
             hash: outcome.to_hex().to_string(),
         };
-        let _ = self.event_tx.send((*drive_id, event));
+        send_with_backpressure(&self.event_tx, (*drive_id, event), "transfer_events");
 
         tracing::info!(
             "Uploaded file {} -> hash {}",
@@ -276,7 +276,7 @@ impl FileTransferManager {
                     modified_by: self.node_id,
                     timestamp: Utc::now(),
                 };
-                let _ = self.event_tx.send((*drive_id, event));
+                send_with_backpressure(&self.event_tx, (*drive_id, event), "transfer_events");
 
                 tracing::info!(
                     "Downloaded hash {} -> {}",
@@ -435,7 +435,7 @@ impl FileTransferManager {
                 total_bytes: state.total_bytes,
                 status: state.status.clone(),
             };
-            let _ = self.progress_tx.send(progress);
+            send_with_backpressure(&self.progress_tx, progress, "transfer_progress");
         }
     }
 

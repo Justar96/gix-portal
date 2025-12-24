@@ -3,7 +3,7 @@
 //! Uses the notify crate with debouncing to monitor shared drive folders
 //! and convert file system events into DriveEvents for sync.
 
-use crate::core::{DriveEvent, DriveId};
+use crate::core::{send_with_backpressure, DriveEvent, DriveId};
 use crate::crypto::NodeId;
 use anyhow::Result;
 use chrono::Utc;
@@ -122,7 +122,11 @@ impl FileWatcherManager {
                         if let Some(drive_event) =
                             process_fs_event(&event, &root_path, &node_id, &mut pending_renames)
                         {
-                            let _ = event_tx.send((drive_id_clone, drive_event));
+                            send_with_backpressure(
+                                &event_tx,
+                                (drive_id_clone, drive_event),
+                                "file_watcher",
+                            );
                         }
                     }
                     Err(e) => {

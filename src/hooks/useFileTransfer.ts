@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import type { TransferState, TransferProgress } from "../types";
@@ -51,6 +51,14 @@ export function useFileTransfer(
 
     const [transfers, setTransfers] = useState<TransferState[]>([]);
     const [error, setError] = useState<string | null>(null);
+    
+    // Use refs for callbacks to avoid re-subscribing to events
+    const callbacksRef = useRef({ onProgress, onComplete, onError });
+    callbacksRef.current = { onProgress, onComplete, onError };
+    
+    // Use ref for transfers to access in event listener without re-subscribing
+    const transfersRef = useRef<TransferState[]>([]);
+    transfersRef.current = transfers;
 
     // Fetch initial transfers list
     const refreshTransfers = useCallback(async () => {
@@ -98,22 +106,22 @@ export function useFileTransfer(
                     );
 
                     // Call progress callback
-                    onProgress?.(progress);
+                    callbacksRef.current.onProgress?.(progress);
 
-                    // Check for completion/failure
+                    // Check for completion/failure using ref
                     if (progress.status === "Completed") {
-                        const transfer = transfers.find(
+                        const transfer = transfersRef.current.find(
                             (t) => t.id === progress.transfer_id
                         );
                         if (transfer) {
-                            onComplete?.({ ...transfer, status: "Completed" });
+                            callbacksRef.current.onComplete?.({ ...transfer, status: "Completed" });
                         }
                     } else if (progress.status === "Failed") {
-                        const transfer = transfers.find(
+                        const transfer = transfersRef.current.find(
                             (t) => t.id === progress.transfer_id
                         );
                         if (transfer) {
-                            onError?.({ ...transfer, status: "Failed" });
+                            callbacksRef.current.onError?.({ ...transfer, status: "Failed" });
                         }
                     }
                 }
@@ -125,7 +133,7 @@ export function useFileTransfer(
         return () => {
             unlisten?.();
         };
-    }, [driveId, onProgress, onComplete, onError, transfers]);
+    }, [driveId]);
 
     // Fetch transfers on mount and periodically
     useEffect(() => {

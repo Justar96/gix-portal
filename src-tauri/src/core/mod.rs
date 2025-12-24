@@ -1,4 +1,5 @@
 // Allow dead code for APIs designed for future use
+pub mod channel;
 #[allow(dead_code)]
 pub mod conflict;
 pub mod drive;
@@ -11,6 +12,7 @@ pub mod locking;
 pub mod presence;
 pub mod watcher;
 
+pub use channel::send_with_backpressure;
 pub use conflict::{ConflictManager, FileConflictDto, ResolutionStrategy};
 pub use drive::{DriveId, DriveInfo, SharedDrive};
 pub use events::{DriveEvent, DriveEventDto};
