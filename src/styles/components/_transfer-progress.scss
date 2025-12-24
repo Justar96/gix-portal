@@ -1,229 +1,221 @@
-// Transfer Progress styles
+// ========================================
+// Component - Transfer Progress
+// Swiss Luxury Spa Design System
+// ========================================
+
 @use '../abstracts' as *;
 
 .transfer-progress {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 360px;
-  background: rgba($bg-card, 0.95);
-  border: 1px solid $border-card;
-  border-radius: $radius-xl;
-  box-shadow: $shadow-xl;
-  z-index: $z-overlay;
-  overflow: hidden;
-  backdrop-filter: blur(12px);
-
-  .transfer-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: $space-3 $space-4;
-    background: rgba($bg-elevated, 0.8);
-    border-bottom: 1px solid $border-subtle;
-    cursor: pointer;
-    transition: background $transition-fast;
-
-    &:hover {
-      background: $bg-hover;
+    position: fixed;
+    bottom: $space-6;
+    right: $space-6;
+    width: 360px;
+    background: $bg-card;
+    border: 1px solid $border-card;
+    border-radius: $radius-xl;
+    box-shadow: $shadow-xl;
+    z-index: $z-overlay;
+    overflow: hidden;
+    backdrop-filter: blur($blur-lg);
+    
+    .transfer-header {
+        @include flex-between;
+        padding: $space-3 $space-4;
+        border-bottom: 1px solid $border-subtle;
+        cursor: pointer;
+        transition: background $transition-fast;
+        
+        &:hover {
+            background: $bg-hover;
+        }
+        
+        .transfer-title {
+            display: flex;
+            align-items: center;
+            gap: $space-2;
+            font-size: $text-sm;
+            font-weight: $weight-semibold;
+            color: $text-primary;
+            
+            svg {
+                color: $accent;
+                width: $icon-sm;
+                height: $icon-sm;
+            }
+        }
+        
+        .btn-icon {
+            @include button-reset;
+            color: $text-muted;
+            padding: $space-1;
+            border-radius: $radius-sm;
+            transition: all $transition-fast;
+            
+            &:hover {
+                background: $bg-tertiary;
+                color: $text-primary;
+            }
+        }
     }
-
-    .transfer-title {
-      display: flex;
-      align-items: center;
-      gap: $space-2;
-      font-size: $text-sm;
-      font-weight: $weight-semibold;
-      color: $text-primary;
-
-      svg {
-        color: $accent;
-        width: 16px;
-        height: 16px;
-      }
-
-      .spinning {
-        color: $accent;
-        animation: spin 1s linear infinite;
-      }
+    
+    .transfer-list {
+        max-height: 280px;
+        overflow-y: auto;
+        padding: $space-2;
+        @include custom-scrollbar;
     }
-
-    .btn-icon {
-      @include button-reset;
-      color: $text-muted;
-      padding: $space-1;
-      border-radius: $radius-sm;
-      transition: all $transition-fast;
-      
-      &:hover {
-        background: $bg-tertiary;
-        color: $text-primary;
-      }
-    }
-  }
-
-  .transfer-list {
-    max-height: 280px;
-    overflow-y: auto;
-    padding: $space-2;
-    @include custom-scrollbar;
-  }
-
-  .transfer-item {
-    display: flex;
-    align-items: center;
-    gap: $space-3;
-    padding: $space-3;
-    border-radius: $radius-lg;
-    margin-bottom: 2px;
-    background: transparent;
-    transition: all $transition-fast;
-    border: 1px solid transparent;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-
-    &:hover {
-      background: $bg-hover;
-      border-color: $border-subtle;
-    }
-
-    &.completed {
-      .transfer-icon {
-        background: $success-soft;
-        color: $success;
-      }
-    }
-
-    &.failed {
-      background: $error-soft;
-      border-color: $error-border;
-
-      .transfer-icon {
-        background: rgba($error, 0.2);
-        color: $error;
-      }
-    }
-
-    .transfer-icon {
-      @include flex-center;
-      width: 36px;
-      height: 36px;
-      border-radius: $radius-md;
-      background: $accent-soft;
-      color: $accent;
-      flex-shrink: 0;
-      
-      svg {
-        width: 18px;
-        height: 18px;
-      }
-    }
-
-    .transfer-info {
-      flex: 1;
-      min-width: 0;
-
-      .transfer-name {
-        font-size: $text-sm;
-        font-weight: $weight-medium;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        margin-bottom: $space-1;
-        color: $text-primary;
-      }
-
-      .transfer-details {
+    
+    .transfer-item {
         display: flex;
         align-items: center;
-        gap: $space-2;
-        font-size: $text-xs;
-        color: $text-secondary;
-      }
-
-      .transfer-size {
-        flex-shrink: 0;
-        font-weight: $weight-medium;
-        font-family: $font-mono;
-      }
-
-      .progress-bar {
-        flex: 1;
-        height: 4px;
-        background: $bg-tertiary;
-        border-radius: 2px;
-        overflow: hidden;
-        margin: 0 $space-2;
-
-        .progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, $accent, $accent-light);
-          border-radius: 2px;
-          transition: width 0.3s ease;
+        gap: $space-3;
+        padding: $space-3;
+        border-radius: $radius-lg;
+        margin-bottom: 2px;
+        background: transparent;
+        transition: all $transition-fast;
+        border: 1px solid transparent;
+        
+        &:last-child {
+            margin-bottom: 0;
         }
-      }
-
-      .transfer-percent {
-        flex-shrink: 0;
-        min-width: 32px;
-        text-align: right;
-        font-weight: $weight-semibold;
-        color: $accent;
-        font-family: $font-mono;
-      }
-
-      .transfer-complete {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        color: $success;
-        font-weight: $weight-medium;
-
-        svg {
-          width: 14px;
-          height: 14px;
-          flex-shrink: 0;
+        
+        &:hover {
+            background: $bg-hover;
+            border-color: $border-subtle;
         }
-      }
-
-      .transfer-failed {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        color: $error;
-        font-weight: $weight-medium;
-
-        svg {
-          flex-shrink: 0;
+        
+        &.completed {
+            .transfer-icon {
+                background: $success-soft;
+                color: $success;
+            }
         }
-      }
-
-      .transfer-cancelled {
-        color: $text-muted;
-        font-style: italic;
-      }
+        
+        &.failed {
+            background: $error-soft;
+            border-color: $error-border;
+            
+            .transfer-icon {
+                background: rgba($error, 0.15);
+                color: $error;
+            }
+        }
+        
+        .transfer-icon {
+            @include flex-center;
+            width: 36px;
+            height: 36px;
+            border-radius: $radius-md;
+            background: $accent-soft;
+            color: $accent;
+            flex-shrink: 0;
+            
+            svg {
+                width: 18px;
+                height: 18px;
+            }
+        }
+        
+        .transfer-info {
+            flex: 1;
+            min-width: 0;
+            
+            .transfer-name {
+                font-size: $text-sm;
+                font-weight: $weight-medium;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                margin-bottom: $space-1;
+                color: $text-primary;
+            }
+            
+            .transfer-details {
+                display: flex;
+                align-items: center;
+                gap: $space-2;
+                font-size: $text-xs;
+                color: $text-secondary;
+            }
+            
+            .transfer-size {
+                flex-shrink: 0;
+                font-weight: $weight-medium;
+                font-family: $font-mono;
+            }
+            
+            .progress-bar {
+                flex: 1;
+                height: 4px;
+                background: $bg-tertiary;
+                border-radius: 2px;
+                overflow: hidden;
+                margin: 0 $space-2;
+                
+                .progress-fill {
+                    height: 100%;
+                    background: $accent;
+                    border-radius: 2px;
+                    transition: width 0.3s ease;
+                }
+            }
+            
+            .transfer-percent {
+                flex-shrink: 0;
+                min-width: 32px;
+                text-align: right;
+                font-weight: $weight-semibold;
+                color: $accent;
+                font-family: $font-mono;
+            }
+            
+            .transfer-complete {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                color: $success;
+                font-weight: $weight-medium;
+                
+                svg {
+                    width: 14px;
+                    height: 14px;
+                    flex-shrink: 0;
+                }
+            }
+            
+            .transfer-failed {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                color: $error;
+                font-weight: $weight-medium;
+                
+                svg {
+                    flex-shrink: 0;
+                }
+            }
+            
+            .transfer-cancelled {
+                color: $text-muted;
+                font-style: italic;
+            }
+        }
+        
+        .btn-cancel {
+            @include button-reset;
+            @include flex-center;
+            flex-shrink: 0;
+            width: 28px;
+            height: 28px;
+            border-radius: $radius-md;
+            color: $text-muted;
+            transition: all $transition-fast;
+            
+            &:hover {
+                background: $error-soft;
+                color: $error;
+            }
+        }
     }
-
-    .btn-cancel {
-      flex-shrink: 0;
-      width: 28px;
-      height: 28px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 8px;
-      background: transparent;
-      border: none;
-      color: $text-muted;
-      cursor: pointer;
-      transition: all $transition-fast;
-
-      &:hover {
-        background: rgba($error, 0.1);
-        color: $error;
-      }
-    }
-  }
 }

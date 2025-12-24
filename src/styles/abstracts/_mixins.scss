@@ -9,42 +9,25 @@
 // ----------------------------------------
 @mixin respond-to($breakpoint) {
     @if $breakpoint == '2xl' {
-        @media (max-width: $breakpoint-2xl) {
-            @content;
-        }
+        @media (max-width: $breakpoint-2xl) { @content; }
     } @else if $breakpoint == 'xl' {
-        @media (max-width: $breakpoint-xl) {
-            @content;
-        }
+        @media (max-width: $breakpoint-xl) { @content; }
     } @else if $breakpoint == 'lg' {
-        @media (max-width: $breakpoint-lg) {
-            @content;
-        }
+        @media (max-width: $breakpoint-lg) { @content; }
     } @else if $breakpoint == 'md' {
-        @media (max-width: $breakpoint-md) {
-            @content;
-        }
+        @media (max-width: $breakpoint-md) { @content; }
     } @else if $breakpoint == 'sm' {
-        @media (max-width: $breakpoint-sm) {
-            @content;
-        }
+        @media (max-width: $breakpoint-sm) { @content; }
     }
 }
 
-// Min-width breakpoints
 @mixin respond-from($breakpoint) {
     @if $breakpoint == 'sm' {
-        @media (min-width: $breakpoint-sm) {
-            @content;
-        }
+        @media (min-width: $breakpoint-sm) { @content; }
     } @else if $breakpoint == 'md' {
-        @media (min-width: $breakpoint-md) {
-            @content;
-        }
+        @media (min-width: $breakpoint-md) { @content; }
     } @else if $breakpoint == 'lg' {
-        @media (min-width: $breakpoint-lg) {
-            @content;
-        }
+        @media (min-width: $breakpoint-lg) { @content; }
     }
 }
 
@@ -126,10 +109,7 @@
 }
 
 @mixin focus-visible-ring {
-    &:focus {
-        outline: none;
-    }
-    
+    &:focus { outline: none; }
     &:focus-visible {
         outline: none;
         box-shadow: $glow-focus;
@@ -141,18 +121,9 @@
     transition: all $transition-base;
     
     &:disabled {
-        opacity: 0.4;
+        opacity: 0.5;
         cursor: not-allowed;
         pointer-events: none;
-    }
-}
-
-@mixin hover-lift {
-    transition: transform $transition-base, box-shadow $transition-base;
-    
-    &:hover {
-        transform: translateY(-1px);
-        box-shadow: $shadow-md;
     }
 }
 
@@ -176,10 +147,10 @@
     @include focus-visible-ring;
     gap: $space-2;
     font-weight: $weight-medium;
-    transition: all $transition-base;
+    transition: all $transition-fast;
     
     &:disabled {
-        opacity: 0.4;
+        opacity: 0.5;
         cursor: not-allowed;
     }
 }
@@ -200,33 +171,12 @@
     box-shadow: $shadow-md;
 }
 
-@mixin surface-hover {
-    &:hover {
-        background: $bg-hover;
-        border-color: $border-hover;
-    }
-}
-
-// Card style for items that need to stand out
 @mixin card {
     background: $bg-card;
     border: 1px solid $border-card;
-    border-radius: $radius-lg;
+    border-radius: $radius-xl;
     box-shadow: $shadow-card;
     transition: all $transition-base;
-}
-
-@mixin card-bordered {
-    background: $bg-card;
-    border: 1px solid $border-card;
-    border-radius: $radius-lg;
-    box-shadow: none;
-    transition: all $transition-base;
-    
-    &:hover {
-        border-color: $border-hover;
-        box-shadow: $shadow-card;
-    }
 }
 
 @mixin card-hover {
@@ -243,24 +193,6 @@
     &:hover {
         border-color: $border-hover;
         box-shadow: $shadow-card-hover;
-        transform: translateY(-1px);
-    }
-    
-    &:active {
-        transform: translateY(0);
-        box-shadow: $shadow-card;
-    }
-}
-
-@mixin card-list-item {
-    background: $bg-card;
-    border: 1px solid $border-secondary;
-    border-radius: $radius-lg;
-    transition: all $transition-base;
-    
-    &:hover {
-        border-color: $border-primary;
-        box-shadow: $shadow-card;
     }
 }
 
@@ -293,10 +225,7 @@
 @mixin scrollbar-hidden {
     scrollbar-width: none;
     -ms-overflow-style: none;
-    
-    &::-webkit-scrollbar {
-        display: none;
-    }
+    &::-webkit-scrollbar { display: none; }
 }
 
 // ----------------------------------------
@@ -330,4 +259,126 @@
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
+}
+
+// ========================================
+// Modal System - Swiss Luxury Unified
+// ========================================
+
+@keyframes modalOverlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes modalContentIn {
+    from { 
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+// Overlay - Unified backdrop
+@mixin modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: $modal-overlay-bg;
+    backdrop-filter: blur($modal-overlay-blur);
+    @include flex-center;
+    z-index: $z-modal;
+    padding: $space-6;
+    animation: modalOverlayIn $modal-enter-duration $ease-out;
+    
+    @include respond-to('sm') {
+        padding: $space-4;
+    }
+}
+
+// Container - Unified modal shell
+@mixin modal-container($width: $modal-width-md) {
+    background: $bg-card;
+    border: 1px solid $border-primary;
+    border-radius: $radius-2xl;
+    width: 100%;
+    max-width: $width;
+    box-shadow: $shadow-modal;
+    position: relative;
+    overflow: hidden;
+    animation: modalContentIn $modal-enter-duration $modal-enter-easing;
+    
+    @include respond-to('sm') {
+        max-width: calc(100% - #{$space-4});
+        border-radius: $radius-xl;
+    }
+}
+
+// Header - Unified modal header
+@mixin modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $modal-padding-y $modal-padding-x;
+    border-bottom: 1px solid $border-subtle;
+    min-height: $modal-header-height;
+    
+    h2 {
+        font-size: $text-lg;
+        font-weight: $weight-semibold;
+        letter-spacing: $tracking-tight;
+        color: $text-primary;
+        margin: 0;
+    }
+}
+
+// Body - Unified content area
+@mixin modal-body {
+    padding: $modal-padding-x;
+    max-height: 60vh;
+    overflow-y: auto;
+    @include custom-scrollbar;
+    
+    @include respond-to('sm') {
+        padding: $modal-padding-y;
+        max-height: 50vh;
+    }
+}
+
+// Footer - Unified actions area
+@mixin modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $space-3;
+    padding: $space-4 $modal-padding-x;
+    border-top: 1px solid $border-subtle;
+    background: $bg-secondary;
+    min-height: $modal-footer-height;
+}
+
+// Close button - Unified close styling
+@mixin modal-close-button {
+    @include button-reset;
+    @include flex-center;
+    position: absolute;
+    top: $space-4;
+    right: $space-4;
+    width: 32px;
+    height: 32px;
+    border-radius: $radius-md;
+    color: $text-muted;
+    z-index: 10;
+    transition: all $transition-fast;
+    
+    &:hover {
+        background: $bg-hover;
+        color: $text-primary;
+    }
+    
+    svg {
+        width: $icon-sm;
+        height: $icon-sm;
+    }
 }

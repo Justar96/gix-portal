@@ -1,90 +1,88 @@
 // ========================================
-// Design Tokens - Modern Light Theme
-// Clean, bordered, event-style design
+// Design Tokens - Swiss Luxury Spa
+// Premium Minimalist Light Theme
 // ========================================
 
 // ----------------------------------------
-// Color Palette - Clean Light Mode
+// Color Palette - Swiss Precision
 // ----------------------------------------
 
-// Backgrounds - Clean whites with contrast
-$bg-primary: #ffffff;    // Pure white
-$bg-secondary: #f5f7f9;  // Slightly tinted for depth
-$bg-tertiary: #eef1f4;   // More visible selection
+// Backgrounds - Pure, clean surfaces
+$bg-primary: #ffffff;
+$bg-secondary: #f8f9fa;
+$bg-tertiary: #f1f3f5;
 $bg-elevated: #ffffff;
-$bg-hover: #e8ecf0;      // More visible hover
-$bg-active: #dce2e8;     // Clear active state
-$bg-card: #ffffff;       // Pure white cards
-$bg-app: #f5f7f9;        // App background toned down
+$bg-hover: #f1f3f5;
+$bg-active: #e9ecef;
+$bg-card: #ffffff;
+$bg-app: #f8f9fa;
 
-// Text Hierarchy - Softer text for toned-down theme
-$text-primary: #1a1a1a;   // Slightly softer black
-$text-secondary: #4a4a4a;  // Warmer gray
-$text-tertiary: #6b7280;  // More professional gray
-$text-muted: #9ca3af;     // Consistent with borders
-$text-disabled: #d1d5db;   // Softer disabled state
+// Text Hierarchy - Swiss typography clarity
+$text-primary: #111827;
+$text-secondary: #4b5563;
+$text-tertiary: #6b7280;
+$text-muted: #9ca3af;
+$text-disabled: #d1d5db;
 
 // ========================================
-// ACCENT COLOR: Indigo Design System
-// ========================================
-// Primary: #6366f1 (Indigo 500)
-// Contrast ratio: 4.5:1 on white (AA compliant)
-// Updated: 2024-12-24
-// Previous: #ff69f5 (Pink/Magenta)
+// ACCENT: Refined Indigo (Swiss Luxury)
 // ========================================
 $accent: #6366f1;
-$accent-soft: rgba(99, 102, 241, 0.15);
-$accent-muted: rgba(99, 102, 241, 0.6);
-$accent-subtle: rgba(99, 102, 241, 0.08);
-$accent-dark: #4f46e5;   // Indigo 600 for hover states
-$accent-light: #818cf8;  // Indigo 400 for highlights
+$accent-soft: rgba(99, 102, 241, 0.12);
+$accent-muted: rgba(99, 102, 241, 0.5);
+$accent-subtle: rgba(99, 102, 241, 0.06);
+$accent-dark: #4f46e5;
+$accent-light: #818cf8;
 
-// Semantic Colors - Muted, professional
-$success: #4ade80;
-$success-soft: rgba(74, 222, 128, 0.15);
-$success-border: rgba(74, 222, 128, 0.3);
+// Semantic Colors - Understated elegance
+$success: #22c55e;
+$success-soft: rgba(34, 197, 94, 0.1);
+$success-border: rgba(34, 197, 94, 0.25);
 
-$warning: #fbbf24;
-$warning-soft: rgba(251, 191, 36, 0.15);
-$warning-border: rgba(251, 191, 36, 0.3);
+$warning: #f59e0b;
+$warning-soft: rgba(245, 158, 11, 0.1);
+$warning-border: rgba(245, 158, 11, 0.25);
 
-$error: #f87171;
-$error-soft: rgba(248, 113, 113, 0.15);
-$error-border: rgba(248, 113, 113, 0.3);
+$error: #ef4444;
+$error-soft: rgba(239, 68, 68, 0.08);
+$error-border: rgba(239, 68, 68, 0.2);
 
-$info: #60a5fa;
-$info-soft: rgba(96, 165, 250, 0.15);
-$info-border: rgba(96, 165, 250, 0.3);
-
-// ----------------------------------------
-// Borders & Dividers - High contrast for light theme
-// ----------------------------------------
-$border-primary: #c4c9cf;   // Strong visibility for light theme
-$border-secondary: #d4d9df; // Secondary borders
-$border-focus: #0a0a0a;
-$border-hover: #9ca3af;     // Clearer hover border
-$border-card: #c4c9cf;      // Card borders - visible on white
-$border-subtle: #e2e6eb;    // Subtle dividers
+$info: #3b82f6;
+$info-soft: rgba(59, 130, 246, 0.1);
+$info-border: rgba(59, 130, 246, 0.25);
 
 // ----------------------------------------
-// Shadows - Refined depth for cards
+// Borders - Swiss precision lines
+// ----------------------------------------
+$border-primary: #e5e7eb;
+$border-secondary: #e5e7eb;
+$border-focus: $accent;
+$border-hover: #d1d5db;
+$border-card: #e5e7eb;
+$border-subtle: #f3f4f6;
+
+// ----------------------------------------
+// Shadows - Whisper-soft depth
 // ----------------------------------------
 $shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
-$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-$shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+$shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.06), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+$shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
 
-// Card-specific shadow - Refined for toned-down theme
-$shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-$shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.08), 0 4px 8px rgba(0, 0, 0, 0.04);
-$shadow-card-active: 0 4px 12px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.03);
+// Card shadows - Premium depth
+$shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04);
+$shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.06);
 
-// Glow effects for focus states
-$glow-focus: 0 0 0 2px rgba(99, 102, 241, 0.3);
+// Modal shadow - Luxury floating effect
+$shadow-modal: 0 25px 50px -12px rgba(0, 0, 0, 0.2), 0 12px 24px -8px rgba(0, 0, 0, 0.1);
+
+// Focus ring
+$glow-focus: 0 0 0 3px rgba(99, 102, 241, 0.15);
 
 // ----------------------------------------
-// Spacing Scale (4-point base, 8-point primary)
+// Spacing Scale (8-point grid system)
 // ----------------------------------------
 $space-0: 0;
 $space-px: 1px;
@@ -94,6 +92,7 @@ $space-1-5: 6px;
 $space-2: 8px;
 $space-2-5: 10px;
 $space-3: 12px;
+$space-3-5: 14px;
 $space-4: 16px;
 $space-5: 20px;
 $space-6: 24px;
@@ -107,12 +106,12 @@ $space-16: 64px;
 $space-20: 80px;
 
 // ----------------------------------------
-// Typography - Clean, professional
+// Typography - Swiss precision
 // ----------------------------------------
 $font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 $font-mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
 
-// Font Sizes
+// Font Sizes - Refined scale
 $text-2xs: 0.6875rem;  // 11px
 $text-xs: 0.75rem;     // 12px
 $text-sm: 0.8125rem;   // 13px
@@ -143,18 +142,18 @@ $tracking-wide: 0.015em;
 $tracking-wider: 0.03em;
 
 // ----------------------------------------
-// Border Radius - Subtle, refined
+// Border Radius - Swiss softness
 // ----------------------------------------
 $radius-none: 0;
 $radius-sm: 4px;
 $radius-md: 6px;
 $radius-lg: 8px;
-$radius-xl: 10px;
-$radius-2xl: 12px;
+$radius-xl: 12px;
+$radius-2xl: 16px;
 $radius-full: 9999px;
 
 // ----------------------------------------
-// Transitions - Smooth, professional
+// Transitions - Butter smooth
 // ----------------------------------------
 $duration-instant: 50ms;
 $duration-fast: 100ms;
@@ -163,9 +162,8 @@ $duration-slow: 250ms;
 $duration-slower: 350ms;
 
 $ease-default: cubic-bezier(0.4, 0, 0.2, 1);
-$ease-in: cubic-bezier(0.4, 0, 1, 1);
+$ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 $ease-out: cubic-bezier(0, 0, 0.2, 1);
-$ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 
 $transition-fast: $duration-fast $ease-default;
 $transition-base: $duration-base $ease-default;
@@ -174,8 +172,7 @@ $transition-slow: $duration-slow $ease-default;
 // ----------------------------------------
 // Layout
 // ----------------------------------------
-$sidebar-width: 260px;
-$sidebar-width-collapsed: 64px;
+$sidebar-width: 200px;
 $header-height: 52px;
 $content-max-width: 1400px;
 
@@ -198,3 +195,55 @@ $z-overlay: 300;
 $z-modal: 400;
 $z-popover: 500;
 $z-tooltip: 600;
+
+// ----------------------------------------
+// Icon Sizing
+// ----------------------------------------
+$icon-xs: 12px;
+$icon-sm: 16px;
+$icon-md: 20px;
+$icon-lg: 24px;
+$icon-xl: 32px;
+$icon-2xl: 48px;
+
+// ----------------------------------------
+// Component Dimensions
+// ----------------------------------------
+$button-height: 40px;
+$button-height-sm: 32px;
+$button-height-lg: 48px;
+$input-height: 40px;
+
+// ========================================
+// Modal System - Swiss Luxury Unified
+// ========================================
+$modal-overlay-bg: rgba(0, 0, 0, 0.4);
+$modal-overlay-blur: 8px;
+
+// Modal sizes
+$modal-width-sm: 360px;
+$modal-width-md: 440px;
+$modal-width-lg: 520px;
+$modal-width-xl: 640px;
+
+// Modal spacing
+$modal-padding-x: $space-6;
+$modal-padding-y: $space-5;
+$modal-header-height: 56px;
+$modal-footer-height: 64px;
+
+// Modal animation
+$modal-enter-duration: 200ms;
+$modal-enter-easing: cubic-bezier(0.16, 1, 0.3, 1);
+
+// Panel dimensions
+$panel-width: 280px;
+
+// ----------------------------------------
+// Blur Effects
+// ----------------------------------------
+$blur-none: 0;
+$blur-sm: 4px;
+$blur-md: 8px;
+$blur-lg: 12px;
+$blur-xl: 16px;

@@ -1,6 +1,6 @@
 // ========================================
-// Component - States (Loading, Empty, Error)
-// Modern Light Theme with Bordered Design
+// Component - States
+// Swiss Luxury Spa Design System
 // ========================================
 
 @use '../abstracts' as *;
@@ -44,7 +44,6 @@
     border-radius: $radius-xl;
     color: $text-muted;
     margin-bottom: $space-4;
-    box-shadow: $shadow-card;
     
     svg {
         opacity: 0.7;
@@ -65,10 +64,10 @@
 .loading-spinner {
     width: 18px;
     height: 18px;
-    border: 2px solid $border-secondary;
-    border-top-color: $text-primary;
+    border: 2px solid $border-primary;
+    border-top-color: $accent;
     border-radius: $radius-full;
-    animation: spin 0.7s linear infinite;
+    @include spin;
     
     &.spinner-sm {
         width: 14px;
@@ -79,12 +78,6 @@
     &.spinner-lg {
         width: 24px;
         height: 24px;
-    }
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
     }
 }
 
@@ -111,18 +104,4 @@
     color: $error;
     font-size: $text-sm;
     margin: $space-4;
-}
-
-// ----------------------------------------
-// Pending/Stale Indicators
-// ----------------------------------------
-.pending-indicator {
-    color: $text-muted;
-    font-size: $text-xs;
-    opacity: 0.7;
-}
-
-.stale {
-    opacity: 0.6;
-    pointer-events: none;
 }

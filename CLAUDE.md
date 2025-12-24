@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 P2P Realtime Drive Sharing System - A self-hosted peer-to-peer file sharing desktop application with enterprise-grade security. Built with Tauri v2 (Rust backend + React frontend) using Iroh for P2P networking.
 
-## Codebase Navigation Guidelines
+## Codebase Navigation tool (morph-mcp)
 
-Warp Grep: warp-grep is a subagent that takes in a search string and tries to find relevant context. Best practice is to use it at the beginning of codebase explorations to fast track finding relevant files/lines. Do not use it to pin point keywords, but use it for broader semantic queries. "Find the XYZ flow", "How does XYZ work", "Where is XYZ handled?", "Where is <error message> coming from?"
+morph-mcp: warpgrep_codebase_search is a subagent that takes in a search string and tries to find relevant context. Best practice is to use it at the beginning of codebase explorations to fast track finding relevant files/lines. Do not use it to pin point keywords, but use it for broader semantic queries. "Find the XYZ flow", "How does XYZ work", "Where is XYZ handled?", "Where is <error message> coming from?"
 
 ## Build & Development Commands
 

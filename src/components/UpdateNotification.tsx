@@ -1,6 +1,10 @@
-import { Download, X, RefreshCw, CheckCircle } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { Download, X, RefreshCw, CheckCircle, AlertCircle } from "lucide-react";
 import { useUpdater } from "../hooks/useUpdater";
 import "../styles/components/_update-notification.scss";
+
+/** Auto-dismiss timeout for error toasts (in milliseconds) */
+const ERROR_AUTO_DISMISS_MS = 5000;
 
 interface UpdateNotificationProps {
   /** Whether to show in compact mode (for titlebar) */
@@ -20,6 +24,29 @@ export function UpdateNotification({ compact = false }: UpdateNotificationProps)
     dismissUpdate,
   } = useUpdater();
 
+  const dismissTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto-dismiss error toast after timeout
+  useEffect(() => {
+    if (error) {
+      // Clear any existing timeout
+      if (dismissTimeoutRef.current) {
+        clearTimeout(dismissTimeoutRef.current);
+      }
+      
+      // Set new timeout to dismiss
+      dismissTimeoutRef.current = setTimeout(() => {
+        dismissUpdate();
+      }, ERROR_AUTO_DISMISS_MS);
+    }
+
+    return () => {
+      if (dismissTimeoutRef.current) {
+        clearTimeout(dismissTimeoutRef.current);
+      }
+    };
+  }, [error, dismissUpdate]);
+
   // Don't render if no update available and not downloading
   if (!available && !downloading && !error) {
     return null;
@@ -33,6 +60,14 @@ export function UpdateNotification({ compact = false }: UpdateNotificationProps)
             <RefreshCw size={14} className="spinning" />
             <span>{Math.round(progress)}%</span>
           </div>
+        ) : error ? (
+          <button
+            className="update-btn-compact error"
+            onClick={checkForUpdates}
+            title="Update failed - Click to retry"
+          >
+            <AlertCircle size={14} />
+          </button>
         ) : available ? (
           <button
             className="update-btn-compact"

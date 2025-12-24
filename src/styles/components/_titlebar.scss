@@ -1,6 +1,6 @@
 // ========================================
-// Component - Custom Titlebar
-// Windows-style custom window controls
+// Component - Titlebar
+// Swiss Luxury Spa Design System
 // ========================================
 
 @use '../abstracts' as *;
@@ -11,7 +11,7 @@
     align-items: center;
     height: 32px;
     background: $bg-primary;
-    border-bottom: 1px solid $border-secondary;
+    border-bottom: 1px solid $border-primary;
     user-select: none;
     -webkit-user-select: none;
     flex-shrink: 0;
@@ -37,13 +37,13 @@
     width: 46px;
     height: 100%;
     color: $text-secondary;
-    transition: background $transition-fast, color $transition-fast;
-
+    transition: all $transition-fast;
+    
     &:hover {
         background: $bg-hover;
         color: $text-primary;
     }
-
+    
     &:active {
         background: $bg-active;
     }
@@ -54,7 +54,7 @@
         background: #e81123;
         color: white;
     }
-
+    
     &:active {
         background: #bf0f1d;
         color: white;

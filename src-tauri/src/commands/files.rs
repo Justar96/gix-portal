@@ -1,9 +1,13 @@
 //! File listing commands with path traversal protection
 //!
 //! All file operations validate paths to prevent directory traversal attacks.
+//! All operations enforce ACL permission checks.
 
+use crate::commands::security::SecurityStore;
 use crate::core::{file, validate_drive_id, validate_path, AppError, FileEntryDto};
+use crate::crypto::Permission;
 use crate::state::AppState;
+use std::sync::Arc;
 use tauri::State;
 
 /// List files in a drive directory
@@ -12,11 +16,13 @@ use tauri::State;
 /// - Validates drive ID format
 /// - Prevents directory traversal attacks
 /// - Ensures path stays within drive root
+/// - Enforces ACL permission checks (requires Read permission)
 #[tauri::command]
 pub async fn list_files(
     drive_id: String,
     path: String,
     state: State<'_, AppState>,
+    security: State<'_, Arc<SecurityStore>>,
 ) -> Result<Vec<FileEntryDto>, String> {
     // Validate drive ID
     let id_arr = validate_drive_id(&drive_id).map_err(|e| e.to_string())?;
@@ -29,6 +35,30 @@ pub async fn list_files(
         }
         .to_string()
     })?;
+
+    // Get caller identity and check permission
+    let caller = state
+        .identity_manager
+        .node_id()
+        .await
+        .ok_or_else(|| AppError::IdentityNotInitialized.to_string())?;
+    let caller_hex = caller.to_hex();
+    let owner_hex = drive.owner.to_hex();
+
+    // Enforce ACL permission check
+    let acl = security.get_or_create_acl(&drive_id, &owner_hex).await;
+    if !acl.check_permission(&caller_hex, &path, Permission::Read) {
+        tracing::warn!(
+            drive_id = %drive_id,
+            user = %caller_hex,
+            path = %path,
+            "Access denied: insufficient permission to list files"
+        );
+        return Err(AppError::AccessDenied {
+            reason: "insufficient permission to list files".to_string(),
+        }
+        .to_string());
+    }
 
     // Validate path is safe (prevents directory traversal)
     let safe_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
@@ -75,11 +105,13 @@ pub struct FileContent {
 /// - Validates drive ID format
 /// - Prevents directory traversal attacks
 /// - Ensures path stays within drive root
+/// - Enforces ACL permission checks (requires Read permission)
 #[tauri::command]
 pub async fn read_file(
     drive_id: String,
     path: String,
     state: State<'_, AppState>,
+    security: State<'_, Arc<SecurityStore>>,
 ) -> Result<FileContent, String> {
     use base64::Engine;
 
@@ -94,6 +126,30 @@ pub async fn read_file(
         }
         .to_string()
     })?;
+
+    // Get caller identity and check permission
+    let caller = state
+        .identity_manager
+        .node_id()
+        .await
+        .ok_or_else(|| AppError::IdentityNotInitialized.to_string())?;
+    let caller_hex = caller.to_hex();
+    let owner_hex = drive.owner.to_hex();
+
+    // Enforce ACL permission check
+    let acl = security.get_or_create_acl(&drive_id, &owner_hex).await;
+    if !acl.check_permission(&caller_hex, &path, Permission::Read) {
+        tracing::warn!(
+            drive_id = %drive_id,
+            user = %caller_hex,
+            path = %path,
+            "Access denied: insufficient permission to read file"
+        );
+        return Err(AppError::AccessDenied {
+            reason: "insufficient permission to read file".to_string(),
+        }
+        .to_string());
+    }
 
     // Validate path is safe (prevents directory traversal)
     let safe_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
@@ -157,12 +213,14 @@ pub async fn read_file(
 /// - Prevents directory traversal attacks
 /// - Ensures path stays within drive root
 /// - Creates parent directories if needed
+/// - Enforces ACL permission checks (requires Write permission)
 #[tauri::command]
 pub async fn write_file(
     drive_id: String,
     path: String,
     content: String,
     state: State<'_, AppState>,
+    security: State<'_, Arc<SecurityStore>>,
 ) -> Result<(), String> {
     use base64::Engine;
 
@@ -177,6 +235,30 @@ pub async fn write_file(
         }
         .to_string()
     })?;
+
+    // Get caller identity and check permission
+    let caller = state
+        .identity_manager
+        .node_id()
+        .await
+        .ok_or_else(|| AppError::IdentityNotInitialized.to_string())?;
+    let caller_hex = caller.to_hex();
+    let owner_hex = drive.owner.to_hex();
+
+    // Enforce ACL permission check (requires Write)
+    let acl = security.get_or_create_acl(&drive_id, &owner_hex).await;
+    if !acl.check_permission(&caller_hex, &path, Permission::Write) {
+        tracing::warn!(
+            drive_id = %drive_id,
+            user = %caller_hex,
+            path = %path,
+            "Access denied: insufficient permission to write file"
+        );
+        return Err(AppError::AccessDenied {
+            reason: "insufficient permission to write file".to_string(),
+        }
+        .to_string());
+    }
 
     // Validate path is safe (prevents directory traversal)
     let safe_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
@@ -216,11 +298,13 @@ pub async fn write_file(
 /// - Validates drive ID format
 /// - Prevents directory traversal attacks
 /// - Ensures path stays within drive root
+/// - Enforces ACL permission checks (requires Write permission)
 #[tauri::command]
 pub async fn delete_path(
     drive_id: String,
     path: String,
     state: State<'_, AppState>,
+    security: State<'_, Arc<SecurityStore>>,
 ) -> Result<(), String> {
     // Validate drive ID
     let id_arr = validate_drive_id(&drive_id).map_err(|e| e.to_string())?;
@@ -233,6 +317,30 @@ pub async fn delete_path(
         }
         .to_string()
     })?;
+
+    // Get caller identity and check permission
+    let caller = state
+        .identity_manager
+        .node_id()
+        .await
+        .ok_or_else(|| AppError::IdentityNotInitialized.to_string())?;
+    let caller_hex = caller.to_hex();
+    let owner_hex = drive.owner.to_hex();
+
+    // Enforce ACL permission check (requires Write to delete)
+    let acl = security.get_or_create_acl(&drive_id, &owner_hex).await;
+    if !acl.check_permission(&caller_hex, &path, Permission::Write) {
+        tracing::warn!(
+            drive_id = %drive_id,
+            user = %caller_hex,
+            path = %path,
+            "Access denied: insufficient permission to delete path"
+        );
+        return Err(AppError::AccessDenied {
+            reason: "insufficient permission to delete path".to_string(),
+        }
+        .to_string());
+    }
 
     // Validate path is safe
     let safe_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
@@ -270,12 +378,14 @@ pub async fn delete_path(
 /// - Validates drive ID format
 /// - Prevents directory traversal attacks
 /// - Ensures both paths stay within drive root
+/// - Enforces ACL permission checks (requires Write permission on both paths)
 #[tauri::command]
 pub async fn rename_path(
     drive_id: String,
     old_path: String,
     new_path: String,
     state: State<'_, AppState>,
+    security: State<'_, Arc<SecurityStore>>,
 ) -> Result<(), String> {
     // Validate drive ID
     let id_arr = validate_drive_id(&drive_id).map_err(|e| e.to_string())?;
@@ -288,6 +398,42 @@ pub async fn rename_path(
         }
         .to_string()
     })?;
+
+    // Get caller identity and check permission
+    let caller = state
+        .identity_manager
+        .node_id()
+        .await
+        .ok_or_else(|| AppError::IdentityNotInitialized.to_string())?;
+    let caller_hex = caller.to_hex();
+    let owner_hex = drive.owner.to_hex();
+
+    // Enforce ACL permission check (requires Write on both old and new paths)
+    let acl = security.get_or_create_acl(&drive_id, &owner_hex).await;
+    if !acl.check_permission(&caller_hex, &old_path, Permission::Write) {
+        tracing::warn!(
+            drive_id = %drive_id,
+            user = %caller_hex,
+            path = %old_path,
+            "Access denied: insufficient permission to rename from source path"
+        );
+        return Err(AppError::AccessDenied {
+            reason: "insufficient permission to rename from source path".to_string(),
+        }
+        .to_string());
+    }
+    if !acl.check_permission(&caller_hex, &new_path, Permission::Write) {
+        tracing::warn!(
+            drive_id = %drive_id,
+            user = %caller_hex,
+            path = %new_path,
+            "Access denied: insufficient permission to rename to destination path"
+        );
+        return Err(AppError::AccessDenied {
+            reason: "insufficient permission to rename to destination path".to_string(),
+        }
+        .to_string());
+    }
 
     // Validate both paths are safe
     let safe_old = validate_path(&drive.local_path, &old_path).map_err(|e| e.to_string())?;

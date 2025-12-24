@@ -51,8 +51,10 @@ export function usePresence({
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     
-    // Track if component is mounted
+    // Track if component is mounted and if we've already joined
     const mountedRef = useRef(true);
+    const joinedRef = useRef<string | null>(null);
+    const leaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Fetch users and activities
     const refresh = useCallback(async () => {
@@ -81,16 +83,42 @@ export function usePresence({
     }, [driveId]);
 
     // Join drive on mount, leave on unmount
+    // Using delayed leave to handle React StrictMode double-mounts
     useEffect(() => {
         mountedRef.current = true;
         
         if (!driveId) return;
 
+        // Cancel any pending leave from previous unmount
+        if (leaveTimeoutRef.current) {
+            clearTimeout(leaveTimeoutRef.current);
+            leaveTimeoutRef.current = null;
+        }
+
+        // Skip join if we already joined this drive (remount case)
+        if (joinedRef.current === driveId) {
+            return;
+        }
+
         const join = async () => {
             setIsLoading(true);
             try {
                 await invoke("join_drive_presence", { driveId });
-                await refresh();
+                joinedRef.current = driveId;
+                
+                // Fetch initial data
+                const [usersData, activitiesData] = await Promise.all([
+                    invoke<UserPresenceInfo[]>("get_online_users", { driveId }),
+                    invoke<ActivityEntryInfo[]>("get_recent_activity", {
+                        driveId,
+                        limit: 50,
+                    }),
+                ]);
+
+                if (mountedRef.current) {
+                    setUsers(usersData);
+                    setActivities(activitiesData);
+                }
             } catch (err) {
                 console.warn("Failed to join drive presence:", err);
             } finally {
@@ -104,9 +132,18 @@ export function usePresence({
 
         return () => {
             mountedRef.current = false;
-            invoke("leave_drive_presence", { driveId }).catch(() => {});
+            
+            // Delay leave to allow for StrictMode remount
+            // If component remounts quickly, the timeout will be cancelled
+            const currentDriveId = driveId;
+            leaveTimeoutRef.current = setTimeout(() => {
+                if (joinedRef.current === currentDriveId) {
+                    joinedRef.current = null;
+                    invoke("leave_drive_presence", { driveId: currentDriveId }).catch(() => {});
+                }
+            }, 100);
         };
-    }, [driveId, refresh]);
+    }, [driveId]);
 
     // Periodic heartbeat
     useEffect(() => {

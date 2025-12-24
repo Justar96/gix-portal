@@ -1,23 +1,23 @@
 // ========================================
 // Component - Buttons
-// Modern Light Theme with Bordered Design
+// Swiss Luxury Spa Design System
 // ========================================
 
 @use '../abstracts' as *;
 
 // ----------------------------------------
-// Primary Button - Refined with accent
+// Primary Button
 // ----------------------------------------
 .btn-primary {
     @include button-base;
-    padding: $space-3 $space-6;
+    padding: $space-2-5 $space-5;
     background: $accent;
     border: 1px solid $accent;
     border-radius: $radius-lg;
-    color: $bg-primary;
+    color: white;
     font-size: $text-sm;
     font-weight: $weight-medium;
-    min-height: 44px;
+    min-height: $button-height;
     transition: all $transition-fast;
     
     &:hover:not(:disabled) {
@@ -26,35 +26,34 @@
     }
     
     &:active:not(:disabled) {
-        background: $accent-dark;
+        transform: translateY(1px);
     }
     
     @include respond-to('sm') {
-        padding: $space-2-5 $space-5;
+        padding: $space-2 $space-4;
         font-size: $text-xs;
-        min-height: 40px;
+        min-height: $button-height-sm;
     }
 }
 
 // ----------------------------------------
-// Secondary Button - Refined outline
+// Secondary Button
 // ----------------------------------------
 .btn-secondary {
     @include button-base;
-    padding: $space-3 $space-6;
+    padding: $space-2-5 $space-5;
     background: $bg-card;
-    border: 1px solid $border-secondary;
+    border: 1px solid $border-primary;
     border-radius: $radius-lg;
     color: $text-primary;
     font-size: $text-sm;
     font-weight: $weight-medium;
-    min-height: 44px;
+    min-height: $button-height;
     transition: all $transition-fast;
     
     &:hover:not(:disabled) {
         background: $bg-hover;
         border-color: $border-hover;
-        color: $text-primary;
     }
     
     &:active:not(:disabled) {
@@ -62,14 +61,14 @@
     }
     
     @include respond-to('sm') {
-        padding: $space-2-5 $space-5;
+        padding: $space-2 $space-4;
         font-size: $text-xs;
-        min-height: 40px;
+        min-height: $button-height-sm;
     }
 }
 
 // ----------------------------------------
-// Icon Button - Square, subtle
+// Icon Button
 // ----------------------------------------
 .btn-icon {
     @include button-base;
@@ -82,25 +81,27 @@
     flex-shrink: 0;
     transition: all $transition-fast;
     
+    svg {
+        width: $icon-md;
+        height: $icon-md;
+    }
+    
     &:hover:not(:disabled) {
         background: $bg-hover;
         color: $text-primary;
-        border-color: $border-subtle;
     }
     
     &:active:not(:disabled) {
         background: $bg-active;
     }
     
-    // Size variants
     &.btn-sm {
         width: 28px;
         height: 28px;
-        padding: 4px;
         
         svg {
-            width: 16px;
-            height: 16px;
+            width: $icon-sm;
+            height: $icon-sm;
         }
     }
     
@@ -109,23 +110,21 @@
         height: 44px;
         
         svg {
-            width: 24px;
-            height: 24px;
+            width: $icon-lg;
+            height: $icon-lg;
         }
     }
     
-    // Danger variant
     &.danger {
         &:hover:not(:disabled) {
             background: $error-soft;
             color: $error;
-            border-color: $error-border;
         }
     }
 }
 
 // ----------------------------------------
-// Ghost Button - Invisible until hover
+// Ghost Button
 // ----------------------------------------
 .btn-ghost {
     @include button-base;
@@ -144,7 +143,21 @@
 }
 
 // ----------------------------------------
-// Close Button - Modal/panel close
+// Text Button
+// ----------------------------------------
+.btn-text {
+    @include button-base;
+    padding: $space-1 $space-2;
+    color: $text-secondary;
+    font-size: $text-sm;
+    
+    &:hover:not(:disabled) {
+        color: $text-primary;
+    }
+}
+
+// ----------------------------------------
+// Close Button
 // ----------------------------------------
 .btn-close {
     @include button-base;
@@ -160,7 +173,7 @@
 }
 
 // ----------------------------------------
-// Copy Button - Clipboard action
+// Copy Button
 // ----------------------------------------
 .btn-copy {
     @include button-base;
@@ -184,26 +197,16 @@
 }
 
 // ----------------------------------------
-// Text Button - Link-style
+// Full Width Button (for modals)
 // ----------------------------------------
-.btn-text {
-    @include button-base;
-    padding: $space-1 $space-2;
-    color: $text-secondary;
-    font-size: $text-sm;
-    
-    &:hover:not(:disabled) {
-        color: $text-primary;
-    }
+.btn-full {
+    width: 100%;
+    justify-content: center;
 }
 
 // ----------------------------------------
-// Spinning animation for loading states
+// Animation Utility
 // ----------------------------------------
-.animate-spin {
-    @include spin;
-}
-
 .spinning {
     @include spin;
 }

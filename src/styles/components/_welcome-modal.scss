@@ -1,353 +1,269 @@
 // ========================================
 // Component - Welcome Modal
-// Onboarding introduction for P2P features
+// Swiss Luxury Spa Design System
 // ========================================
 
 @use '../abstracts' as *;
 
+// ----------------------------------------
+// Modal Structure
+// ----------------------------------------
 .welcome-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
-  @include flex-center;
-  z-index: $z-modal;
-  padding: $space-6;
-
-  @include respond-to('sm') {
-    padding: $space-4;
-  }
+    @include modal-overlay;
 }
 
 .welcome-modal {
-  background: $bg-card;
-  border: 1px solid $border-hover;
-  border-radius: $radius-2xl;
-  width: 100%;
-  max-width: 520px;
-  box-shadow: $shadow-xl;
-  position: relative;
-  overflow: hidden;
-  outline: none;
-
-  @include respond-to('sm') {
-    max-width: 100%;
-    border-radius: $radius-xl;
-  }
-
-  .modal-close {
-    @include button-reset;
-    @include flex-center;
-    position: absolute;
-    top: $space-4;
-    right: $space-4;
-    width: 32px;
-    height: 32px;
-    border-radius: $radius-md;
-    color: $text-muted;
-    z-index: 10;
-    transition: all $transition-fast;
-
-    &:hover {
-      background: $bg-hover;
-      color: $text-primary;
+    @include modal-container($modal-width-lg);
+    
+    .modal-close {
+        @include modal-close-button;
     }
-  }
 }
 
+// ----------------------------------------
 // Header
+// ----------------------------------------
 .welcome-header {
-  text-align: center;
-  padding: $space-8 $space-6 $space-4;
-  background: $bg-elevated;
-  border-bottom: 1px solid $border-subtle;
-
-  @include respond-to('sm') {
-    padding: $space-6 $space-4 $space-3;
-  }
-
-  .welcome-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: $space-1-5;
-    padding: $space-1 $space-3;
-    background: $accent-subtle;
-    border: 1px solid rgba($accent, 0.2);
-    border-radius: $radius-full;
-    font-size: $text-xs;
-    font-weight: $weight-medium;
-    color: $accent;
-    margin-bottom: $space-3;
-
-    svg {
-      color: $accent;
-    }
-  }
-
-  h2 {
-    font-size: $text-2xl;
-    font-weight: $weight-semibold;
-    letter-spacing: $tracking-tight;
-    color: $text-primary;
-    margin: 0 0 $space-2;
-
+    text-align: center;
+    padding: $space-8 $modal-padding-x $space-5;
+    border-bottom: 1px solid $border-subtle;
+    
     @include respond-to('sm') {
-      font-size: $text-xl;
+        padding: $space-6 $modal-padding-y $space-4;
     }
-  }
-
-  .welcome-subtitle {
-    font-size: $text-sm;
-    color: $text-secondary;
-    margin: 0;
-    line-height: 1.5;
-  }
+    
+    .welcome-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: $space-1-5;
+        padding: $space-1 $space-3;
+        background: $accent-subtle;
+        border: 1px solid rgba($accent, 0.15);
+        border-radius: $radius-full;
+        font-size: $text-xs;
+        font-weight: $weight-medium;
+        color: $accent;
+        margin-bottom: $space-3;
+        
+        svg {
+            color: $accent;
+        }
+    }
+    
+    h2 {
+        font-size: $text-2xl;
+        font-weight: $weight-semibold;
+        letter-spacing: $tracking-tight;
+        color: $text-primary;
+        margin: 0 0 $space-2;
+        
+        @include respond-to('sm') {
+            font-size: $text-xl;
+        }
+    }
+    
+    .welcome-subtitle {
+        font-size: $text-sm;
+        color: $text-secondary;
+        margin: 0;
+        line-height: $leading-normal;
+    }
 }
 
-// Step indicators
+// ----------------------------------------
+// Step Indicators
+// ----------------------------------------
 .step-indicators {
-  display: flex;
-  justify-content: center;
-  gap: $space-2;
-  padding: $space-4 0;
-  background: $bg-card;
-
-  .step-dot {
-    @include button-reset;
-    width: 8px;
-    height: 8px;
-    border-radius: $radius-full;
-    background: $border-primary;
-    transition: all $transition-fast;
-    cursor: pointer;
-
-    &:hover {
-      background: $text-muted;
+    display: flex;
+    justify-content: center;
+    gap: $space-2;
+    padding: $space-4 0;
+    background: $bg-card;
+    
+    .step-dot {
+        @include button-reset;
+        width: 8px;
+        height: 8px;
+        border-radius: $radius-full;
+        background: $border-primary;
+        transition: all $transition-fast;
+        cursor: pointer;
+        
+        &:hover {
+            background: $text-muted;
+        }
+        
+        &.active {
+            width: 24px;
+            background: $accent;
+        }
+        
+        &.completed {
+            background: $accent-muted;
+        }
     }
-
-    &.active {
-      width: 24px;
-      background: $accent;
-    }
-
-    &.completed {
-      background: $accent-muted;
-    }
-  }
 }
 
-// Content area
+// ----------------------------------------
+// Content Area
+// ----------------------------------------
 .welcome-content {
-  padding: $space-6;
-  text-align: center;
-  min-height: 320px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  @include respond-to('sm') {
-    padding: $space-4;
-    min-height: 280px;
-  }
+    padding: $modal-padding-x;
+    text-align: center;
+    min-height: 320px;
+    @include flex-column;
+    align-items: center;
+    
+    @include respond-to('sm') {
+        padding: $modal-padding-y;
+        min-height: 280px;
+    }
 }
 
 .feature-icon {
-  @include flex-center;
-  width: 72px;
-  height: 72px;
-  background: linear-gradient(135deg, $accent-subtle, rgba($accent, 0.15));
-  border: 1px solid rgba($accent, 0.2);
-  border-radius: $radius-xl;
-  color: $accent;
-  margin-bottom: $space-4;
-
-  svg {
-    width: 32px;
-    height: 32px;
-  }
-
-  @include respond-to('sm') {
-    width: 60px;
-    height: 60px;
-
+    @include flex-center;
+    width: 72px;
+    height: 72px;
+    color: $accent;
+    margin-bottom: $space-4;
+    
     svg {
-      width: 28px;
-      height: 28px;
+        width: 40px;
+        height: 40px;
+        stroke-width: 1.5;
     }
-  }
+    
+    @include respond-to('sm') {
+        width: 60px;
+        height: 60px;
+        
+        svg {
+            width: 32px;
+            height: 32px;
+        }
+    }
 }
 
 .feature-title {
-  font-size: $text-lg;
-  font-weight: $weight-semibold;
-  color: $text-primary;
-  margin: 0 0 $space-2;
-  letter-spacing: $tracking-tight;
+    font-size: $text-lg;
+    font-weight: $weight-semibold;
+    color: $text-primary;
+    margin: 0 0 $space-2;
+    letter-spacing: $tracking-tight;
 }
 
 .feature-description {
-  font-size: $text-sm;
-  color: $text-secondary;
-  margin: 0 0 $space-5;
-  line-height: 1.6;
-  max-width: 400px;
+    font-size: $text-sm;
+    color: $text-secondary;
+    margin: 0 0 $space-5;
+    line-height: $leading-relaxed;
+    max-width: 400px;
 }
 
 .feature-details {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  text-align: left;
-  width: 100%;
-  max-width: 360px;
-
-  li {
-    display: flex;
-    align-items: flex-start;
-    gap: $space-3;
-    padding: $space-2 0;
-    font-size: $text-sm;
-    color: $text-primary;
-    line-height: 1.5;
-
-    &:not(:last-child) {
-      border-bottom: 1px solid $border-subtle;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    text-align: left;
+    width: 100%;
+    max-width: 360px;
+    
+    li {
+        display: flex;
+        align-items: flex-start;
+        gap: $space-3;
+        padding: $space-2 0;
+        font-size: $text-sm;
+        color: $text-primary;
+        line-height: $leading-normal;
+        
+        &:not(:last-child) {
+            border-bottom: 1px solid $border-subtle;
+        }
     }
-  }
-
-  .detail-bullet {
-    flex-shrink: 0;
-    width: 6px;
-    height: 6px;
-    margin-top: 7px;
-    background: $accent;
-    border-radius: $radius-full;
-  }
+    
+    .detail-bullet {
+        flex-shrink: 0;
+        width: 6px;
+        height: 6px;
+        margin-top: 7px;
+        background: $accent;
+        border-radius: $radius-full;
+    }
 }
 
+// ----------------------------------------
 // Footer
+// ----------------------------------------
 .welcome-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-4;
-  padding: $space-4 $space-6;
-  background: $bg-secondary;
-  border-top: 1px solid $border-subtle;
-
-  @include respond-to('sm') {
-    flex-direction: column;
-    padding: $space-4;
-    gap: $space-3;
-  }
+    @include modal-footer;
+    justify-content: space-between;
+    
+    @include respond-to('sm') {
+        flex-direction: column;
+        padding: $modal-padding-y;
+        gap: $space-3;
+    }
 }
 
 .dont-show-checkbox {
-  display: flex;
-  align-items: center;
-  gap: $space-2;
-  font-size: $text-xs;
-  color: $text-muted;
-  cursor: pointer;
-  user-select: none;
-
-  input[type="checkbox"] {
-    appearance: none;
-    width: 16px;
-    height: 16px;
-    border: 1.5px solid $border-primary;
-    border-radius: $radius-sm;
-    background: $bg-card;
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    font-size: $text-xs;
+    color: $text-muted;
     cursor: pointer;
-    transition: all $transition-fast;
-    position: relative;
-
-    &:hover {
-      border-color: $accent-muted;
+    user-select: none;
+    
+    input[type="checkbox"] {
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border: 1.5px solid $border-primary;
+        border-radius: $radius-sm;
+        background: $bg-card;
+        cursor: pointer;
+        transition: all $transition-fast;
+        position: relative;
+        
+        &:hover {
+            border-color: $accent-muted;
+        }
+        
+        &:checked {
+            background: $accent;
+            border-color: $accent;
+            
+            &::after {
+                content: '';
+                position: absolute;
+                left: 4px;
+                top: 1px;
+                width: 5px;
+                height: 9px;
+                border: solid white;
+                border-width: 0 2px 2px 0;
+                transform: rotate(45deg);
+            }
+        }
     }
-
-    &:checked {
-      background: $accent;
-      border-color: $accent;
-
-      &::after {
-        content: '';
-        position: absolute;
-        left: 4px;
-        top: 1px;
-        width: 5px;
-        height: 9px;
-        border: solid white;
-        border-width: 0 2px 2px 0;
-        transform: rotate(45deg);
-      }
+    
+    span {
+        transition: color $transition-fast;
     }
-  }
-
-  span {
-    transition: color $transition-fast;
-  }
-
-  &:hover span {
-    color: $text-secondary;
-  }
+    
+    &:hover span {
+        color: $text-secondary;
+    }
 }
 
 .welcome-actions {
-  display: flex;
-  align-items: center;
-  gap: $space-3;
-
-  @include respond-to('sm') {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  .btn-secondary {
     display: flex;
     align-items: center;
-    gap: $space-1;
-    padding: $space-2-5 $space-4;
-    background: transparent;
-    border: 1px solid $border-primary;
-    border-radius: $radius-lg;
-    font-size: $text-sm;
-    font-weight: $weight-medium;
-    color: $text-secondary;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover {
-      background: $bg-hover;
-      border-color: $border-hover;
-      color: $text-primary;
+    gap: $space-3;
+    
+    @include respond-to('sm') {
+        width: 100%;
+        justify-content: flex-end;
     }
-
-    svg {
-      flex-shrink: 0;
-    }
-  }
-
-  .btn-primary {
-    display: flex;
-    align-items: center;
-    gap: $space-1-5;
-    padding: $space-2-5 $space-5;
-    background: $accent;
-    border: none;
-    border-radius: $radius-lg;
-    font-size: $text-sm;
-    font-weight: $weight-medium;
-    color: white;
-    cursor: pointer;
-    transition: all $transition-fast;
-
-    &:hover {
-      background: $accent-dark;
-    }
-
-    svg {
-      flex-shrink: 0;
-    }
-  }
 }

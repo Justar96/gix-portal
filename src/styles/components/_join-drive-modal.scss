@@ -1,348 +1,273 @@
-// JoinDriveModal styles
-@use "../abstracts" as *;
+// ========================================
+// Component - Join Drive Modal
+// Swiss Luxury Spa Design System
+// ========================================
 
+@use '../abstracts' as *;
+
+// ----------------------------------------
+// Modal Structure
+// ----------------------------------------
 .join-drive-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: $z-modal;
+    @include modal-overlay;
 }
 
 .join-drive-modal {
-  background: $bg-card;
-  border: 1px solid $border-card;
-  border-radius: $radius-xl;
-  width: 100%;
-  max-width: 380px;
-  padding: $space-6;
-  position: relative;
-  box-shadow: $shadow-lg;
-}
-
-.modal-close {
-  position: absolute;
-  top: $space-4;
-  right: $space-4;
-  background: transparent;
-  border: none;
-  color: $text-muted;
-  cursor: pointer;
-  padding: $space-1;
-  border-radius: $radius-sm;
-  transition: background $transition-fast, color $transition-fast;
-  z-index: 1;
-
-  &:hover {
-    background: $bg-hover;
-    color: $text-primary;
-  }
-}
-
-.modal-header {
-  display: flex;
-  align-items: flex-start;
-  gap: $space-3;
-  margin-bottom: $space-5;
-  padding-right: $space-6;
-
-  .modal-icon {
-    flex-shrink: 0;
-    color: $accent;
-
-    svg {
-      width: 24px;
-      height: 24px;
+    @include modal-container($modal-width-sm);
+    
+    .modal-close {
+        @include modal-close-button;
     }
-  }
-
-  .modal-text {
-    flex: 1;
-    min-width: 0;
-  }
-
-  h2 {
-    font-size: $text-base;
-    font-weight: $weight-semibold;
-    color: $text-primary;
-    margin: 0 0 $space-0-5;
-    letter-spacing: -0.01em;
-    white-space: nowrap;
-  }
-
-  .modal-subtitle {
-    font-size: $text-xs;
-    color: $text-muted;
-    line-height: 1.4;
-    margin: 0;
-  }
 }
 
+// ----------------------------------------
+// Header - Compact icon layout
+// ----------------------------------------
+.join-drive-modal .modal-header {
+    display: flex;
+    align-items: flex-start;
+    gap: $space-3;
+    padding: $modal-padding-x;
+    padding-right: $space-12;
+    border-bottom: none;
+    
+    .modal-icon {
+        flex-shrink: 0;
+        color: $accent;
+        
+        svg {
+            width: $icon-lg;
+            height: $icon-lg;
+        }
+    }
+    
+    .modal-text {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    h2 {
+        font-size: $text-base;
+        font-weight: $weight-semibold;
+        color: $text-primary;
+        margin: 0 0 $space-0-5;
+        letter-spacing: $tracking-tight;
+    }
+    
+    .modal-subtitle {
+        font-size: $text-xs;
+        color: $text-muted;
+        line-height: $leading-snug;
+        margin: 0;
+    }
+}
+
+// ----------------------------------------
+// Content Area
+// ----------------------------------------
 .modal-content {
-  min-height: 100px;
+    padding: 0 $modal-padding-x $modal-padding-x;
+    min-height: 100px;
 }
 
-// Input state
+// ----------------------------------------
+// Input State
+// ----------------------------------------
 .input-section {
-  .token-input-group {
+    .token-input-group {
+        display: flex;
+        gap: $space-2;
+        margin-bottom: $space-4;
+    }
+    
+    .token-input {
+        flex: 1;
+        padding: $space-2-5 $space-3;
+        background: $bg-secondary;
+        border: 1px solid $border-primary;
+        border-radius: $radius-md;
+        color: $text-primary;
+        font-size: $text-xs;
+        font-family: $font-mono;
+        transition: border-color $transition-fast, background $transition-fast;
+        
+        &::placeholder {
+            color: $text-muted;
+        }
+        
+        &:hover {
+            border-color: $border-hover;
+        }
+        
+        &:focus {
+            outline: none;
+            border-color: $accent;
+            background: $bg-primary;
+        }
+    }
+    
+    .paste-btn {
+        @include flex-center;
+        padding: $space-2-5;
+        background: $bg-secondary;
+        border: 1px solid $border-primary;
+        border-radius: $radius-md;
+        color: $text-secondary;
+        cursor: pointer;
+        transition: all $transition-fast;
+        
+        &:hover {
+            background: $bg-tertiary;
+            color: $text-primary;
+        }
+    }
+}
+
+// ----------------------------------------
+// Loading State
+// ----------------------------------------
+.loading-section {
+    @include flex-column-center;
+    gap: $space-3;
+    padding: $space-6 0;
+    color: $text-secondary;
+    
+    .spinning {
+        @include spin;
+        color: $accent;
+        width: $icon-lg;
+        height: $icon-lg;
+    }
+    
+    p {
+        font-size: $text-xs;
+        font-weight: $weight-medium;
+        color: $text-muted;
+    }
+}
+
+// ----------------------------------------
+// Preview State
+// ----------------------------------------
+.preview-section {
+    .invite-details {
+        background: $bg-secondary;
+        border: 1px solid $border-primary;
+        border-radius: $radius-lg;
+        padding: $space-3;
+        margin-bottom: $space-4;
+    }
+    
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: $space-2 0;
+        
+        &:first-child { padding-top: 0; }
+        &:last-child { padding-bottom: 0; border-bottom: none; }
+        &:not(:last-child) { border-bottom: 1px solid $border-subtle; }
+    }
+    
+    .detail-label {
+        @include text-label;
+        font-size: $text-2xs;
+    }
+    
+    .detail-value {
+        font-size: $text-xs;
+        color: $text-primary;
+        font-weight: $weight-medium;
+        font-family: $font-mono;
+        
+        &.permission-badge {
+            background: $accent-soft;
+            color: $accent;
+            padding: $space-0-5 $space-2;
+            border-radius: $radius-full;
+            font-size: $text-2xs;
+            font-weight: $weight-semibold;
+            font-family: $font-sans;
+        }
+    }
+}
+
+// ----------------------------------------
+// Success State
+// ----------------------------------------
+.success-section {
+    @include flex-column-center;
+    gap: $space-3;
+    padding: $space-5 0;
+    
+    .success-icon {
+        @include flex-center;
+        width: 40px;
+        height: 40px;
+        color: $success;
+        
+        svg {
+            width: $icon-xl;
+            height: $icon-xl;
+            stroke-width: 1.5;
+        }
+    }
+    
+    h3 {
+        font-size: $text-base;
+        font-weight: $weight-semibold;
+        color: $text-primary;
+        margin: 0;
+    }
+    
+    p {
+        font-size: $text-xs;
+        color: $text-muted;
+        margin: 0;
+        text-align: center;
+        line-height: $leading-snug;
+    }
+}
+
+// ----------------------------------------
+// Error State
+// ----------------------------------------
+.error-section {
+    @include flex-column;
+    gap: $space-4;
+    
+    .error-content {
+        display: flex;
+        align-items: center;
+        gap: $space-3;
+        padding: $space-3;
+        background: $error-soft;
+        border: 1px solid $error-border;
+        border-radius: $radius-md;
+    }
+    
+    .error-icon {
+        color: $error;
+        width: $icon-md;
+        height: $icon-md;
+        flex-shrink: 0;
+    }
+    
+    .error-message {
+        font-size: $text-xs;
+        color: $error;
+        font-weight: $weight-medium;
+        line-height: $leading-snug;
+        flex: 1;
+    }
+}
+
+// ----------------------------------------
+// Actions
+// ----------------------------------------
+.join-drive-modal .modal-actions {
     display: flex;
     gap: $space-2;
-    margin-bottom: $space-4;
-  }
-
-  .token-input {
-    flex: 1;
-    padding: $space-2-5 $space-3;
-    background: $bg-secondary;
-    border: 1px solid $border-subtle;
-    border-radius: $radius-md;
-    color: $text-primary;
-    font-size: $text-xs;
-    font-family: $font-mono;
-    transition: border-color $transition-fast, background $transition-fast;
-
-    &::placeholder {
-      color: $text-muted;
-    }
-
-    &:hover {
-      border-color: $border-hover;
-    }
-
-    &:focus {
-      outline: none;
-      border-color: $accent;
-      background: $bg-primary;
-    }
-  }
-
-  .paste-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: $bg-secondary;
-    border: 1px solid $border-subtle;
-    color: $text-secondary;
-    padding: $space-2-5;
-    border-radius: $radius-md;
-    cursor: pointer;
-    transition: background $transition-fast, color $transition-fast;
-
-    &:hover {
-      background: $bg-tertiary;
-      color: $text-primary;
-    }
-  }
-}
-
-// Loading state
-.loading-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: $space-3;
-  padding: $space-6 0;
-  color: $text-secondary;
-
-  .spinning {
-    animation: spin 1s linear infinite;
-    color: $accent;
-    width: 24px;
-    height: 24px;
-  }
-
-  p {
-    font-size: $text-xs;
-    font-weight: $weight-medium;
-    color: $text-muted;
-  }
-}
-
-// Preview state
-.preview-section {
-  .invite-details {
-    background: $bg-secondary;
-    border-radius: $radius-lg;
-    padding: $space-3;
-    margin-bottom: $space-4;
-    border: 1px solid $border-subtle;
-  }
-
-  .detail-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: $space-2 0;
-
-    &:first-child {
-      padding-top: 0;
-    }
-
-    &:last-child {
-      padding-bottom: 0;
-      border-bottom: none;
-    }
-
-    &:not(:last-child) {
-      border-bottom: 1px solid $border-subtle;
-    }
-  }
-
-  .detail-label {
-    font-size: $text-2xs;
-    color: $text-muted;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .detail-value {
-    font-size: $text-xs;
-    color: $text-primary;
-    font-weight: $weight-medium;
-    font-family: $font-mono;
-
-    &.permission-badge {
-      background: $accent-soft;
-      color: $accent;
-      padding: $space-0-5 $space-2;
-      border-radius: $radius-full;
-      font-size: $text-2xs;
-      font-weight: $weight-semibold;
-      font-family: $font-sans;
-    }
-  }
-}
-
-// Success state
-.success-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: $space-3;
-  padding: $space-5 0;
-
-  .success-icon {
-    width: 40px;
-    height: 40px;
-    color: $success;
-    background: $success-soft;
-    padding: $space-2;
-    border-radius: $radius-full;
-  }
-
-  h3 {
-    font-size: $text-base;
-    font-weight: $weight-semibold;
-    color: $text-primary;
-    margin: 0;
-  }
-
-  p {
-    font-size: $text-xs;
-    color: $text-muted;
-    margin: 0;
-    text-align: center;
-    line-height: 1.4;
-  }
-}
-
-// Error state
-.error-section {
-  display: flex;
-  flex-direction: column;
-  gap: $space-4;
-
-  .error-content {
-    display: flex;
-    align-items: center;
-    gap: $space-3;
-    padding: $space-3;
-    background: $error-soft;
-    border-radius: $radius-md;
-    border: 1px solid $error-border;
-  }
-
-  .error-icon {
-    color: $error;
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-  }
-
-  .error-message {
-    font-size: $text-xs;
-    color: $error;
-    font-weight: $weight-medium;
-    line-height: 1.4;
-    flex: 1;
-  }
-}
-
-// Actions
-.modal-actions {
-  display: flex;
-  gap: $space-2;
-  justify-content: flex-end;
-  margin-top: $space-2;
-
-  .btn-secondary {
-    padding: $space-2 $space-4;
-    background: transparent;
-    border: 1px solid $border-secondary;
-    border-radius: $radius-md;
-    color: $text-secondary;
-    font-size: $text-xs;
-    font-weight: $weight-medium;
-    cursor: pointer;
-    transition: background $transition-fast, color $transition-fast;
-
-    &:hover:not(:disabled) {
-      background: $bg-hover;
-      color: $text-primary;
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  }
-
-  .btn-primary {
-    padding: $space-2 $space-5;
-    background: $accent;
-    border: none;
-    border-radius: $radius-md;
-    color: white;
-    font-size: $text-xs;
-    font-weight: $weight-medium;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: $space-1-5;
-    transition: background $transition-fast;
-
-    &:hover:not(:disabled) {
-      background: $accent-dark;
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  }
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
+    justify-content: flex-end;
+    margin-top: $space-4;
 }

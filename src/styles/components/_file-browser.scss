@@ -179,12 +179,7 @@
 }
 
 .spinning {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    @include spin;
 }
 
 // Table Container
@@ -237,7 +232,8 @@
     }
     
     &.selected {
-        background: $accent-subtle;
+        background: $bg-hover;
+        border-bottom-color: transparent;
         
         .file-name {
             color: $accent;
@@ -369,7 +365,7 @@
 
 .lock-menu {
     position: absolute;
-    top: calc(100% + 4px);
+    top: calc(100% + #{$space-1});
     right: 0;
     z-index: $z-dropdown;
     background: $bg-card;
@@ -568,20 +564,26 @@
 
 .file-grid {
     display: grid;
-    gap: $space-3;
+    gap: $space-2;
     padding: $space-3;
     overflow-y: auto;
     height: 100%;
     @include custom-scrollbar;
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    align-items: start;
+    align-content: start;
+
+    @media (min-width: 1440px) {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
 
     @media (min-width: 2560px) {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
 
     @include respond-to('sm') {
-        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-        gap: $space-2;
+        grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+        gap: $space-1-5;
         padding: $space-2;
     }
 }
@@ -590,13 +592,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: $space-1-5;
-    padding: $space-3;
+    gap: $space-1;
+    padding: $space-2;
     border-radius: $radius-md;
     cursor: pointer;
-    transition: background $transition-fast;
-    border: 1px solid transparent;
+    transition: background $transition-fast, border-color $transition-fast;
+    border: 2px solid transparent;
     position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+    min-width: 0;
     
     .grid-item-checkbox {
         position: absolute;
@@ -662,13 +667,14 @@
 
 .grid-item-icon {
     @include flex-center;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     color: $text-muted;
+    flex-shrink: 0;
     
     svg {
-        width: 24px;
-        height: 24px;
+        width: 22px;
+        height: 22px;
     }
     
     .directory & svg {

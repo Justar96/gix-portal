@@ -1,6 +1,6 @@
 // ========================================
 // Component - Update Notification
-// Modern Light Theme with Bordered Design
+// Swiss Luxury Spa Design System
 // ========================================
 
 @use '../abstracts' as *;
@@ -19,12 +19,11 @@
     box-shadow: $shadow-lg;
     padding: $space-4;
     max-width: 360px;
-
+    
     &.error {
         border-color: $error-border;
         
         .update-icon {
-            background: $error-soft;
             color: $error;
         }
     }
@@ -40,14 +39,13 @@
     flex-shrink: 0;
     width: 40px;
     height: 40px;
-    border-radius: $radius-lg;
-    background: $success-soft;
     color: $success;
     @include flex-center;
-
-    &.error {
-        background: $error-soft;
-        color: $error;
+    
+    svg {
+        width: $icon-lg;
+        height: $icon-lg;
+        stroke-width: 1.5;
     }
 }
 
@@ -81,7 +79,7 @@
 
 .update-progress-fill {
     height: 100%;
-    background: $text-primary;
+    background: $accent;
     border-radius: $radius-full;
     transition: width $duration-base $ease-default;
 }
@@ -110,7 +108,7 @@
     color: $text-muted;
     border-radius: $radius-sm;
     transition: all $transition-fast;
-
+    
     &:hover {
         background: $bg-hover;
         color: $text-secondary;
@@ -124,23 +122,31 @@
     display: flex;
     align-items: center;
     gap: $space-1-5;
-
+    
     .update-btn-compact {
         @include button-reset;
         @include flex-center;
         width: 28px;
         height: 28px;
         border-radius: $radius-md;
-        background: $text-primary;
-        color: $bg-primary;
+        background: $accent;
+        color: white;
         cursor: pointer;
         transition: background $transition-fast;
-
+        
         &:hover {
-            background: $text-secondary;
+            background: $accent-dark;
+        }
+        
+        &.error {
+            background: $error;
+            
+            &:hover {
+                background: #dc2626; // Darker error color
+            }
         }
     }
-
+    
     .update-progress-compact {
         display: flex;
         align-items: center;
@@ -154,14 +160,5 @@
 }
 
 .spinning {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+    @include spin;
 }

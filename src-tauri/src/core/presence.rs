@@ -211,14 +211,19 @@ impl DrivePresenceManager {
     /// Add or update a user's presence
     pub async fn user_joined(&self, node_id: NodeId) {
         let mut users = self.users.write().await;
+        let is_new = !users.contains_key(&node_id);
+
         users
             .entry(node_id)
             .or_insert_with(|| UserPresence::new(node_id))
             .touch();
 
-        // Add activity
-        self.add_activity(ActivityEntry::new(ActivityType::UserJoined, node_id))
-            .await;
+        // Only add activity if user actually joined (not already present)
+        if is_new {
+            drop(users); // Release lock before async call
+            self.add_activity(ActivityEntry::new(ActivityType::UserJoined, node_id))
+                .await;
+        }
     }
 
     /// Remove a user

@@ -1,169 +1,151 @@
-// Sync Status Bar styles
+// ========================================
+// Component - Sync Status Bar
+// Swiss Luxury Spa Design System
+// ========================================
+
+@use '../abstracts' as *;
+
 .sync-status-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
-  border-bottom: 1px solid var(--border-color);
-  font-size: 12px;
-  gap: 16px;
-  min-height: 44px;
-
-  .sync-status-left {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .sync-status-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .sync-indicator {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-weight: 600;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    transition: all 0.2s ease;
-
-    &.syncing {
-      color: #10b981;
-      background: rgba(16, 185, 129, 0.12);
-      box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2);
-
-      svg {
-        filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.4));
-      }
+    @include flex-between;
+    padding: $space-2 $space-4;
+    background: $bg-secondary;
+    border-bottom: 1px solid $border-subtle;
+    font-size: $text-xs;
+    gap: $space-4;
+    min-height: $button-height;
+    
+    .sync-status-left {
+        @include flex-start;
+        gap: $space-4;
     }
-
-    &.offline {
-      color: var(--text-muted);
-      background: var(--bg-tertiary);
-      box-shadow: 0 0 0 1px var(--border-color);
+    
+    .sync-status-right {
+        @include flex-start;
+        gap: $space-2;
     }
-
-    svg {
-      flex-shrink: 0;
+    
+    .sync-indicator {
+        @include flex-start;
+        gap: $space-2;
+        padding: $space-1-5 $space-3;
+        border-radius: $radius-full;
+        font-weight: $weight-semibold;
+        font-size: $text-2xs;
+        text-transform: uppercase;
+        letter-spacing: $tracking-wider;
+        transition: all $transition-base;
+        
+        &.syncing {
+            color: $success;
+            background: $success-soft;
+            border: 1px solid $success-border;
+        }
+        
+        &.offline {
+            color: $text-muted;
+            background: $bg-tertiary;
+            border: 1px solid $border-subtle;
+        }
+        
+        svg {
+            flex-shrink: 0;
+        }
+        
+        .sync-pulse {
+            width: 6px;
+            height: 6px;
+            border-radius: $radius-full;
+            background: currentColor;
+        }
     }
-
-    .sync-pulse {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: currentColor;
+    
+    .status-divider {
+        width: 1px;
+        height: $space-5;
+        background: $border-subtle;
     }
-  }
-
-  .status-divider {
-    width: 1px;
-    height: 20px;
-    background: var(--border-color);
-  }
-
-  .peer-count {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 12px;
-    background: var(--bg-tertiary);
-    color: var(--text-secondary);
-    font-weight: 500;
-
-    svg {
-      opacity: 0.7;
+    
+    .peer-count {
+        @include flex-start;
+        gap: $space-1-5;
+        padding: $space-1 $space-2-5;
+        border-radius: $radius-xl;
+        background: $bg-tertiary;
+        color: $text-secondary;
+        font-weight: $weight-medium;
+        
+        svg {
+            opacity: 0.7;
+        }
+        
+        span {
+            min-width: 14px;
+            text-align: center;
+        }
     }
-
-    span {
-      min-width: 14px;
-      text-align: center;
+    
+    .last-sync {
+        @include flex-start;
+        gap: $space-1-5;
+        color: $text-muted;
+        font-size: $text-2xs;
+        
+        svg {
+            color: $success;
+        }
     }
-  }
-
-  .last-sync {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--text-muted);
-    font-size: 11px;
-
-    svg {
-      color: #10b981;
+    
+    .sync-error {
+        @include flex-start;
+        gap: $space-1-5;
+        padding: $space-1 $space-2-5;
+        border-radius: $radius-xl;
+        background: $error-soft;
+        color: $error;
+        font-size: $text-2xs;
+        font-weight: $weight-medium;
     }
-  }
-
-  .sync-error {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border-radius: 12px;
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-    font-size: 11px;
-    font-weight: 500;
-  }
-
-  .btn-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background: var(--bg-primary);
-    color: var(--text-secondary);
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &:hover:not(:disabled) {
-      background: var(--bg-tertiary);
-      color: var(--text-primary);
-      border-color: var(--text-muted);
+    
+    .btn-status {
+        @include flex-start;
+        gap: $space-1-5;
+        padding: $space-1-5 $space-3-5;
+        border: 1px solid $border-primary;
+        border-radius: $radius-lg;
+        background: $bg-primary;
+        color: $text-secondary;
+        font-size: $text-xs;
+        font-weight: $weight-medium;
+        cursor: pointer;
+        transition: all $transition-base;
+        
+        &:hover:not(:disabled) {
+            background: $bg-hover;
+            color: $text-primary;
+            border-color: $border-hover;
+        }
+        
+        &.active {
+            background: $accent-soft;
+            border-color: rgba($accent, 0.3);
+            color: $accent;
+        }
+        
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        svg {
+            flex-shrink: 0;
+        }
     }
-
-    &.active {
-      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0.05) 100%);
-      border-color: rgba(99, 102, 241, 0.4);
-      color: #6366f1;
-      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
-
-      &:hover:not(:disabled) {
-        background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0.08) 100%);
-      }
-    }
-
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    svg {
-      flex-shrink: 0;
-    }
-  }
 }
 
-// Spinning animations
 .spinning {
-  animation: spin 0.8s linear infinite;
+    @include spin;
 }
 
 .spinning-slow {
-  animation: spin 3s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+    animation: spin 3s linear infinite;
 }
