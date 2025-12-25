@@ -240,11 +240,18 @@ impl EncryptionManager {
     }
 
     /// Clear cached keys (for security, e.g., on app lock)
+    ///
+    /// Returns true if any keys were actually cleared.
     #[allow(dead_code)]
-    pub async fn clear_cache(&self) {
+    pub async fn clear_cache(&self) -> bool {
         let mut cache = self.cached_keys.write().await;
+        if cache.is_empty() {
+            return false;
+        }
+        let count = cache.len();
         cache.clear();
-        tracing::info!("Encryption key cache cleared");
+        tracing::info!("Encryption key cache cleared ({} keys)", count);
+        true
     }
 }
 

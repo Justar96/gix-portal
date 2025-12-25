@@ -210,10 +210,11 @@ pub fn run() {
                                     // Window lost focus - clear encryption key cache for security
                                     let em_clone = em_for_blur.clone();
                                     tauri::async_runtime::spawn(async move {
-                                        em_clone.clear_cache().await;
-                                        tracing::debug!(
-                                            "Encryption key cache cleared due to window blur"
-                                        );
+                                        if em_clone.clear_cache().await {
+                                            tracing::debug!(
+                                                "Encryption key cache cleared due to window blur"
+                                            );
+                                        }
                                     });
                                 }
                             });
