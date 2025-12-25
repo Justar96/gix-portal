@@ -27,7 +27,7 @@ interface FeatureStep {
 const FEATURES: FeatureStep[] = [
   {
     id: "create",
-    icon: <FolderSync size={36} strokeWidth={1.5} />,
+    icon: <FolderSync size={32} strokeWidth={1.5} />,
     title: "Create & Sync",
     description:
       "Transform any folder into a secure P2P drive that syncs instantly across all your devices.",
@@ -39,7 +39,7 @@ const FEATURES: FeatureStep[] = [
   },
   {
     id: "share",
-    icon: <Share2 size={36} strokeWidth={1.5} />,
+    icon: <Share2 size={32} strokeWidth={1.5} />,
     title: "Share Securely",
     description:
       "Generate invite links with custom permissions. Control who can view, edit, or manage your files.",
@@ -51,7 +51,7 @@ const FEATURES: FeatureStep[] = [
   },
   {
     id: "collaborate",
-    icon: <Users size={36} strokeWidth={1.5} />,
+    icon: <Users size={32} strokeWidth={1.5} />,
     title: "Collaborate Live",
     description:
       "See who's online, track changes in real-time, and resolve conflicts with ease.",
@@ -70,6 +70,7 @@ export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
   const [dontShowAgain, setDontShowAgain] = useState(false);
   const [direction, setDirection] = useState<"next" | "prev">("next");
   const [isAnimating, setIsAnimating] = useState(false);
+  const [iconClicked, setIconClicked] = useState(false);
 
   const currentFeature = FEATURES[currentStep];
   const isLastStep = currentStep === FEATURES.length - 1;
@@ -84,11 +85,15 @@ export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
     setTimeout(() => {
       setCurrentStep(newStep);
       // Wait for enter animation to complete
-      setTimeout(() => setIsAnimating(false), 300);
-    }, 200);
+      setTimeout(() => setIsAnimating(false), 250);
+    }, 180);
   };
 
   const handleNext = () => {
+    // Trigger icon animation
+    setIconClicked(true);
+    setTimeout(() => setIconClicked(false), 300);
+
     if (isLastStep) {
       handleFinish();
     } else {
@@ -151,7 +156,7 @@ export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
         {/* Header with branding */}
         <div className="welcome-header">
           <div className="welcome-badge">
-            <Sparkles size={14} />
+            <Sparkles size={12} />
             <span>Welcome to Gix</span>
           </div>
           <h2 id="welcome-title">P2P Drive Sharing</h2>
@@ -188,9 +193,9 @@ export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
 
           <ul className="feature-highlights">
             {currentFeature.highlights.map((highlight, index) => (
-              <li key={index} style={{ animationDelay: `${index * 80}ms` }}>
+              <li key={index} style={{ animationDelay: `${index * 60}ms` }}>
                 <span className="highlight-icon">
-                  <Check size={14} strokeWidth={2.5} />
+                  <Check size={12} strokeWidth={2.5} />
                 </span>
                 {highlight}
               </li>
@@ -212,31 +217,31 @@ export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
           <div className="welcome-actions">
             {!isFirstStep && (
               <button
-                className="btn-secondary"
+                className="btn-secondary btn-nav"
                 onClick={handlePrev}
                 aria-label="Previous step"
                 disabled={isAnimating}
               >
                 <ChevronLeft size={16} />
-                Back
+                <span>Back</span>
               </button>
             )}
 
             <button
-              className="btn-primary"
+              className={`btn-primary btn-nav ${iconClicked ? "icon-nudge" : ""}`}
               onClick={handleNext}
               aria-label={isLastStep ? "Get started" : "Next step"}
               disabled={isAnimating}
             >
               {isLastStep ? (
                 <>
-                  Get Started
-                  <ArrowRight size={16} />
+                  <span>Get Started</span>
+                  <ArrowRight size={16} className="nav-icon" />
                 </>
               ) : (
                 <>
-                  Next
-                  <ChevronRight size={16} />
+                  <span>Next</span>
+                  <ChevronRight size={16} className="nav-icon" />
                 </>
               )}
             </button>

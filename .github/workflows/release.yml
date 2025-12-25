@@ -60,15 +60,34 @@ jobs:
           releaseDraft: false
           prerelease: false
 
-      - name: Get version
-        id: version
-        run: echo "version=${{ github.ref_name }}" | sed 's/v//' >> $GITHUB_OUTPUT
-        shell: bash
+      - name: List bundle files
+        run: |
+          echo "=== NSIS bundle files ==="
+          Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Recurse | ForEach-Object { $_.FullName }
+          echo "=== MSI bundle files ==="
+          Get-ChildItem -Path "src-tauri/target/release/bundle/msi" -Recurse | ForEach-Object { $_.FullName }
+        shell: pwsh
 
       - name: Create latest.json
         run: |
           $version = "${{ github.ref_name }}".TrimStart('v')
-          $sig = Get-Content "src-tauri/target/release/bundle/nsis/Gix_${version}_x64-setup.exe.sig" -Raw
+
+          # Find the signature file
+          $sigFile = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Filter "*.exe.sig" -Recurse | Select-Object -First 1
+
+          if (-not $sigFile) {
+            Write-Host "No .exe.sig file found in nsis folder. Checking msi folder..."
+            $sigFile = Get-ChildItem -Path "src-tauri/target/release/bundle" -Filter "*.sig" -Recurse | Select-Object -First 1
+          }
+
+          if (-not $sigFile) {
+            Write-Error "No signature file found!"
+            exit 1
+          }
+
+          Write-Host "Found signature file: $($sigFile.FullName)"
+          $sig = Get-Content $sigFile.FullName -Raw
+
           $json = @{
             version = $version
             notes = "Update to version $version"
@@ -80,6 +99,7 @@ jobs:
               }
             }
           } | ConvertTo-Json -Depth 4
+
           $json | Out-File -FilePath "latest.json" -Encoding utf8
           Write-Host "Created latest.json:"
           Get-Content "latest.json"
