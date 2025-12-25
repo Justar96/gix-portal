@@ -42,6 +42,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Update version in tauri.conf.json
+        run: |
+          $version = "${{ inputs.version }}"
+          $configPath = "src-tauri/tauri.conf.json"
+          
+          # Read and update the config
+          $config = Get-Content $configPath -Raw | ConvertFrom-Json
+          $config.version = $version
+          
+          # Write back with proper formatting
+          $config | ConvertTo-Json -Depth 10 | Set-Content $configPath -Encoding utf8
+          
+          Write-Host "Updated tauri.conf.json version to: $version"
+        shell: pwsh
+
       - name: Build Tauri app (unsigned)
         run: npx tauri build
         env:
