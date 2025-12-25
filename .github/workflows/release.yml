@@ -59,4 +59,35 @@ jobs:
             Existing users will receive this update automatically.
           releaseDraft: false
           prerelease: false
-          includeUpdaterJson: true
+
+      - name: Get version
+        id: version
+        run: echo "version=${{ github.ref_name }}" | sed 's/v//' >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Create latest.json
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $sig = Get-Content "src-tauri/target/release/bundle/nsis/Gix_${version}_x64-setup.exe.sig" -Raw
+          $json = @{
+            version = $version
+            notes = "Update to version $version"
+            pub_date = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            platforms = @{
+              "windows-x86_64" = @{
+                signature = $sig.Trim()
+                url = "https://github.com/Justar96/gix-portal/releases/download/v$version/Gix_${version}_x64-setup.exe"
+              }
+            }
+          } | ConvertTo-Json -Depth 4
+          $json | Out-File -FilePath "latest.json" -Encoding utf8
+          Write-Host "Created latest.json:"
+          Get-Content "latest.json"
+        shell: pwsh
+
+      - name: Upload latest.json to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: latest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
