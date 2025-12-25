@@ -68,6 +68,37 @@
 }
 
 // ----------------------------------------
+// Secondary Accent Button (for Join actions)
+// ----------------------------------------
+.btn-secondary-accent {
+    @include button-base;
+    padding: $space-2-5 $space-5;
+    background: rgba($accent, 0.08);
+    border: 1px solid rgba($accent, 0.25);
+    border-radius: $radius-lg;
+    color: $accent;
+    font-size: $text-sm;
+    font-weight: $weight-medium;
+    min-height: $button-height;
+    transition: all $transition-fast;
+    
+    &:hover:not(:disabled) {
+        background: rgba($accent, 0.14);
+        border-color: rgba($accent, 0.4);
+    }
+    
+    &:active:not(:disabled) {
+        background: rgba($accent, 0.18);
+    }
+    
+    @include respond-to('sm') {
+        padding: $space-2 $space-4;
+        font-size: $text-xs;
+        min-height: $button-height-sm;
+    }
+}
+
+// ----------------------------------------
 // Icon Button
 // ----------------------------------------
 .btn-icon {

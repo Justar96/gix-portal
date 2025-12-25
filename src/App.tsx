@@ -25,7 +25,7 @@ function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showPresence, setShowPresence] = useState(true);
   const { showWelcome, setShowWelcome } = useWelcomeModal();
-  
+
   // Get conflict count for presence panel
   const { conflictCount } = useConflicts({ driveId: selectedDrive?.id ?? "" });
 
@@ -191,7 +191,7 @@ function App() {
                         Create Drive
                       </button>
                       <button
-                        className="btn-secondary"
+                        className="btn-secondary-accent"
                         onClick={() => setShowJoinModal(true)}
                       >
                         <Radar size={14} />

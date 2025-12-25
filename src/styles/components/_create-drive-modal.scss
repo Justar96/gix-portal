@@ -1,0 +1,177 @@
+// ========================================
+// Component - Create Drive Modal
+// Clean Minimal Design
+// ========================================
+
+@use '../abstracts' as *;
+
+// ----------------------------------------
+// Modal Customizations
+// ----------------------------------------
+.create-drive-modal {
+    max-width: 400px;
+
+    .modal-header.centered {
+        text-align: center;
+        padding: $space-6 $modal-padding-x $space-4;
+
+        h2 {
+            font-size: $text-lg;
+            font-weight: $weight-semibold;
+            color: $text-primary;
+            margin: 0 0 $space-1;
+        }
+    }
+
+    .modal-icon {
+        @include flex-center;
+        width: 56px;
+        height: 56px;
+        background: linear-gradient(135deg, $accent-subtle 0%, rgba($accent, 0.06) 100%);
+        border: 1px solid rgba($accent, 0.1);
+        border-radius: $radius-lg;
+        color: $accent;
+        margin: 0 auto $space-3;
+    }
+
+    .modal-subtitle {
+        font-size: $text-xs;
+        color: $text-muted;
+        margin: 0;
+    }
+
+    .modal-body {
+        padding: $space-4 $modal-padding-x $space-5;
+    }
+
+    .modal-footer {
+        padding: $space-4 $modal-padding-x;
+        border-top: 1px solid $border-subtle;
+    }
+}
+
+// ----------------------------------------
+// Folder Selection Button
+// ----------------------------------------
+.folder-select-btn {
+    @include button-reset;
+    display: flex;
+    align-items: center;
+    gap: $space-3;
+    width: 100%;
+    padding: $space-4;
+    background: $bg-elevated;
+    border: 1.5px dashed $border-primary;
+    border-radius: $radius-lg;
+    cursor: pointer;
+    transition: all $transition-fast;
+    margin-bottom: $space-4;
+    text-align: left;
+
+    &:hover:not(:disabled) {
+        border-color: $accent;
+        background: $accent-subtle;
+
+        .folder-select-icon {
+            color: $accent;
+            background: rgba($accent, 0.12);
+        }
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    // Selected state
+    &.selected {
+        border-style: solid;
+        border-color: $success;
+        background: rgba($success, 0.04);
+
+        .folder-select-icon {
+            background: $success;
+            color: white;
+        }
+
+        &:hover:not(:disabled) {
+            border-color: $success;
+            background: rgba($success, 0.08);
+        }
+    }
+}
+
+.folder-select-icon {
+    @include flex-center;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    background: $bg-secondary;
+    border-radius: $radius-md;
+    color: $text-tertiary;
+    transition: all $transition-fast;
+}
+
+.folder-select-content {
+    flex: 1;
+    min-width: 0;
+    @include flex-column;
+    gap: $space-0-5;
+
+    .folder-name {
+        font-size: $text-sm;
+        font-weight: $weight-medium;
+        color: $text-primary;
+    }
+
+    .folder-path {
+        font-size: $text-xs;
+        color: $text-muted;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+
+// ----------------------------------------
+// Compact Form Group
+// ----------------------------------------
+.form-group.compact {
+    margin-bottom: 0;
+
+    label {
+        font-size: 11px;
+        margin-bottom: $space-1-5;
+    }
+
+    input {
+        min-height: 40px;
+        padding: $space-2-5 $space-3;
+        font-size: $text-sm;
+    }
+}
+
+// ----------------------------------------
+// Form Error
+// ----------------------------------------
+.form-error {
+    display: flex;
+    align-items: center;
+    gap: $space-2;
+    padding: $space-2-5 $space-3;
+    background: $error-soft;
+    border: 1px solid $error-border;
+    border-radius: $radius-md;
+    margin-top: $space-3;
+
+    svg {
+        flex-shrink: 0;
+        color: $error;
+    }
+
+    span {
+        font-size: $text-xs;
+        color: $error;
+        line-height: $leading-normal;
+    }
+}

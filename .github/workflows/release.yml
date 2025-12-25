@@ -39,54 +39,47 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
+      - name: Build Tauri app (unsigned)
+        run: npx tauri build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sign the installer
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $exePath = "src-tauri/target/release/bundle/nsis/Gix_${version}_x64-setup.exe"
+
+          Write-Host "Signing: $exePath"
+
+          # Write key to temp file
+          $env:TAURI_SIGNING_PRIVATE_KEY | Out-File -FilePath "private.key" -Encoding utf8 -NoNewline
+
+          # Sign using tauri CLI
+          npx tauri signer sign --private-key private.key --password "$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$exePath"
+
+          # Clean up
+          Remove-Item "private.key"
+
+          # Verify signature was created
+          $sigPath = "$exePath.sig"
+          if (Test-Path $sigPath) {
+            Write-Host "Signature created: $sigPath"
+            Get-Content $sigPath
+          } else {
+            Write-Error "Failed to create signature!"
+            exit 1
+          }
+        shell: pwsh
+        env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          tauriScript: npx tauri
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Gix v__VERSION__'
-          releaseBody: |
-            See the changelog for details.
-
-            ## Installation
-            Download `Gix_x.x.x_x64-setup.exe` and run it.
-
-            ## Auto-Update
-            Existing users will receive this update automatically.
-          releaseDraft: false
-          prerelease: false
-
-      - name: List bundle files
-        run: |
-          echo "=== NSIS bundle files ==="
-          Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Recurse | ForEach-Object { $_.FullName }
-          echo "=== MSI bundle files ==="
-          Get-ChildItem -Path "src-tauri/target/release/bundle/msi" -Recurse | ForEach-Object { $_.FullName }
-        shell: pwsh
 
       - name: Create latest.json
         run: |
           $version = "${{ github.ref_name }}".TrimStart('v')
+          $sigPath = "src-tauri/target/release/bundle/nsis/Gix_${version}_x64-setup.exe.sig"
 
-          # Find the signature file
-          $sigFile = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Filter "*.exe.sig" -Recurse | Select-Object -First 1
-
-          if (-not $sigFile) {
-            Write-Host "No .exe.sig file found in nsis folder. Checking msi folder..."
-            $sigFile = Get-ChildItem -Path "src-tauri/target/release/bundle" -Filter "*.sig" -Recurse | Select-Object -First 1
-          }
-
-          if (-not $sigFile) {
-            Write-Error "No signature file found!"
-            exit 1
-          }
-
-          Write-Host "Found signature file: $($sigFile.FullName)"
-          $sig = Get-Content $sigFile.FullName -Raw
+          $sig = Get-Content $sigPath -Raw
 
           $json = @{
             version = $version
@@ -105,9 +98,18 @@ jobs:
           Get-Content "latest.json"
         shell: pwsh
 
-      - name: Upload latest.json to release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: latest.json
+          files: |
+            src-tauri/target/release/bundle/nsis/Gix_*_x64-setup.exe
+            src-tauri/target/release/bundle/nsis/Gix_*_x64-setup.exe.sig
+            latest.json
+          body: |
+            ## Installation
+            Download the `.exe` installer and run it.
+
+            ## Auto-Update
+            Existing users will receive this update automatically.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

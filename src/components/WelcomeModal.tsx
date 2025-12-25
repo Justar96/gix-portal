@@ -68,7 +68,6 @@ const STORAGE_KEY = "gix_welcome_shown";
 export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [dontShowAgain, setDontShowAgain] = useState(false);
-  const [direction, setDirection] = useState<"next" | "prev">("next");
   const [isAnimating, setIsAnimating] = useState(false);
   const [iconClicked, setIconClicked] = useState(false);
 
@@ -76,34 +75,28 @@ export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
   const isLastStep = currentStep === FEATURES.length - 1;
   const isFirstStep = currentStep === 0;
 
-  const animateToStep = (newStep: number, dir: "next" | "prev") => {
+  const goToStep = (newStep: number) => {
     if (isAnimating || newStep === currentStep) return;
     setIsAnimating(true);
-    setDirection(dir);
-
-    // Wait for exit animation, then change step
-    setTimeout(() => {
-      setCurrentStep(newStep);
-      // Wait for enter animation to complete
-      setTimeout(() => setIsAnimating(false), 250);
-    }, 180);
+    setCurrentStep(newStep);
+    setTimeout(() => setIsAnimating(false), 150);
   };
 
   const handleNext = () => {
     // Trigger icon animation
     setIconClicked(true);
-    setTimeout(() => setIconClicked(false), 300);
+    setTimeout(() => setIconClicked(false), 200);
 
     if (isLastStep) {
       handleFinish();
     } else {
-      animateToStep(currentStep + 1, "next");
+      goToStep(currentStep + 1);
     }
   };
 
   const handlePrev = () => {
     if (!isFirstStep) {
-      animateToStep(currentStep - 1, "prev");
+      goToStep(currentStep - 1);
     }
   };
 
@@ -134,7 +127,7 @@ export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
 
   const handleStepClick = (index: number) => {
     if (index !== currentStep) {
-      animateToStep(index, index > currentStep ? "next" : "prev");
+      goToStep(index);
     }
   };
 
@@ -182,7 +175,7 @@ export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
 
         {/* Feature content with animation */}
         <div
-          className={`welcome-content ${isAnimating ? `animating-${direction}` : "visible"}`}
+          className={`welcome-content ${isAnimating ? "animating" : "visible"}`}
           key={currentFeature.id}
         >
           <div className="feature-icon">{currentFeature.icon}</div>

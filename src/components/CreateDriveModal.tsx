@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { X, FolderOpen, Loader2 } from "lucide-react";
+import { X, FolderOpen, Loader2, FolderPlus, Check, AlertCircle } from "lucide-react";
 import type { DriveInfo } from "../types";
 
 interface CreateDriveModalProps {
@@ -24,6 +24,7 @@ export function CreateDriveModal({ onClose, onCreated }: CreateDriveModalProps) 
       });
       if (selected && typeof selected === "string") {
         setPath(selected);
+        setError(null);
         // Auto-fill name from folder name if empty
         if (!name) {
           const folderName = selected.split(/[/\\]/).pop() || "New Drive";
@@ -62,7 +63,7 @@ export function CreateDriveModal({ onClose, onCreated }: CreateDriveModalProps) 
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !loading) {
+    if (e.key === "Enter" && !loading && name.trim() && path.trim()) {
       handleCreate();
     }
     if (e.key === "Escape") {
@@ -70,52 +71,77 @@ export function CreateDriveModal({ onClose, onCreated }: CreateDriveModalProps) 
     }
   };
 
+  const isValid = name.trim() && path.trim();
+  const folderName = path ? path.split(/[/\\]/).pop() : null;
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal"
+        className="modal create-drive-modal"
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleKeyDown}
       >
-        <div className="modal-header">
+        <button className="modal-close" onClick={onClose}>
+          <X size={16} />
+        </button>
+
+        <div className="modal-header centered">
+          <div className="modal-icon">
+            <FolderPlus size={24} strokeWidth={1.5} />
+          </div>
           <h2>Create Drive</h2>
-          <button className="modal-close" onClick={onClose}>
-            <X size={16} />
-          </button>
+          <p className="modal-subtitle">Select a folder to share peer-to-peer</p>
         </div>
 
         <div className="modal-body">
-          <div className="form-group">
-            <label htmlFor="drive-name">Name</label>
+          {/* Folder Selection - Primary Action */}
+          <button
+            type="button"
+            className={`folder-select-btn ${path ? "selected" : ""}`}
+            onClick={selectFolder}
+            disabled={loading}
+          >
+            <div className="folder-select-icon">
+              {path ? <Check size={20} strokeWidth={2} /> : <FolderOpen size={20} />}
+            </div>
+            <div className="folder-select-content">
+              {path ? (
+                <>
+                  <span className="folder-name">{folderName}</span>
+                  <span className="folder-path">{path}</span>
+                </>
+              ) : (
+                <>
+                  <span className="folder-name">Select Folder</span>
+                  <span className="folder-path">Choose a folder from your computer</span>
+                </>
+              )}
+            </div>
+          </button>
+
+          {/* Drive Name Input */}
+          <div className="form-group compact">
+            <label htmlFor="drive-name">Drive Name</label>
             <input
               id="drive-name"
               type="text"
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="My Shared Drive"
-              autoFocus
+              onChange={(e) => {
+                setName(e.target.value);
+                setError(null);
+              }}
+              placeholder="Enter a name for this drive"
+              disabled={loading}
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="drive-path">Folder</label>
-            <div className="path-input">
-              <input
-                id="drive-path"
-                type="text"
-                value={path}
-                onChange={(e) => setPath(e.target.value)}
-                placeholder="Select a folder..."
-                readOnly
-              />
-              <button onClick={selectFolder} disabled={loading}>
-                <FolderOpen size={16} />
-                Browse
-              </button>
+          {/* Error Display */}
+          {error && (
+            <div className="form-error">
+              <AlertCircle size={14} />
+              <span>{error}</span>
             </div>
-          </div>
-
-          {error && <div className="error-message">{error}</div>}
+          )}
         </div>
 
         <div className="modal-footer">
@@ -125,15 +151,18 @@ export function CreateDriveModal({ onClose, onCreated }: CreateDriveModalProps) 
           <button
             className="btn-primary"
             onClick={handleCreate}
-            disabled={loading || !name.trim() || !path.trim()}
+            disabled={loading || !isValid}
           >
             {loading ? (
               <>
-                <Loader2 size={16} className="animate-spin" />
+                <Loader2 size={16} className="spinning" />
                 Creating...
               </>
             ) : (
-              "Create Drive"
+              <>
+                <FolderPlus size={16} />
+                Create Drive
+              </>
             )}
           </button>
         </div>
