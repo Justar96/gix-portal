@@ -86,9 +86,9 @@
       }
     },
     "updater": {
-      "pubkey": "",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IENCNkM3QzhBRUE4MjFDQzIKUldUQ0hJTHFpbnhzeTNwS0xaVFNSZWVnS1hWVndjTUNneUhvd2UwTmJCanQraG5XMmNQSDlCalIK",
       "endpoints": [
-        "https://releases.gix.app/{{target}}/{{arch}}/{{current_version}}"
+        "https://github.com/Justar96/gix-portal/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"

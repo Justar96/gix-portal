@@ -1,3 +1,4 @@
+mod audit;
 mod conflict;
 mod drive;
 mod files;
@@ -7,6 +8,7 @@ mod presence;
 mod security;
 mod sync;
 
+pub use audit::{get_audit_count, get_audit_log, get_denied_access_log, get_drive_audit_log};
 pub use conflict::{
     dismiss_conflict, get_conflict, get_conflict_count, list_conflicts, resolve_conflict,
 };
@@ -25,7 +27,7 @@ pub use presence::{
 };
 pub use security::{
     accept_invite, check_permission, generate_invite, grant_permission, list_permissions,
-    revoke_permission, verify_invite, SecurityStore,
+    list_revoked_tokens, revoke_invite, revoke_permission, verify_invite, SecurityStore,
 };
 pub use sync::{
     cancel_transfer, download_file, get_sync_status, get_transfer, is_watching, list_transfers,

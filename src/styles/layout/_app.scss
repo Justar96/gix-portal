@@ -412,7 +412,8 @@
 // ----------------------------------------
 .content {
     flex: 1;
-    @include flex-column;
+    display: flex;
+    flex-direction: row; // Horizontal layout for content-main and presence panel
     overflow: hidden;
     background: $bg-primary;
     position: relative;
@@ -421,15 +422,14 @@
         min-height: 0;
         flex: 1;
     }
-    
-    // Adjust header when panel is open
-    &:has(.drive-workspace.panel-open) .content-header {
-        padding-right: calc($space-4 + 280px);
-        
-        @include respond-to('lg') {
-            padding-right: $space-3;
-        }
-    }
+}
+
+// Content Main - contains header and body
+.content-main {
+    flex: 1;
+    @include flex-column;
+    min-width: 0;
+    overflow: hidden;
 }
 
 // ----------------------------------------

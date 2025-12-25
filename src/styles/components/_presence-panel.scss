@@ -48,30 +48,24 @@
     }
   }
 
-  // Responsive Behavior (Tablet/Mobile)
+  // Responsive: overlay mode on smaller screens
   @include respond-to('lg') {
     position: absolute;
     right: 0;
     top: 0;
     bottom: 0;
-    height: 100%;
     z-index: $z-overlay;
 
-    // When open on mobile, it overlays with shadow
     &.open {
-      width: 280px;
       box-shadow: -4px 0 16px rgba(0, 0, 0, 0.15);
-      border-left: 1px solid $border-primary;
     }
 
-    // When closed on mobile, it slides off-screen completely
     &.closed {
-      width: 280px; // Keep width so layout inside is preserved
-      transform: translateX(100%); // Move off-screen right
+      width: 280px;
+      transform: translateX(100%);
       border-left: none;
 
       .presence-toggle-tab {
-        // Ensure tab is visible on screen edge
         transform: translateX(-100%) translateY(-50%);
         left: 0;
       }
@@ -148,13 +142,14 @@
     background: $bg-primary; // Ensure background covers
   }
 
-  // Panel Header (new)
+  // Panel Header - matches content-header height to align with it
   .presence-panel-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: $space-3 $space-4;
-    border-bottom: 1px solid $border-subtle;
+    height: 40px; // Match content-header height
+    padding: 0 $space-4;
+    border-bottom: 1px solid $border-secondary; // Match content-header border
     background: $bg-primary;
     flex-shrink: 0;
 

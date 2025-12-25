@@ -5,6 +5,7 @@
 //!
 //! All messages are cryptographically signed for authentication.
 //! Sender authorization is verified against ACLs when a security store is configured.
+//! Per-peer rate limiting prevents DoS attacks via message flooding.
 
 #![allow(dead_code)]
 
@@ -20,11 +21,71 @@ use iroh_gossip::proto::TopicId;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tokio::sync::{broadcast, RwLock};
+use std::time::Instant;
+use tokio::sync::{broadcast, Mutex, RwLock};
 use tokio::task::JoinHandle;
 
 /// Maximum age of a gossip message before it's considered stale (5 minutes)
 const MAX_MESSAGE_AGE_MS: i64 = 5 * 60 * 1000;
+
+/// Maximum messages per peer per second before rate limiting kicks in
+const PEER_RATE_LIMIT_PER_SEC: usize = 100;
+
+/// Rate limit window duration in seconds
+const RATE_LIMIT_WINDOW_SECS: u64 = 1;
+
+/// Per-peer rate limiter to prevent DoS attacks
+#[derive(Clone)]
+struct PeerRateLimiter {
+    /// Message counts per peer (peer_id -> (count, window_start))
+    limits: Arc<Mutex<HashMap<String, (usize, Instant)>>>,
+    /// Maximum messages per window
+    max_per_window: usize,
+    /// Window duration
+    window_secs: u64,
+}
+
+impl PeerRateLimiter {
+    fn new(max_per_window: usize, window_secs: u64) -> Self {
+        Self {
+            limits: Arc::new(Mutex::new(HashMap::new())),
+            max_per_window,
+            window_secs,
+        }
+    }
+
+    /// Check if a peer should be rate limited
+    /// Returns true if the message should be processed, false if rate limited
+    async fn check(&self, peer_id: &str) -> bool {
+        let mut limits = self.limits.lock().await;
+        let now = Instant::now();
+
+        let entry = limits.entry(peer_id.to_string()).or_insert((0, now));
+
+        // Reset window if expired
+        if now.duration_since(entry.1).as_secs() >= self.window_secs {
+            entry.0 = 0;
+            entry.1 = now;
+        }
+
+        // Check if rate limited
+        if entry.0 >= self.max_per_window {
+            return false;
+        }
+
+        // Increment count
+        entry.0 += 1;
+        true
+    }
+
+    /// Cleanup stale entries (peers we haven't heard from in a while)
+    async fn cleanup(&self) {
+        let mut limits = self.limits.lock().await;
+        let now = Instant::now();
+        // Remove entries older than 60 seconds
+        limits.retain(|_, (_, start)| now.duration_since(*start).as_secs() < 60);
+    }
+}
 
 /// Type alias for the ACL checking callback
 /// Takes (drive_id, sender_node_id) and returns true if sender is authorized
@@ -122,6 +183,9 @@ impl EventBroadcaster {
         // Clone ACL checker for the spawned task
         let acl_checker = self.acl_checker.read().await.clone();
 
+        // Create per-peer rate limiter for this topic
+        let rate_limiter = PeerRateLimiter::new(PEER_RATE_LIMIT_PER_SEC, RATE_LIMIT_WINDOW_SECS);
+
         // Spawn receiver task to forward events to frontend
         let frontend_tx = self.frontend_tx.clone();
         let drive_id_hex = drive_id.to_hex();
@@ -131,6 +195,16 @@ impl EventBroadcaster {
             use futures_lite::StreamExt;
 
             tracing::debug!("Started gossip receiver for drive {}", drive_id_hex);
+
+            // Periodically cleanup rate limiter entries
+            let rate_limiter_for_cleanup = rate_limiter.clone();
+            let cleanup_task = tokio::spawn(async move {
+                let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(30));
+                loop {
+                    interval.tick().await;
+                    rate_limiter_for_cleanup.cleanup().await;
+                }
+            });
 
             while let Some(event_result) = receiver.next().await {
                 match event_result {
@@ -142,6 +216,18 @@ impl EventBroadcaster {
                                 // Deserialize the signed message envelope
                                 match serde_json::from_slice::<SignedGossipMessage>(&msg.content) {
                                     Ok(signed_msg) => {
+                                        // SECURITY: Rate limit check BEFORE signature verification
+                                        // This prevents DoS via CPU-intensive signature verification
+                                        let sender_id = signed_msg.sender.to_hex();
+                                        if !rate_limiter.check(&sender_id).await {
+                                            tracing::warn!(
+                                                "Rate limited gossip messages from peer {} for drive {}",
+                                                signed_msg.sender.short_string(),
+                                                drive_id_hex
+                                            );
+                                            continue;
+                                        }
+
                                         // Verify the signature
                                         if let Err(e) = signed_msg.verify() {
                                             tracing::warn!(
@@ -229,6 +315,8 @@ impl EventBroadcaster {
                 }
             }
 
+            // Abort the cleanup task when receiver ends
+            cleanup_task.abort();
             tracing::debug!("Gossip receiver ended for drive {}", drive_id_hex);
         });
 

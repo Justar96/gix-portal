@@ -5,3 +5,4 @@ export { useConflicts } from "./useConflicts";
 export { usePresence } from "./usePresence";
 export { useDeepLink, generateInviteLink } from "./useDeepLink";
 export { useUpdater } from "./useUpdater";
+export { usePermissions } from "./usePermissions";

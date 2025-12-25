@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Link2, X, CheckCircle, AlertCircle, Loader2, ClipboardPaste } from "lucide-react";
+import { Radar, X, CheckCircle, AlertCircle, Loader2, ClipboardPaste, Shield, User, Clock, Hash } from "lucide-react";
 import type { InviteVerification, AcceptInviteResult } from "../types";
 import "../styles/components/_join-drive-modal.scss";
 
@@ -112,11 +112,11 @@ export function JoinDriveModal({ onClose, onJoined }: JoinDriveModalProps) {
 
                 <div className="modal-header">
                     <div className="modal-icon">
-                        <Link2 size={24} />
+                        <Radar size={24} />
                     </div>
                     <div className="modal-text">
                         <h2>Join Drive</h2>
-                        <p className="modal-subtitle">Enter an invite token to join a shared drive</p>
+                        <p className="modal-subtitle">Connect to a shared P2P drive using an invite token</p>
                     </div>
                 </div>
 
@@ -165,23 +165,44 @@ export function JoinDriveModal({ onClose, onJoined }: JoinDriveModalProps) {
                     {state === "preview" && inviteInfo && (
                         <div className="preview-section">
                             <div className="invite-details">
+                                <div className="detail-row drive-name-row">
+                                    <span className="detail-label">
+                                        <Radar size={12} />
+                                        Drive Name
+                                    </span>
+                                    <span className="detail-value drive-name">
+                                        {inviteInfo.drive_name || "Unnamed Drive"}
+                                    </span>
+                                </div>
                                 <div className="detail-row">
-                                    <span className="detail-label">Drive ID</span>
+                                    <span className="detail-label">
+                                        <Hash size={12} />
+                                        Drive ID
+                                    </span>
                                     <span className="detail-value">{shortId(inviteInfo.drive_id)}</span>
                                 </div>
                                 <div className="detail-row">
-                                    <span className="detail-label">Permission</span>
+                                    <span className="detail-label">
+                                        <Shield size={12} />
+                                        Permission
+                                    </span>
                                     <span className="detail-value permission-badge">
                                         {formatPermission(inviteInfo.permission)}
                                     </span>
                                 </div>
                                 <div className="detail-row">
-                                    <span className="detail-label">Invited by</span>
+                                    <span className="detail-label">
+                                        <User size={12} />
+                                        Invited by
+                                    </span>
                                     <span className="detail-value">{shortId(inviteInfo.inviter)}</span>
                                 </div>
                                 {inviteInfo.expires_at && (
                                     <div className="detail-row">
-                                        <span className="detail-label">Expires</span>
+                                        <span className="detail-label">
+                                            <Clock size={12} />
+                                            Expires
+                                        </span>
                                         <span className="detail-value">
                                             {new Date(inviteInfo.expires_at).toLocaleDateString()}
                                         </span>
@@ -193,8 +214,8 @@ export function JoinDriveModal({ onClose, onJoined }: JoinDriveModalProps) {
                                     Back
                                 </button>
                                 <button className="btn-primary" onClick={handleAccept}>
-                                    <CheckCircle size={14} />
-                                    Accept Invite
+                                    <Radar size={14} />
+                                    Connect to Drive
                                 </button>
                             </div>
                         </div>

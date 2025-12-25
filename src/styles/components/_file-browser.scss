@@ -7,6 +7,8 @@
     height: 100%;
     outline: none;
     background: $bg-card;
+    position: relative;
+    overflow: hidden;
 }
 
 // Toolbar
@@ -20,6 +22,8 @@
     border-bottom: 1px solid $border-subtle;
     flex-shrink: 0;
     min-height: 48px;
+    position: relative;
+    z-index: 10;
 
     @include respond-to('sm') {
         flex-wrap: wrap;
@@ -31,6 +35,7 @@
     display: flex;
     align-items: center;
     gap: $space-2;
+    flex-shrink: 0;
 }
 
 .toolbar-divider {
@@ -128,6 +133,8 @@
     gap: $space-2;
     padding: $space-2 $space-4;
     background: $bg-card;
+    position: relative;
+    z-index: 10;
     border-bottom: 1px solid $border-subtle;
     flex-shrink: 0;
     min-height: 40px;
@@ -188,6 +195,8 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
+    z-index: 0;
     
     &.stale {
         opacity: 0.5;
@@ -555,6 +564,8 @@
 .file-grid-container {
     flex: 1;
     overflow: hidden;
+    position: relative;
+    z-index: 0;
     
     &.stale {
         opacity: 0.5;
@@ -701,4 +712,145 @@
 .btn-danger {
     color: $error !important;
     &:hover { background: $error-soft !important; }
+}
+
+// Lock Type Badges
+.lock-type-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    font-size: 9px;
+    font-weight: $weight-semibold;
+    border-radius: $radius-sm;
+    margin-left: $space-0-5;
+    
+    &.advisory {
+        background: rgba($warning, 0.2);
+        color: $warning;
+    }
+    
+    &.exclusive {
+        background: rgba($error, 0.2);
+        color: $error;
+    }
+}
+
+.grid-lock-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 16px;
+    height: 16px;
+    border-radius: $radius-full;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    &.advisory {
+        background: $warning;
+        color: white;
+    }
+    
+    &.exclusive {
+        background: $error;
+        color: white;
+    }
+}
+
+.grid-item-icon {
+    position: relative;
+}
+
+// Virtualized Grid Scroll
+.file-grid-scroll {
+    height: 100%;
+    overflow-y: auto;
+    @include custom-scrollbar;
+    padding: $space-3;
+    position: relative;
+}
+
+.file-grid-row {
+    box-sizing: border-box;
+    align-items: start;
+}
+
+// Context Menu Enhancements
+.context-section-title {
+    display: flex;
+    align-items: center;
+    gap: $space-1;
+    padding: $space-1 $space-3;
+    font-size: $text-2xs;
+    color: $text-muted;
+    font-weight: $weight-medium;
+    text-transform: uppercase;
+    letter-spacing: $tracking-wide;
+    
+    .btn-info {
+        padding: 2px;
+        color: $text-disabled;
+        
+        &:hover {
+            color: $text-muted;
+        }
+    }
+}
+
+.lock-hint {
+    margin-left: auto;
+    font-size: $text-2xs;
+    color: $text-disabled;
+    font-weight: $weight-normal;
+}
+
+.locked-status {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+    
+    &:hover {
+        background: transparent !important;
+    }
+}
+
+// Empty State Enhancement
+.empty-hint {
+    font-size: $text-xs;
+    color: $text-disabled;
+    margin-top: $space-1;
+}
+
+// Drop Zone Overlay
+.drop-zone-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba($accent, 0.1);
+    border: 2px dashed $accent;
+    border-radius: $radius-md;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $space-3;
+    z-index: $z-dropdown;
+    pointer-events: none;
+    animation: fadeIn 0.15s ease;
+    
+    svg {
+        color: $accent;
+        opacity: 0.8;
+    }
+    
+    span {
+        font-size: $text-md;
+        color: $accent;
+        font-weight: $weight-medium;
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }

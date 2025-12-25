@@ -27,10 +27,16 @@ import {
   X,
   Grid,
   List,
+  Upload,
+  Eye,
+  Info,
 } from "lucide-react";
-import type { FileEntry, DriveInfo, FileCategory } from "../types";
-import { formatBytes, formatDate, getFileCategory, shortNodeId, formatLockExpiry } from "../types";
-import { useLocking } from "../hooks";
+import type { FileEntry, DriveInfo, FileCategory, LockType } from "../types";
+import { formatBytes, formatDate, getFileCategory, shortNodeId, formatLockExpiry, LOCK_TYPE_LABELS, LOCK_TYPE_DESCRIPTIONS } from "../types";
+import { useLocking, useFileTransfer, usePermissions } from "../hooks";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { FilePreview } from "./FilePreview";
+import { useToast } from "./Toast";
 
 interface FileBrowserProps {
   drive: DriveInfo;
@@ -46,9 +52,16 @@ interface ContextMenuState {
   file: FileEntry;
 }
 
+interface DeleteConfirmState {
+  isOpen: boolean;
+  files: FileEntry[];
+}
+
 // Menu dimensions for viewport boundary calculations
 const CONTEXT_MENU_WIDTH = 200;
 const CONTEXT_MENU_HEIGHT = 280;
+const GRID_ITEM_SIZE = 120;
+const GRID_GAP = 12;
 
 /** Get Lucide icon component for file category */
 function getFileIconComponent(entry: FileEntry) {
@@ -155,11 +168,11 @@ const FileRow = memo(function FileRow({
           )}
           {lock && !file.is_dir && (
             <span
-              className={`lock-indicator ${lockedByMe ? "mine" : "other"}`}
+              className={`lock-indicator ${lockedByMe ? "mine" : "other"} ${lock.lock_type}`}
               title={
                 lockedByMe
-                  ? `Locked by you (${formatLockExpiry(lock.expires_at)})`
-                  : `Locked by ${shortNodeId(lock.holder)} (${lock.lock_type})`
+                  ? `Locked by you (${LOCK_TYPE_LABELS[lock.lock_type as LockType]}) - ${formatLockExpiry(lock.expires_at)}`
+                  : `Locked by ${shortNodeId(lock.holder)} (${LOCK_TYPE_LABELS[lock.lock_type as LockType]})\n${LOCK_TYPE_DESCRIPTIONS[lock.lock_type as LockType]}`
               }
             >
               {lockedByMe ? (
@@ -167,6 +180,9 @@ const FileRow = memo(function FileRow({
               ) : (
                 <Lock size={12} className="lock-icon other" />
               )}
+              <span className={`lock-type-badge ${lock.lock_type}`}>
+                {lock.lock_type === "exclusive" ? "E" : "A"}
+              </span>
             </span>
           )}
         </div>
@@ -191,6 +207,63 @@ const FileRow = memo(function FileRow({
   );
 });
 
+// Memoized grid item component
+interface GridItemProps {
+  file: FileEntry;
+  index: number;
+  isSelected: boolean;
+  lockedByOther: boolean;
+  lockedByMe: boolean;
+  lock: ReturnType<ReturnType<typeof useLocking>["getLockStatus"]>;
+  onRowClick: (e: React.MouseEvent, index: number) => void;
+  onDoubleClick: (file: FileEntry) => void;
+  onContextMenu: (e: React.MouseEvent, file: FileEntry, index: number) => void;
+}
+
+const GridItem = memo(function GridItem({
+  file,
+  index,
+  isSelected,
+  lockedByOther,
+  lockedByMe,
+  lock,
+  onRowClick,
+  onDoubleClick,
+  onContextMenu,
+}: GridItemProps) {
+  return (
+    <div
+      className={`file-grid-item ${file.is_dir ? "directory" : "file"} ${isSelected ? "selected" : ""} ${lockedByOther ? "locked-other" : ""} ${lockedByMe ? "locked-mine" : ""}`}
+      onClick={(e) => onRowClick(e, index)}
+      onDoubleClick={() => onDoubleClick(file)}
+      onContextMenu={(e) => onContextMenu(e, file, index)}
+    >
+      <div className="grid-item-checkbox">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={() => {}}
+          onClick={(e) => {
+            e.stopPropagation();
+            onRowClick({ ...e, ctrlKey: true } as React.MouseEvent, index);
+          }}
+        />
+      </div>
+      <div className="grid-item-icon">
+        {getFileIconComponent(file)}
+        {lock && !file.is_dir && (
+          <span className={`grid-lock-badge ${lock.lock_type}`} title={LOCK_TYPE_DESCRIPTIONS[lock.lock_type as LockType]}>
+            {lock.lock_type === "exclusive" ? <Lock size={10} /> : <LockOpen size={10} />}
+          </span>
+        )}
+      </div>
+      <span className="grid-item-name" title={file.name}>
+        {file.name}
+      </span>
+    </div>
+  );
+});
+
 export function FileBrowser({ drive }: FileBrowserProps) {
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [currentPath, setCurrentPath] = useState("/");
@@ -208,11 +281,18 @@ export function FileBrowser({ drive }: FileBrowserProps) {
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
 
+  // New state for improved UX
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>({ isOpen: false, files: [] });
+  const [previewFile, setPreviewFile] = useState<FileEntry | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // React 18 concurrent features for smoother UI
   const [isPending, startTransition] = useTransition();
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
+  const dragCounterRef = useRef(0);
 
   // File locking
   const {
@@ -222,6 +302,22 @@ export function FileBrowser({ drive }: FileBrowserProps) {
     acquireLock,
     releaseLock,
   } = useLocking({ driveId: drive.id });
+
+  // File transfer for uploads
+  const { uploadFile } = useFileTransfer({ driveId: drive.id });
+
+  // Permissions for this drive
+  const { canPerform } = usePermissions({ driveId: drive.id });
+  const canWrite = canPerform("write");
+  const canDelete = canPerform("delete");
+
+  // Toast notifications
+  let toast: ReturnType<typeof useToast> | null = null;
+  try {
+    toast = useToast();
+  } catch {
+    // Toast provider not available, will use fallback
+  }
 
   // Memoized filter and sort - only recalculate when dependencies change
   const displayFiles = useMemo(() => {
@@ -257,12 +353,36 @@ export function FileBrowser({ drive }: FileBrowserProps) {
     return result;
   }, [files, searchQuery, sortField, sortDirection]);
 
+  // Calculate grid columns based on container width
+  const [gridColumns, setGridColumns] = useState(5);
+  useEffect(() => {
+    const updateGridColumns = () => {
+      if (scrollContainerRef.current && viewMode === "grid") {
+        const width = scrollContainerRef.current.clientWidth - 32; // padding
+        const cols = Math.max(2, Math.floor(width / (GRID_ITEM_SIZE + GRID_GAP)));
+        setGridColumns(cols);
+      }
+    };
+    updateGridColumns();
+    window.addEventListener("resize", updateGridColumns);
+    return () => window.removeEventListener("resize", updateGridColumns);
+  }, [viewMode]);
+
   // Virtualizer for list view
   const rowVirtualizer = useVirtualizer({
     count: displayFiles.length,
     getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => viewMode === "grid" ? 100 : 36,
+    estimateSize: () => 36,
     overscan: 10,
+  });
+
+  // Virtualizer for grid view
+  const gridRowCount = Math.ceil(displayFiles.length / gridColumns);
+  const gridVirtualizer = useVirtualizer({
+    count: gridRowCount,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => GRID_ITEM_SIZE + GRID_GAP,
+    overscan: 3,
   });
 
   const loadFiles = useCallback(
@@ -302,6 +422,9 @@ export function FileBrowser({ drive }: FileBrowserProps) {
   const navigateTo = (entry: FileEntry) => {
     if (entry.is_dir) {
       loadFiles(entry.path);
+    } else {
+      // Open preview for files
+      setPreviewFile(entry);
     }
   };
 
@@ -404,9 +527,11 @@ export function FileBrowser({ drive }: FileBrowserProps) {
   const handleCopyPath = async (file: FileEntry) => {
     try {
       await navigator.clipboard.writeText(file.path);
+      toast?.showSuccess("Path copied to clipboard");
       closeContextMenu();
     } catch (err) {
       console.error("Failed to copy path:", err);
+      toast?.showError("Failed to copy path");
     }
   };
 
@@ -436,25 +561,133 @@ export function FileBrowser({ drive }: FileBrowserProps) {
     loadFiles(currentPath);
   };
 
-  // Delete files (placeholder - needs backend)
-  const handleDelete = async () => {
+  // Delete files with styled confirmation
+  const handleDeleteRequest = () => {
     closeContextMenu();
     const selected = Array.from(selectedIndices).map((i) => displayFiles[i]);
     if (selected.length === 0) return;
-    
-    const names = selected.map((f) => f.name).join(", ");
-    if (!confirm(`Delete ${selected.length} item(s)?\n${names}`)) return;
-    
-    // TODO: Implement delete via backend
-    console.log("Delete:", selected.map((f) => f.path));
-    loadFiles(currentPath);
+    setDeleteConfirm({ isOpen: true, files: selected });
   };
 
-  // Download file (placeholder - needs backend)
+  const handleDeleteConfirm = async () => {
+    const filesToDelete = deleteConfirm.files;
+    setIsDeleting(true);
+    
+    try {
+      // Delete files using backend command
+      for (const file of filesToDelete) {
+        await invoke("delete_path", {
+          driveId: drive.id,
+          path: file.path,
+        });
+      }
+      
+      setDeleteConfirm({ isOpen: false, files: [] });
+      setSelectedIndices(new Set());
+      
+      // Show undo toast
+      const names = filesToDelete.map(f => f.name).join(", ");
+      toast?.showUndo(
+        `Deleted ${filesToDelete.length} item${filesToDelete.length > 1 ? "s" : ""}: ${names.slice(0, 50)}${names.length > 50 ? "..." : ""}`,
+        () => {
+          // TODO: Implement undo via backend
+          toast?.showInfo("Undo not yet implemented");
+          loadFiles(currentPath);
+        }
+      );
+      
+      loadFiles(currentPath);
+    } catch (e) {
+      toast?.showError(`Failed to delete: ${e}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  // Download file
   const handleDownload = async (file: FileEntry) => {
     closeContextMenu();
-    // TODO: Implement download via backend
-    console.log("Download:", file.path);
+    try {
+      await invoke("download_file_to_system", {
+        driveId: drive.id,
+        path: file.path,
+      });
+      toast?.showSuccess(`Downloaded ${file.name}`);
+    } catch (e) {
+      console.error("Download error:", e);
+      toast?.showError(`Failed to download: ${e}`);
+    }
+  };
+
+  // Preview file
+  const handlePreview = (file: FileEntry) => {
+    closeContextMenu();
+    if (!file.is_dir) {
+      setPreviewFile(file);
+    }
+  };
+
+  // Preview navigation
+  const handlePreviewNavigate = (direction: "prev" | "next") => {
+    if (!previewFile) return;
+    const nonDirFiles = displayFiles.filter(f => !f.is_dir);
+    const currentNonDirIndex = nonDirFiles.findIndex(f => f.path === previewFile.path);
+    
+    if (direction === "prev" && currentNonDirIndex > 0) {
+      setPreviewFile(nonDirFiles[currentNonDirIndex - 1]);
+    } else if (direction === "next" && currentNonDirIndex < nonDirFiles.length - 1) {
+      setPreviewFile(nonDirFiles[currentNonDirIndex + 1]);
+    }
+  };
+
+  // Drag & Drop handlers
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounterRef.current = 0;
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+
+    toast?.showInfo(`Uploading ${files.length} file${files.length > 1 ? "s" : ""}...`);
+
+    for (const file of files) {
+      try {
+        // For web file API, we need to handle this differently
+        // The file path from dataTransfer is the full path
+        const filePath = (file as any).path || file.name;
+        await uploadFile(drive.id, filePath);
+        toast?.showSuccess(`Uploaded ${file.name}`);
+      } catch (err) {
+        toast?.showError(`Failed to upload ${file.name}: ${err}`);
+      }
+    }
+
+    loadFiles(currentPath);
   };
 
   // Sort toggle
@@ -500,6 +733,15 @@ export function FileBrowser({ drive }: FileBrowserProps) {
           navigateTo(displayFiles[lastSelectedIndex]);
         }
         break;
+      case " ":
+        e.preventDefault();
+        if (lastSelectedIndex >= 0 && lastSelectedIndex < displayFiles.length) {
+          const file = displayFiles[lastSelectedIndex];
+          if (!file.is_dir) {
+            setPreviewFile(file);
+          }
+        }
+        break;
       case "Backspace":
         if (!renameFile) {
           navigateUp();
@@ -512,7 +754,7 @@ export function FileBrowser({ drive }: FileBrowserProps) {
         break;
       case "Delete":
         if (selectedIndices.size > 0) {
-          handleDelete();
+          handleDeleteRequest();
         }
         break;
       case "F2":
@@ -554,8 +796,30 @@ export function FileBrowser({ drive }: FileBrowserProps) {
     }
   }, [renameFile]);
 
+  // Preview navigation helpers
+  const previewFileIndex = previewFile ? displayFiles.filter(f => !f.is_dir).findIndex(f => f.path === previewFile.path) : -1;
+  const nonDirFilesCount = displayFiles.filter(f => !f.is_dir).length;
+
   return (
-    <div className="file-browser" tabIndex={0} onKeyDown={handleKeyDown} ref={containerRef} onClick={closeContextMenu}>
+    <div
+      className="file-browser"
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      ref={containerRef}
+      onClick={closeContextMenu}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag & Drop Overlay */}
+      {isDragging && (
+        <div className="drop-zone-overlay">
+          <Upload size={48} />
+          <span>Drop files to upload</span>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="browser-toolbar">
         <div className="toolbar-left">
@@ -583,8 +847,9 @@ export function FileBrowser({ drive }: FileBrowserProps) {
               </span>
               <button
                 className="btn-icon btn-danger"
-                onClick={handleDelete}
-                title="Delete (Del)"
+                onClick={handleDeleteRequest}
+                disabled={!canDelete}
+                title={canDelete ? "Delete (Del)" : "You don't have delete permission"}
               >
                 <Trash2 size={14} />
               </button>
@@ -669,6 +934,7 @@ export function FileBrowser({ drive }: FileBrowserProps) {
             <FolderOpen size={32} />
           </div>
           <p>{searchQuery ? "No matching files" : "This folder is empty"}</p>
+          <p className="empty-hint">Drag & drop files here to upload</p>
           {searchQuery && (
             <button className="btn-secondary" onClick={() => setSearchQuery("")}>
               Clear filter
@@ -774,39 +1040,53 @@ export function FileBrowser({ drive }: FileBrowserProps) {
           </div>
         </div>
       ) : (
-        // Grid view
+        // Virtualized Grid view
         <div className={`file-grid-container ${isPending ? "stale" : ""}`}>
-          <div ref={scrollContainerRef} className="file-grid">
-            {displayFiles.map((file, index) => {
-              const isSelected = selectedIndices.has(index);
-              const lockedByOther = isLockedByOther(file.path);
-              const lockedByMe = isLockedByMe(file.path);
+          <div ref={scrollContainerRef} className="file-grid-scroll">
+            {gridVirtualizer.getVirtualItems().map((virtualRow) => {
+              const rowIndex = virtualRow.index;
+              const startIndex = rowIndex * gridColumns;
+              const rowFiles = displayFiles.slice(startIndex, startIndex + gridColumns);
 
               return (
                 <div
-                  key={file.path}
-                  className={`file-grid-item ${file.is_dir ? "directory" : "file"} ${isSelected ? "selected" : ""} ${lockedByOther ? "locked-other" : ""} ${lockedByMe ? "locked-mine" : ""}`}
-                  onClick={(e) => handleRowClick(e, index)}
-                  onDoubleClick={() => navigateTo(file)}
-                  onContextMenu={(e) => handleContextMenu(e, file, index)}
+                  key={rowIndex}
+                  className="file-grid-row"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                    display: "grid",
+                    gridTemplateColumns: `repeat(${gridColumns}, ${GRID_ITEM_SIZE}px)`,
+                    gap: `${GRID_GAP}px`,
+                    padding: `0 ${GRID_GAP}px`,
+                  }}
                 >
-                  <div className="grid-item-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => {}}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRowClick({ ...e, ctrlKey: true } as React.MouseEvent, index);
-                      }}
-                    />
-                  </div>
-                  <div className="grid-item-icon">
-                    {getFileIconComponent(file)}
-                  </div>
-                  <span className="grid-item-name" title={file.name}>
-                    {file.name}
-                  </span>
+                  {rowFiles.map((file, colIndex) => {
+                    const index = startIndex + colIndex;
+                    const lock = getLockStatus(file.path);
+                    const lockedByOther = isLockedByOther(file.path);
+                    const lockedByMe = isLockedByMe(file.path);
+                    const isSelected = selectedIndices.has(index);
+
+                    return (
+                      <GridItem
+                        key={file.path}
+                        file={file}
+                        index={index}
+                        isSelected={isSelected}
+                        lockedByOther={lockedByOther}
+                        lockedByMe={lockedByMe}
+                        lock={lock}
+                        onRowClick={handleRowClick}
+                        onDoubleClick={navigateTo}
+                        onContextMenu={handleContextMenu}
+                      />
+                    );
+                  })}
                 </div>
               );
             })}
@@ -837,6 +1117,11 @@ export function FileBrowser({ drive }: FileBrowserProps) {
               </>
             ) : (
               <>
+                <button onClick={() => handlePreview(contextMenu.file)}>
+                  <Eye size={14} />
+                  Preview
+                  <span className="shortcut">Space</span>
+                </button>
                 <button onClick={() => handleDownload(contextMenu.file)}>
                   <Download size={14} />
                   Download
@@ -849,20 +1134,41 @@ export function FileBrowser({ drive }: FileBrowserProps) {
                   </button>
                 ) : !isLockedByOther(contextMenu.file.path) ? (
                   <>
+                    <div className="context-section-title">
+                      <Lock size={12} />
+                      Lock File
+                      <button
+                        className="btn-icon btn-info"
+                        title="Advisory: Warns others but doesn't prevent access. Exclusive: Prevents others from editing."
+                      >
+                        <Info size={10} />
+                      </button>
+                    </div>
                     <button onClick={() => { acquireLock(contextMenu.file.path, "advisory"); closeContextMenu(); }}>
-                      <Lock size={14} />
+                      <LockOpen size={14} />
                       Advisory Lock
+                      <span className="lock-hint">Warns others</span>
                     </button>
                     <button onClick={() => { acquireLock(contextMenu.file.path, "exclusive"); closeContextMenu(); }}>
                       <Lock size={14} />
                       Exclusive Lock
+                      <span className="lock-hint">Blocks editing</span>
                     </button>
                   </>
-                ) : null}
+                ) : (
+                  <button disabled className="locked-status">
+                    <Lock size={14} />
+                    Locked by {shortNodeId(getLockStatus(contextMenu.file.path)?.holder || "")}
+                  </button>
+                )}
                 <div className="context-divider" />
               </>
             )}
-            <button onClick={() => handleStartRename(contextMenu.file)}>
+            <button 
+              onClick={() => handleStartRename(contextMenu.file)}
+              disabled={!canWrite}
+              title={!canWrite ? "You don't have write permission" : undefined}
+            >
               <Pencil size={14} />
               Rename
               <span className="shortcut">F2</span>
@@ -872,13 +1178,44 @@ export function FileBrowser({ drive }: FileBrowserProps) {
               Copy Path
             </button>
             <div className="context-divider" />
-            <button className="danger" onClick={handleDelete}>
+            <button 
+              className="danger" 
+              onClick={handleDeleteRequest}
+              disabled={!canDelete}
+              title={!canDelete ? "You don't have delete permission" : undefined}
+            >
               <Trash2 size={14} />
               Delete
               <span className="shortcut">Del</span>
             </button>
           </div>
         </>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        title={`Delete ${deleteConfirm.files.length} item${deleteConfirm.files.length !== 1 ? "s" : ""}?`}
+        message={`This will delete: ${deleteConfirm.files.map(f => f.name).join(", ").slice(0, 100)}${deleteConfirm.files.map(f => f.name).join(", ").length > 100 ? "..." : ""}`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteConfirm({ isOpen: false, files: [] })}
+        isLoading={isDeleting}
+      />
+
+      {/* File Preview */}
+      {previewFile && (
+        <FilePreview
+          file={previewFile}
+          driveId={drive.id}
+          onClose={() => setPreviewFile(null)}
+          onDownload={handleDownload}
+          onNavigate={handlePreviewNavigate}
+          hasPrev={previewFileIndex > 0}
+          hasNext={previewFileIndex < nonDirFilesCount - 1}
+        />
       )}
     </div>
   );

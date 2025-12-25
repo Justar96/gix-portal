@@ -1,15 +1,18 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { FolderOpen, Plus, PanelLeftClose, PanelLeft, Link } from "lucide-react";
+import { FolderOpen, FolderPlus, Radar, PanelLeftClose, PanelLeft, Plus } from "lucide-react";
 import { Titlebar } from "./components/Titlebar";
 import { IdentityBadge } from "./components/IdentityBadge";
 import { DriveList } from "./components/DriveList";
 import { CreateDriveModal } from "./components/CreateDriveModal";
 import { JoinDriveModal } from "./components/JoinDriveModal";
 import { DriveWorkspace } from "./components/DriveWorkspace";
+import { PresencePanel } from "./components/PresencePanel";
 import { UpdateNotification } from "./components/UpdateNotification";
 import { InviteHandler } from "./components/InviteHandler";
 import { WelcomeModal, useWelcomeModal } from "./components/WelcomeModal";
+import { ToastProvider } from "./components/Toast";
+import { useConflicts } from "./hooks";
 import type { DriveInfo } from "./types";
 import "./styles/main.scss";
 
@@ -20,7 +23,11 @@ function App() {
   const [selectedDrive, setSelectedDrive] = useState<DriveInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showPresence, setShowPresence] = useState(true);
   const { showWelcome, setShowWelcome } = useWelcomeModal();
+  
+  // Get conflict count for presence panel
+  const { conflictCount } = useConflicts({ driveId: selectedDrive?.id ?? "" });
 
   // Use ref to track selected drive ID without causing re-renders
   const selectedDriveIdRef = useRef<string | null>(null);
@@ -74,152 +81,166 @@ function App() {
   }, []);
 
   return (
-    <div className="app">
-      <Titlebar />
-      <main className="app-main">
-        <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
-          <div className="sidebar-header">
-            <button
-              className="btn-icon btn-collapse"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {sidebarCollapsed ? <PanelLeft size={14} /> : <PanelLeftClose size={14} />}
-            </button>
+    <ToastProvider>
+      <div className="app">
+        <Titlebar />
+        <main className="app-main">
+          <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+            <div className="sidebar-header">
+              <button
+                className="btn-icon btn-collapse"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {sidebarCollapsed ? <PanelLeft size={14} /> : <PanelLeftClose size={14} />}
+              </button>
+              {!sidebarCollapsed && (
+                <>
+                  <span className="sidebar-title">Drives</span>
+                  <button
+                    className="btn-icon btn-add"
+                    onClick={() => setShowCreateModal(true)}
+                    title="Create new drive"
+                    aria-label="Create new drive"
+                  >
+                    <FolderPlus size={15} />
+                  </button>
+                  <button
+                    className="btn-icon btn-join"
+                    onClick={() => setShowJoinModal(true)}
+                    title="Join shared drive"
+                    aria-label="Join shared drive"
+                  >
+                    <Radar size={15} />
+                  </button>
+                </>
+              )}
+            </div>
+
             {!sidebarCollapsed && (
-              <>
-                <span className="sidebar-title">Drives</span>
+              <div className="sidebar-content">
+                {loading ? (
+                  <div className="loading-state">
+                    <div className="loading-spinner" />
+                  </div>
+                ) : (
+                  <DriveList
+                    drives={drives}
+                    onSelect={handleSelectDrive}
+                    onUpdate={loadDrives}
+                    selectedId={selectedDrive?.id ?? null}
+                  />
+                )}
+              </div>
+            )}
+
+            {sidebarCollapsed && (
+              <div className="sidebar-collapsed-content">
                 <button
-                  className="btn-icon btn-join"
-                  onClick={() => setShowJoinModal(true)}
-                  title="Join shared drive"
-                  aria-label="Join shared drive"
-                >
-                  <Link size={11} />
-                </button>
-                <button
-                  className="btn-icon btn-add"
+                  className="btn-icon btn-add-collapsed"
                   onClick={() => setShowCreateModal(true)}
                   title="Create new drive"
-                  aria-label="Create new drive"
                 >
                   <Plus size={16} />
                 </button>
-              </>
-            )}
-          </div>
-
-          {!sidebarCollapsed && (
-            <div className="sidebar-content">
-              {loading ? (
-                <div className="loading-state">
-                  <div className="loading-spinner" />
-                </div>
-              ) : (
-                <DriveList
-                  drives={drives}
-                  onSelect={handleSelectDrive}
-                  onUpdate={loadDrives}
-                  selectedId={selectedDrive?.id ?? null}
-                />
-              )}
-            </div>
-          )}
-
-          {sidebarCollapsed && (
-            <div className="sidebar-collapsed-content">
-              <button
-                className="btn-icon btn-add-collapsed"
-                onClick={() => setShowCreateModal(true)}
-                title="Create new drive"
-              >
-                <Plus size={16} />
-              </button>
-              {drives.slice(0, 6).map((drive) => (
-                <button
-                  key={drive.id}
-                  className={`collapsed-drive-item ${selectedDrive?.id === drive.id ? 'selected' : ''}`}
-                  onClick={() => handleSelectDrive(drive)}
-                  title={drive.name}
-                >
-                  <FolderOpen size={16} />
-                </button>
-              ))}
-              {drives.length > 6 && (
-                <span className="collapsed-more">+{drives.length - 6}</span>
-              )}
-            </div>
-          )}
-        </aside>
-
-        <section className="content">
-          <header className="content-header">
-            <div className="content-header-left">
-              {selectedDrive && (
-                <h1 className="content-title">{selectedDrive.name}</h1>
-              )}
-            </div>
-            <div className="content-header-right">
-              <IdentityBadge />
-            </div>
-          </header>
-          <div className="content-body">
-            {selectedDrive ? (
-              <DriveWorkspace drive={selectedDrive} />
-            ) : (
-              <div className="empty-state">
-                <div className="empty-icon">
-                  <FolderOpen size={24} />
-                </div>
-                <h3>Welcome to Gix</h3>
-                <p>Create a drive to start sharing files peer-to-peer</p>
-                <div className="empty-actions">
+                {drives.slice(0, 6).map((drive) => (
                   <button
-                    className="btn-primary"
-                    onClick={() => setShowCreateModal(true)}
+                    key={drive.id}
+                    className={`collapsed-drive-item ${selectedDrive?.id === drive.id ? 'selected' : ''}`}
+                    onClick={() => handleSelectDrive(drive)}
+                    title={drive.name}
                   >
-                    <Plus size={14} />
-                    Create Drive
+                    <FolderOpen size={16} />
                   </button>
-                  <button
-                    className="btn-secondary"
-                    onClick={() => setShowJoinModal(true)}
-                  >
-                    <Link size={14} />
-                    Join Drive
-                  </button>
-                </div>
+                ))}
+                {drives.length > 6 && (
+                  <span className="collapsed-more">+{drives.length - 6}</span>
+                )}
               </div>
             )}
-          </div>
-        </section>
-      </main>
+          </aside>
 
-      {showCreateModal && (
-        <CreateDriveModal
-          onClose={() => setShowCreateModal(false)}
-          onCreated={handleDriveCreated}
-        />
-      )}
+          <section className={`content ${selectedDrive && showPresence ? 'presence-open' : ''}`}>
+            <div className="content-main">
+              <header className="content-header">
+                <div className="content-header-left">
+                  {selectedDrive && (
+                    <h1 className="content-title">{selectedDrive.name}</h1>
+                  )}
+                </div>
+                <div className="content-header-right">
+                  <IdentityBadge />
+                </div>
+              </header>
+              <div className="content-body">
+                {selectedDrive ? (
+                  <DriveWorkspace drive={selectedDrive} />
+                ) : (
+                  <div className="empty-state">
+                    <div className="empty-icon">
+                      <FolderOpen size={24} />
+                    </div>
+                    <h3>Welcome to Gix</h3>
+                    <p>Create a drive to start sharing files peer-to-peer</p>
+                    <div className="empty-actions">
+                      <button
+                        className="btn-primary"
+                        onClick={() => setShowCreateModal(true)}
+                      >
+                        <FolderPlus size={14} />
+                        Create Drive
+                      </button>
+                      <button
+                        className="btn-secondary"
+                        onClick={() => setShowJoinModal(true)}
+                      >
+                        <Radar size={14} />
+                        Join Drive
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
 
-      {showJoinModal && (
-        <JoinDriveModal
-          onClose={() => setShowJoinModal(false)}
-          onJoined={handleDriveJoined}
-        />
-      )}
+            {/* Presence Panel - at content level for proper layout */}
+            {selectedDrive && (
+              <PresencePanel
+                drive={selectedDrive}
+                isOpen={showPresence}
+                onToggle={() => setShowPresence(!showPresence)}
+                conflictCount={conflictCount}
+              />
+            )}
+          </section>
+        </main>
 
-      {/* Update notification */}
-      <UpdateNotification />
+        {showCreateModal && (
+          <CreateDriveModal
+            onClose={() => setShowCreateModal(false)}
+            onCreated={handleDriveCreated}
+          />
+        )}
 
-      {/* Deep link invite handler */}
-      <InviteHandler onDriveJoined={handleDriveJoined} />
+        {showJoinModal && (
+          <JoinDriveModal
+            onClose={() => setShowJoinModal(false)}
+            onJoined={handleDriveJoined}
+          />
+        )}
 
-      {/* Welcome modal for first-time users */}
-      {showWelcome && (
-        <WelcomeModal onClose={() => setShowWelcome(false)} />
-      )}
-    </div>
+        {/* Update notification */}
+        <UpdateNotification />
+
+        {/* Deep link invite handler */}
+        <InviteHandler onDriveJoined={handleDriveJoined} />
+
+        {/* Welcome modal for first-time users */}
+        {showWelcome && (
+          <WelcomeModal onClose={() => setShowWelcome(false)} />
+        )}
+      </div>
+    </ToastProvider>
   );
 }
 

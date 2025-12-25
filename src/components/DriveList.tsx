@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { HardDrive, Pencil, Trash2, Share2 } from "lucide-react";
+import { HardDrive, Pencil, Trash2, Share2, FolderSync, MoreVertical } from "lucide-react";
 import type { DriveInfo } from "../types";
 import { formatBytes } from "../types";
 import { ShareDriveModal } from "./ShareDriveModal";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { useToast } from "./Toast";
 
 interface DriveListProps {
   drives: DriveInfo[];
@@ -18,6 +20,11 @@ interface ContextMenuState {
   drive: DriveInfo;
 }
 
+interface DeleteConfirmState {
+  isOpen: boolean;
+  drive: DriveInfo | null;
+}
+
 export function DriveList({
   drives,
   onSelect,
@@ -28,6 +35,16 @@ export function DriveList({
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameName, setRenameName] = useState("");
   const [shareDrive, setShareDrive] = useState<DriveInfo | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirmState>({ isOpen: false, drive: null });
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Toast notifications
+  let toast: ReturnType<typeof useToast> | null = null;
+  try {
+    toast = useToast();
+  } catch {
+    // Toast provider not available
+  }
 
   const handleContextMenu = (e: React.MouseEvent, drive: DriveInfo) => {
     e.preventDefault();
@@ -38,18 +55,26 @@ export function DriveList({
     setContextMenu(null);
   };
 
-  const handleDelete = async (drive: DriveInfo) => {
+  const handleDeleteRequest = (drive: DriveInfo) => {
     closeContextMenu();
-    if (!confirm(`Delete drive "${drive.name}"? This will not delete your files.`)) {
-      return;
-    }
+    setDeleteConfirm({ isOpen: true, drive });
+  };
 
+  const handleDeleteConfirm = async () => {
+    const driveToDelete = deleteConfirm.drive;
+    if (!driveToDelete) return;
+
+    setIsDeleting(true);
     try {
-      await invoke("delete_drive", { driveId: drive.id });
+      await invoke("delete_drive", { driveId: driveToDelete.id });
+      setDeleteConfirm({ isOpen: false, drive: null });
+      toast?.showSuccess(`Drive "${driveToDelete.name}" removed`);
       onUpdate();
     } catch (e) {
       console.error("Failed to delete drive:", e);
-      alert(`Failed to delete drive: ${e}`);
+      toast?.showError(`Failed to delete drive: ${e}`);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -87,8 +112,11 @@ export function DriveList({
   if (drives.length === 0) {
     return (
       <div className="drive-list empty">
-        <p>No drives yet</p>
-        <p className="hint">Create one to get started</p>
+        <div className="empty-icon">
+          <FolderSync size={32} />
+        </div>
+        <p className="empty-title">No drives yet</p>
+        <p className="hint">Create your first drive to start syncing</p>
       </div>
     );
   }
@@ -104,7 +132,7 @@ export function DriveList({
             onContextMenu={(e) => handleContextMenu(e, drive)}
           >
             <div className="drive-icon">
-              <HardDrive size={16} />
+              <HardDrive size={18} />
             </div>
             <div className="drive-info">
               {renameId === drive.id ? (
@@ -118,12 +146,25 @@ export function DriveList({
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <div className="drive-name">{drive.name}</div>
+                <>
+                  <span className="drive-name">{drive.name}</span>
+                  <div className="drive-meta">
+                    <span>• {drive.file_count} files</span>
+                    <span>• {formatBytes(drive.total_size)}</span>
+                  </div>
+                </>
               )}
-              <div className="drive-stats">
-                {drive.file_count} files &middot; {formatBytes(drive.total_size)}
-              </div>
             </div>
+            <button
+              className="drive-menu-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleContextMenu(e, drive);
+              }}
+              title="More options"
+            >
+              <MoreVertical size={14} />
+            </button>
           </div>
         ))}
       </div>
@@ -151,7 +192,7 @@ export function DriveList({
             </button>
             <button
               className="danger"
-              onClick={() => handleDelete(contextMenu.drive)}
+              onClick={() => handleDeleteRequest(contextMenu.drive)}
             >
               <Trash2 size={14} />
               Delete
@@ -167,6 +208,19 @@ export function DriveList({
           onClose={() => setShareDrive(null)}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.isOpen}
+        title={`Delete "${deleteConfirm.drive?.name}"?`}
+        message="This will remove the drive from Gix. Your local files will not be deleted."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteConfirm({ isOpen: false, drive: null })}
+        isLoading={isDeleting}
+      />
     </>
   );
 }

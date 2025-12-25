@@ -6,6 +6,73 @@
 @use '../abstracts' as *;
 
 // ----------------------------------------
+// Animations
+// ----------------------------------------
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+}
+
+@keyframes slideInReverse {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOutReverse {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes iconPulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+// ----------------------------------------
 // Modal Structure
 // ----------------------------------------
 .welcome-overlay {
@@ -13,7 +80,8 @@
 }
 
 .welcome-modal {
-    @include modal-container($modal-width-lg);
+    @include modal-container($modal-width-md);
+    overflow: hidden;
     
     .modal-close {
         @include modal-close-button;
@@ -25,11 +93,10 @@
 // ----------------------------------------
 .welcome-header {
     text-align: center;
-    padding: $space-8 $modal-padding-x $space-5;
-    border-bottom: 1px solid $border-subtle;
+    padding: $space-6 $modal-padding-x $space-5;
     
     @include respond-to('sm') {
-        padding: $space-6 $modal-padding-y $space-4;
+        padding: $space-5 $modal-padding-y $space-4;
     }
     
     .welcome-badge {
@@ -44,6 +111,7 @@
         font-weight: $weight-medium;
         color: $accent;
         margin-bottom: $space-3;
+        animation: fadeInUp 0.4s ease-out;
         
         svg {
             color: $accent;
@@ -55,7 +123,7 @@
         font-weight: $weight-semibold;
         letter-spacing: $tracking-tight;
         color: $text-primary;
-        margin: 0 0 $space-2;
+        margin: 0 0 $space-1-5;
         
         @include respond-to('sm') {
             font-size: $text-xl;
@@ -64,7 +132,7 @@
     
     .welcome-subtitle {
         font-size: $text-sm;
-        color: $text-secondary;
+        color: $text-muted;
         margin: 0;
         line-height: $leading-normal;
     }
@@ -77,8 +145,7 @@
     display: flex;
     justify-content: center;
     gap: $space-2;
-    padding: $space-4 0;
-    background: $bg-card;
+    padding: $space-3 0 $space-4;
     
     .step-dot {
         @include button-reset;
@@ -86,70 +153,93 @@
         height: 8px;
         border-radius: $radius-full;
         background: $border-primary;
-        transition: all $transition-fast;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
         
         &:hover {
             background: $text-muted;
+            transform: scale(1.2);
         }
         
         &.active {
-            width: 24px;
+            width: 28px;
             background: $accent;
+            box-shadow: 0 0 12px rgba($accent, 0.4);
         }
         
         &.completed {
-            background: $accent-muted;
+            background: $accent;
+            opacity: 0.6;
         }
     }
 }
 
 // ----------------------------------------
-// Content Area
+// Content Area with Animations
 // ----------------------------------------
 .welcome-content {
-    padding: $modal-padding-x;
+    padding: $space-6 $modal-padding-x $space-5;
     text-align: center;
-    min-height: 320px;
+    min-height: 280px;
     @include flex-column;
     align-items: center;
+    justify-content: flex-start;
+    
+    &.visible {
+        animation: slideIn 0.3s ease-out forwards;
+    }
+    
+    &.animating-next {
+        animation: slideOut 0.2s ease-in forwards;
+    }
+    
+    &.animating-prev {
+        animation: slideOutReverse 0.2s ease-in forwards;
+    }
     
     @include respond-to('sm') {
-        padding: $modal-padding-y;
-        min-height: 280px;
+        padding: $space-4 $modal-padding-y;
+        min-height: 260px;
     }
 }
 
 .feature-icon {
     @include flex-center;
-    width: 72px;
-    height: 72px;
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, $accent-subtle 0%, rgba($accent, 0.08) 100%);
+    border: 1px solid rgba($accent, 0.12);
+    border-radius: $radius-xl;
     color: $accent;
-    margin-bottom: $space-4;
+    margin-bottom: $space-5;
+    animation: iconPulse 2s ease-in-out infinite;
     
     svg {
-        width: 40px;
-        height: 40px;
         stroke-width: 1.5;
     }
     
     @include respond-to('sm') {
-        width: 60px;
-        height: 60px;
+        width: 68px;
+        height: 68px;
+        margin-bottom: $space-4;
         
         svg {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
         }
     }
 }
 
 .feature-title {
-    font-size: $text-lg;
+    font-size: $text-xl;
     font-weight: $weight-semibold;
     color: $text-primary;
     margin: 0 0 $space-2;
     letter-spacing: $tracking-tight;
+    
+    @include respond-to('sm') {
+        font-size: $text-lg;
+    }
 }
 
 .feature-description {
@@ -157,38 +247,47 @@
     color: $text-secondary;
     margin: 0 0 $space-5;
     line-height: $leading-relaxed;
-    max-width: 400px;
+    max-width: 380px;
+    
+    @include respond-to('sm') {
+        margin-bottom: $space-4;
+    }
 }
 
-.feature-details {
+.feature-highlights {
     list-style: none;
     margin: 0;
     padding: 0;
     text-align: left;
     width: 100%;
-    max-width: 360px;
+    max-width: 320px;
     
     li {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         gap: $space-3;
-        padding: $space-2 0;
+        padding: $space-2-5 0;
         font-size: $text-sm;
         color: $text-primary;
         line-height: $leading-normal;
+        animation: fadeInUp 0.4s ease-out both;
         
         &:not(:last-child) {
             border-bottom: 1px solid $border-subtle;
         }
     }
     
-    .detail-bullet {
+    .highlight-icon {
+        @include flex-center;
         flex-shrink: 0;
-        width: 6px;
-        height: 6px;
-        margin-top: 7px;
-        background: $accent;
+        width: 20px;
+        height: 20px;
+        background: linear-gradient(135deg, $success 0%, darken($success, 8%) 100%);
         border-radius: $radius-full;
+        
+        svg {
+            color: white;
+        }
     }
 }
 
@@ -198,6 +297,7 @@
 .welcome-footer {
     @include modal-footer;
     justify-content: space-between;
+    border-top: 1px solid $border-subtle;
     
     @include respond-to('sm') {
         flex-direction: column;
@@ -261,6 +361,11 @@
     display: flex;
     align-items: center;
     gap: $space-3;
+    
+    button:disabled {
+        opacity: 0.5;
+        pointer-events: none;
+    }
     
     @include respond-to('sm') {
         width: 100%;

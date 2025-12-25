@@ -14,11 +14,11 @@ morph-mcp: warpgrep_codebase_search is a subagent that takes in a search string 
 
 ```bash
 # Install dependencies
-pnpm install
+bun install
 cd src-tauri && cargo build
 
 # Run development
-pnpm tauri dev
+bun tauri dev
 
 # Run tests
 cd src-tauri && cargo test
@@ -27,7 +27,7 @@ cd src-tauri && cargo test
 cd src-tauri && cargo test test_name
 
 # Lint
-pnpm lint
+bun lint
 cd src-tauri && cargo clippy
 
 # Check Rust code (faster than full build)

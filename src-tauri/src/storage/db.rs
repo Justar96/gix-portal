@@ -1,5 +1,5 @@
 use anyhow::Result;
-use redb::{Database as RedbDatabase, ReadableTable, TableDefinition};
+use redb::{Database as RedbDatabase, ReadableTable, ReadableTableMetadata, TableDefinition};
 use std::path::Path;
 
 // Table definitions
@@ -9,6 +9,9 @@ const ACLS_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("acls");
 const TOKEN_TRACKERS_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("token_trackers");
 const KEY_EXCHANGE_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("key_exchange");
 const DRIVE_KEYS_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("drive_keys");
+const AUDIT_LOG_TABLE: TableDefinition<u64, &[u8]> = TableDefinition::new("audit_log");
+const AUDIT_COUNTER_TABLE: TableDefinition<&str, u64> = TableDefinition::new("audit_counter");
+const REVOKED_TOKENS_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("revoked_tokens");
 
 /// Database wrapper for persistent storage using redb
 pub struct Database {
@@ -29,6 +32,9 @@ impl Database {
             let _ = write_txn.open_table(TOKEN_TRACKERS_TABLE)?;
             let _ = write_txn.open_table(KEY_EXCHANGE_TABLE)?;
             let _ = write_txn.open_table(DRIVE_KEYS_TABLE)?;
+            let _ = write_txn.open_table(AUDIT_LOG_TABLE)?;
+            let _ = write_txn.open_table(AUDIT_COUNTER_TABLE)?;
+            let _ = write_txn.open_table(REVOKED_TOKENS_TABLE)?;
         }
         write_txn.commit()?;
 
@@ -283,5 +289,136 @@ impl Database {
         };
         write_txn.commit()?;
         Ok(removed)
+    }
+
+    // ============================================================================
+    // Audit Log Operations
+    // ============================================================================
+
+    /// Append an audit log entry and return the assigned ID
+    pub fn append_audit_log(&self, data: &[u8]) -> Result<u64> {
+        let write_txn = self.db.begin_write()?;
+        let id = {
+            // Get and increment counter
+            let mut counter_table = write_txn.open_table(AUDIT_COUNTER_TABLE)?;
+            let current_id = counter_table
+                .get("next_id")?
+                .map(|v| v.value())
+                .unwrap_or(1);
+            counter_table.insert("next_id", current_id + 1)?;
+
+            // Insert audit entry
+            let mut audit_table = write_txn.open_table(AUDIT_LOG_TABLE)?;
+            audit_table.insert(current_id, data)?;
+
+            current_id
+        };
+        write_txn.commit()?;
+        Ok(id)
+    }
+
+    /// Query audit log entries with pagination
+    pub fn query_audit_log(
+        &self,
+        since_ms: Option<i64>,
+        until_ms: Option<i64>,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Vec<(u64, Vec<u8>)>> {
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(AUDIT_LOG_TABLE)?;
+
+        let mut entries = Vec::new();
+        let mut skipped = 0;
+
+        // Iterate in reverse order (newest first)
+        for entry in table.iter()?.rev() {
+            let (key, value) = entry?;
+            let id = key.value();
+            let data = value.value().to_vec();
+
+            // Apply timestamp filters if data contains timestamp
+            // This is a simple filter - entries are stored with timestamp in JSON
+            if since_ms.is_some() || until_ms.is_some() {
+                // Parse timestamp from JSON if possible
+                if let Ok(parsed) = serde_json::from_slice::<serde_json::Value>(&data) {
+                    if let Some(ts) = parsed.get("timestamp").and_then(|t| t.as_str()) {
+                        if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(ts) {
+                            let ts_ms = dt.timestamp_millis();
+                            if let Some(since) = since_ms {
+                                if ts_ms < since {
+                                    continue;
+                                }
+                            }
+                            if let Some(until) = until_ms {
+                                if ts_ms > until {
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Apply pagination
+            if skipped < offset {
+                skipped += 1;
+                continue;
+            }
+
+            entries.push((id, data));
+
+            if entries.len() >= limit {
+                break;
+            }
+        }
+
+        Ok(entries)
+    }
+
+    /// Count total audit log entries
+    pub fn count_audit_log(&self) -> Result<u64> {
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(AUDIT_LOG_TABLE)?;
+        Ok(table.len()?)
+    }
+
+    // ============================================================================
+    // Revoked Tokens Operations
+    // ============================================================================
+
+    /// Save revoked tokens for a drive
+    pub fn save_revoked_tokens(&self, drive_id: &str, data: &[u8]) -> Result<()> {
+        let write_txn = self.db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(REVOKED_TOKENS_TABLE)?;
+            table.insert(drive_id, data)?;
+        }
+        write_txn.commit()?;
+        Ok(())
+    }
+
+    /// Get revoked tokens for a drive
+    pub fn get_revoked_tokens(&self, drive_id: &str) -> Result<Option<Vec<u8>>> {
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(REVOKED_TOKENS_TABLE)?;
+
+        match table.get(drive_id)? {
+            Some(guard) => Ok(Some(guard.value().to_vec())),
+            None => Ok(None),
+        }
+    }
+
+    /// Load all revoked tokens from database
+    pub fn list_revoked_tokens(&self) -> Result<Vec<(String, Vec<u8>)>> {
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(REVOKED_TOKENS_TABLE)?;
+
+        let mut tokens = Vec::new();
+        for entry in table.iter()? {
+            let (key, value) = entry?;
+            tokens.push((key.value().to_string(), value.value().to_vec()));
+        }
+        Ok(tokens)
     }
 }

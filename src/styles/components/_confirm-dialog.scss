@@ -1,0 +1,124 @@
+@use "../abstracts" as *;
+
+.confirm-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: $z-modal;
+    animation: confirmFadeIn 0.15s ease;
+}
+
+.confirm-dialog {
+    background: $bg-card;
+    border: 1px solid $border-primary;
+    border-radius: $radius-lg;
+    width: min(400px, 90vw);
+    box-shadow: $shadow-lg;
+    animation: confirmSlideUp 0.2s ease;
+
+    &.variant-danger .confirm-dialog-icon {
+        background: rgba($error, 0.15);
+        color: $error;
+    }
+
+    &.variant-warning .confirm-dialog-icon {
+        background: rgba($warning, 0.15);
+        color: $warning;
+    }
+
+    &.variant-info .confirm-dialog-icon {
+        background: rgba($accent, 0.15);
+        color: $accent;
+    }
+}
+
+.confirm-dialog-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: $space-5 $space-5 0;
+}
+
+.confirm-dialog-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: $radius-full;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.confirm-dialog-content {
+    padding: $space-4 $space-5;
+}
+
+.confirm-dialog-title {
+    font-size: $text-lg;
+    font-weight: $weight-semibold;
+    color: $text-primary;
+    margin: 0 0 $space-2;
+}
+
+.confirm-dialog-message {
+    font-size: $text-sm;
+    color: $text-secondary;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.confirm-dialog-actions {
+    display: flex;
+    gap: $space-2;
+    justify-content: flex-end;
+    padding: $space-4 $space-5 $space-5;
+    border-top: 1px solid $border-primary;
+    margin-top: $space-2;
+}
+
+.confirm-dialog .btn-danger {
+    background: $error;
+    color: white;
+    border: none;
+    padding: $space-2 $space-4;
+    border-radius: $radius-md;
+    font-size: $text-sm;
+    font-weight: $weight-medium;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: $space-1;
+    transition: background $transition-fast;
+
+    &:hover:not(:disabled) {
+        background: darken($error, 8%);
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}
+
+@keyframes confirmFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes confirmSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}

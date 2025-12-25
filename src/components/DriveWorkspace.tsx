@@ -1,9 +1,7 @@
-import { useState } from "react";
 import type { DriveInfo } from "../types";
 import { FileBrowser } from "./FileBrowser";
 import { SyncStatusBar } from "./SyncStatusBar";
 import { ConflictPanel } from "./ConflictPanel";
-import { PresencePanel } from "./PresencePanel";
 import { TransferProgress } from "./TransferProgress";
 import { useConflicts } from "../hooks";
 
@@ -15,17 +13,17 @@ interface DriveWorkspaceProps {
  * DriveWorkspace integrates all P2P features with the file browser:
  * - SyncStatusBar: Sync controls, watching toggle, peer count
  * - ConflictPanel: Shows and resolves file conflicts
- * - PresencePanel: Online users and activity feed
  * - TransferProgress: Active file transfers
+ *
+ * Note: PresencePanel is now rendered at the App level for proper layout alignment
  */
 export function DriveWorkspace({ drive }: DriveWorkspaceProps) {
-    const [showPresence, setShowPresence] = useState(true);
     const { conflictCount } = useConflicts({ driveId: drive.id });
 
     return (
-        <div className={`drive-workspace ${showPresence ? 'panel-open' : 'panel-closed'}`}>
+        <div className="drive-workspace">
             {/* Sync Status Bar */}
-            <SyncStatusBar drive={drive} presencePanelOpen={showPresence} />
+            <SyncStatusBar drive={drive} />
 
             {/* Main Content Area */}
             <div className="workspace-content">
@@ -37,14 +35,6 @@ export function DriveWorkspace({ drive }: DriveWorkspaceProps) {
                     {/* File Browser */}
                     <FileBrowser drive={drive} />
                 </div>
-
-                {/* Presence Panel (collapsible sidebar) */}
-                <PresencePanel
-                    drive={drive}
-                    isOpen={showPresence}
-                    onToggle={() => setShowPresence(!showPresence)}
-                    conflictCount={conflictCount}
-                />
             </div>
 
             {/* Transfer Progress (floating) */}

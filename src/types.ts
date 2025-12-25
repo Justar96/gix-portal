@@ -391,6 +391,7 @@ export interface InviteInfo {
 export interface InviteVerification {
     valid: boolean;
     drive_id: string | null;
+    drive_name: string | null;
     permission: PermissionLevel | null;
     inviter: string | null;
     expires_at: string | null;

@@ -9,18 +9,19 @@ mod tray;
 use commands::{
     accept_invite, acquire_lock, cancel_transfer, check_permission, create_drive, delete_drive,
     delete_path, dismiss_conflict, download_file, extend_lock, force_release_lock, generate_invite,
-    get_conflict, get_conflict_count, get_connection_status, get_drive, get_identity,
-    get_lock_status, get_online_count, get_online_users, get_recent_activity, get_sync_status,
-    get_transfer, grant_permission, is_watching, join_drive_presence, leave_drive_presence,
-    list_conflicts, list_drives, list_files, list_locks, list_permissions, list_transfers,
+    get_audit_count, get_audit_log, get_conflict, get_conflict_count, get_connection_status,
+    get_denied_access_log, get_drive, get_drive_audit_log, get_identity, get_lock_status,
+    get_online_count, get_online_users, get_recent_activity, get_sync_status, get_transfer,
+    grant_permission, is_watching, join_drive_presence, leave_drive_presence, list_conflicts,
+    list_drives, list_files, list_locks, list_permissions, list_revoked_tokens, list_transfers,
     presence_heartbeat, read_file, read_file_encrypted, release_lock, rename_drive, rename_path,
-    resolve_conflict, revoke_permission, start_sync, start_watching, stop_sync, stop_watching,
-    subscribe_drive_events, upload_file, verify_invite, write_file, write_file_encrypted,
-    SecurityStore,
+    resolve_conflict, revoke_invite, revoke_permission, start_sync, start_watching, stop_sync,
+    stop_watching, subscribe_drive_events, upload_file, verify_invite, write_file,
+    write_file_encrypted, SecurityStore,
 };
 use core::{
-    ConflictManager, DriveEvent, DriveEventDto, DriveId, LockManager, PresenceManager, RateLimiter,
-    SharedRateLimiter,
+    AuditLogger, ConflictManager, DriveEvent, DriveEventDto, DriveId, LockManager, PresenceManager,
+    RateLimiter, SharedRateLimiter,
 };
 use state::AppState;
 use std::sync::Arc;
@@ -138,16 +139,24 @@ pub fn run() {
                     }
                     app_handle.manage(security_store.clone());
 
+                    // Initialize AuditLogger for security event tracking
+                    let audit_logger = Arc::new(AuditLogger::new(state.db.clone()));
+                    app_handle.manage(audit_logger);
+                    tracing::info!("AuditLogger initialized for security event tracking");
+
                     // Configure ACL checker for gossip sender authorization
                     if let Some(ref broadcaster) = state.event_broadcaster {
                         let security_for_acl = security_store.clone();
                         let acl_checker: network::AclChecker =
                             Arc::new(move |drive_id, sender_id| {
                                 // Check if sender has at least Read permission on the drive
-                                // Use blocking_read since we're in a sync closure
-                                let acl = futures_lite::future::block_on(
-                                    security_for_acl.get_or_create_acl(drive_id, ""),
-                                );
+                                // Use block_in_place to properly block within tokio runtime context
+                                // This moves the current thread out of the worker pool during the blocking call
+                                let acl = tokio::task::block_in_place(|| {
+                                    tokio::runtime::Handle::current().block_on(
+                                        security_for_acl.get_or_create_acl(drive_id, ""),
+                                    )
+                                });
                                 use crate::crypto::Permission;
                                 acl.check_permission(sender_id, "/", Permission::Read)
                             });
@@ -190,6 +199,27 @@ pub fn run() {
                     if let Some(ref em) = state.encryption_manager {
                         app_handle.manage(em.clone());
                         tracing::info!("EncryptionManager registered with Tauri");
+
+                        // SECURITY: Set up window blur listener to clear encryption key cache
+                        // This protects against cold boot attacks if device is stolen while app is running
+                        let em_for_blur = em.clone();
+                        if let Some(window) = app_handle.get_webview_window("main") {
+                            let _ = window.on_window_event(move |event| {
+                                if let tauri::WindowEvent::Focused(false) = event {
+                                    // Window lost focus - clear encryption key cache for security
+                                    let em_clone = em_for_blur.clone();
+                                    tauri::async_runtime::spawn(async move {
+                                        em_clone.clear_cache().await;
+                                        tracing::debug!(
+                                            "Encryption key cache cleared due to window blur"
+                                        );
+                                    });
+                                }
+                            });
+                            tracing::info!(
+                                "Window blur listener configured for encryption cache clearing"
+                            );
+                        }
                     }
 
                     app_handle.manage(state);
@@ -240,6 +270,8 @@ pub fn run() {
             generate_invite,
             verify_invite,
             accept_invite,
+            revoke_invite,
+            list_revoked_tokens,
             list_permissions,
             grant_permission,
             revoke_permission,
@@ -264,6 +296,11 @@ pub fn run() {
             join_drive_presence,
             leave_drive_presence,
             presence_heartbeat,
+            // Security: Audit logging commands
+            get_audit_log,
+            get_audit_count,
+            get_drive_audit_log,
+            get_denied_access_log,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

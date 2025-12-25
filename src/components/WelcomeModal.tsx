@@ -3,13 +3,12 @@ import {
   X,
   FolderSync,
   Share2,
-  Shield,
   Users,
-  Link2,
   ArrowRight,
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Check,
 } from "lucide-react";
 
 interface WelcomeModalProps {
@@ -22,68 +21,44 @@ interface FeatureStep {
   icon: React.ReactNode;
   title: string;
   description: string;
-  details: string[];
+  highlights: string[];
 }
 
 const FEATURES: FeatureStep[] = [
   {
     id: "create",
-    icon: <FolderSync size={32} />,
-    title: "Create a Shared Drive",
-    description: "Turn any folder into a P2P shared drive that syncs in real-time.",
-    details: [
-      "Select any folder on your computer",
-      "Your files are encrypted end-to-end",
-      "Changes sync automatically across all peers",
-      "Works over LAN or internet",
+    icon: <FolderSync size={36} strokeWidth={1.5} />,
+    title: "Create & Sync",
+    description:
+      "Transform any folder into a secure P2P drive that syncs instantly across all your devices.",
+    highlights: [
+      "Select any folder to share",
+      "Real-time sync across peers",
+      "Works on LAN or internet",
     ],
   },
   {
     id: "share",
-    icon: <Share2 size={32} />,
-    title: "Share with Anyone",
-    description: "Generate invite links to share your drives securely with others.",
-    details: [
-      "Create invite links with custom permissions",
-      "Set expiration time for links",
-      "Control read, write, or admin access",
+    icon: <Share2 size={36} strokeWidth={1.5} />,
+    title: "Share Securely",
+    description:
+      "Generate invite links with custom permissions. Control who can view, edit, or manage your files.",
+    highlights: [
+      "Custom permission levels",
+      "Expiring invite links",
       "Revoke access anytime",
     ],
   },
   {
     id: "collaborate",
-    icon: <Users size={32} />,
-    title: "Real-time Collaboration",
-    description: "See who is online and what they are working on.",
-    details: [
-      "View online collaborators in real-time",
-      "Lock files to prevent conflicts",
-      "Activity feed shows all changes",
-      "Resolve sync conflicts easily",
-    ],
-  },
-  {
-    id: "security",
-    icon: <Shield size={32} />,
-    title: "End-to-End Encryption",
-    description: "Your files are secured with enterprise-grade cryptography.",
-    details: [
-      "ChaCha20-Poly1305 encryption",
-      "Ed25519 identity keys",
-      "X25519 key exchange",
-      "No central server stores your data",
-    ],
-  },
-  {
-    id: "join",
-    icon: <Link2 size={32} />,
-    title: "Join Shared Drives",
-    description: "Accept invite links to join drives shared by others.",
-    details: [
-      "Click invite links to join instantly",
-      "Files download automatically",
-      "Your changes sync back to others",
-      "Leave anytime with one click",
+    icon: <Users size={36} strokeWidth={1.5} />,
+    title: "Collaborate Live",
+    description:
+      "See who's online, track changes in real-time, and resolve conflicts with ease.",
+    highlights: [
+      "Live presence indicators",
+      "File locking support",
+      "Smart conflict resolution",
     ],
   },
 ];
@@ -93,22 +68,37 @@ const STORAGE_KEY = "gix_welcome_shown";
 export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [direction, setDirection] = useState<"next" | "prev">("next");
+  const [isAnimating, setIsAnimating] = useState(false);
 
   const currentFeature = FEATURES[currentStep];
   const isLastStep = currentStep === FEATURES.length - 1;
   const isFirstStep = currentStep === 0;
 
+  const animateToStep = (newStep: number, dir: "next" | "prev") => {
+    if (isAnimating || newStep === currentStep) return;
+    setIsAnimating(true);
+    setDirection(dir);
+
+    // Wait for exit animation, then change step
+    setTimeout(() => {
+      setCurrentStep(newStep);
+      // Wait for enter animation to complete
+      setTimeout(() => setIsAnimating(false), 300);
+    }, 200);
+  };
+
   const handleNext = () => {
     if (isLastStep) {
       handleFinish();
     } else {
-      setCurrentStep((prev) => prev + 1);
+      animateToStep(currentStep + 1, "next");
     }
   };
 
   const handlePrev = () => {
     if (!isFirstStep) {
-      setCurrentStep((prev) => prev - 1);
+      animateToStep(currentStep - 1, "prev");
     }
   };
 
@@ -134,6 +124,12 @@ export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
       handleNext();
     } else if (e.key === "ArrowLeft") {
       handlePrev();
+    }
+  };
+
+  const handleStepClick = (index: number) => {
+    if (index !== currentStep) {
+      animateToStep(index, index > currentStep ? "next" : "prev");
     }
   };
 
@@ -172,24 +168,31 @@ export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
               className={`step-dot ${index === currentStep ? "active" : ""} ${
                 index < currentStep ? "completed" : ""
               }`}
-              onClick={() => setCurrentStep(index)}
+              onClick={() => handleStepClick(index)}
               aria-label={`Go to ${feature.title}`}
               aria-current={index === currentStep ? "step" : undefined}
             />
           ))}
         </div>
 
-        {/* Feature content */}
-        <div className="welcome-content">
+        {/* Feature content with animation */}
+        <div
+          className={`welcome-content ${isAnimating ? `animating-${direction}` : "visible"}`}
+          key={currentFeature.id}
+        >
           <div className="feature-icon">{currentFeature.icon}</div>
+
           <h3 className="feature-title">{currentFeature.title}</h3>
+
           <p className="feature-description">{currentFeature.description}</p>
 
-          <ul className="feature-details">
-            {currentFeature.details.map((detail, index) => (
-              <li key={index}>
-                <span className="detail-bullet" />
-                {detail}
+          <ul className="feature-highlights">
+            {currentFeature.highlights.map((highlight, index) => (
+              <li key={index} style={{ animationDelay: `${index * 80}ms` }}>
+                <span className="highlight-icon">
+                  <Check size={14} strokeWidth={2.5} />
+                </span>
+                {highlight}
               </li>
             ))}
           </ul>
@@ -203,7 +206,7 @@ export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
               checked={dontShowAgain}
               onChange={(e) => setDontShowAgain(e.target.checked)}
             />
-            <span>Do not show again</span>
+            <span>Don't show again</span>
           </label>
 
           <div className="welcome-actions">
@@ -212,6 +215,7 @@ export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
                 className="btn-secondary"
                 onClick={handlePrev}
                 aria-label="Previous step"
+                disabled={isAnimating}
               >
                 <ChevronLeft size={16} />
                 Back
@@ -222,6 +226,7 @@ export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
               className="btn-primary"
               onClick={handleNext}
               aria-label={isLastStep ? "Get started" : "Next step"}
+              disabled={isAnimating}
             >
               {isLastStep ? (
                 <>

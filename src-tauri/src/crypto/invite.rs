@@ -37,6 +37,8 @@ pub struct InvitePayload {
     pub version: u8,
     /// The drive being shared (DriveId hex)
     pub drive_id: String,
+    /// Human-readable name of the drive
+    pub drive_name: String,
     /// The inviter's NodeId (hex)
     pub inviter: String,
     /// Permission level being granted
@@ -79,6 +81,7 @@ impl InviteToken {
     pub fn create(
         signing_key: &SigningKey,
         drive_id: &str,
+        drive_name: &str,
         permission: Permission,
         validity: Duration,
         note: Option<String>,
@@ -90,6 +93,7 @@ impl InviteToken {
         let payload = InvitePayload {
             version: INVITE_VERSION,
             drive_id: drive_id.to_string(),
+            drive_name: drive_name.to_string(),
             inviter: hex::encode(signing_key.verifying_key().to_bytes()),
             permission,
             created_at: now,
@@ -160,6 +164,7 @@ impl InviteToken {
 /// Builder for creating invite tokens with custom options
 pub struct InviteBuilder {
     drive_id: String,
+    drive_name: String,
     permission: Permission,
     validity: Duration,
     note: Option<String>,
@@ -168,9 +173,10 @@ pub struct InviteBuilder {
 
 impl InviteBuilder {
     /// Start building an invite for a drive
-    pub fn new(drive_id: impl Into<String>) -> Self {
+    pub fn new(drive_id: impl Into<String>, drive_name: impl Into<String>) -> Self {
         Self {
             drive_id: drive_id.into(),
+            drive_name: drive_name.into(),
             permission: Permission::Read,
             validity: Duration::days(7), // Default: 1 week
             note: None,
@@ -207,6 +213,7 @@ impl InviteBuilder {
         InviteToken::create(
             signing_key,
             &self.drive_id,
+            &self.drive_name,
             self.permission,
             self.validity,
             self.note,
@@ -295,7 +302,7 @@ mod tests {
     #[test]
     fn test_invite_creation() {
         let key = generate_signing_key();
-        let token = InviteBuilder::new("drive123")
+        let token = InviteBuilder::new("drive123", "My Test Drive")
             .with_permission(Permission::Write)
             .with_validity(Duration::hours(24))
             .with_note("Welcome to my drive!")
@@ -303,6 +310,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(token.payload.drive_id, "drive123");
+        assert_eq!(token.payload.drive_name, "My Test Drive");
         assert_eq!(token.payload.permission, Permission::Write);
         assert!(!token.is_expired());
     }
@@ -310,7 +318,7 @@ mod tests {
     #[test]
     fn test_invite_verification() {
         let key = generate_signing_key();
-        let token = InviteBuilder::new("drive123")
+        let token = InviteBuilder::new("drive123", "Test Drive")
             .with_permission(Permission::Read)
             .build(&key)
             .unwrap();
@@ -326,7 +334,7 @@ mod tests {
     #[test]
     fn test_invite_serialization() {
         let key = generate_signing_key();
-        let token = InviteBuilder::new("drive123")
+        let token = InviteBuilder::new("drive123", "Serialization Test")
             .with_permission(Permission::Manage)
             .single_use()
             .build(&key)
@@ -336,6 +344,7 @@ mod tests {
         let restored = InviteToken::from_string(&token_string).unwrap();
 
         assert_eq!(token.payload.drive_id, restored.payload.drive_id);
+        assert_eq!(token.payload.drive_name, restored.payload.drive_name);
         assert_eq!(token.payload.permission, restored.payload.permission);
         assert!(restored.verify(&key.verifying_key()).is_ok());
     }
@@ -343,7 +352,7 @@ mod tests {
     #[test]
     fn test_expired_invite() {
         let key = generate_signing_key();
-        let token = InviteBuilder::new("drive123")
+        let token = InviteBuilder::new("drive123", "Expired Drive")
             .with_validity(Duration::seconds(-1)) // Already expired
             .build(&key)
             .unwrap();
@@ -369,7 +378,7 @@ mod tests {
     #[test]
     fn test_invite_builder_defaults() {
         let key = generate_signing_key();
-        let token = InviteBuilder::new("drive123").build(&key).unwrap();
+        let token = InviteBuilder::new("drive123", "Default Test").build(&key).unwrap();
 
         // Default permission is Read
         assert_eq!(token.payload.permission, Permission::Read);

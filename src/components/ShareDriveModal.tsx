@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { X, Link2, Users, Copy, Check, Loader2, Shield, Crown } from "lucide-react";
+import { X, Link2, Users, Copy, Check, Loader2, Shield, Crown, ExternalLink, QrCode } from "lucide-react";
 import type {
     DriveInfo,
     PermissionLevel,
@@ -9,6 +9,7 @@ import type {
     InviteInfo,
 } from "../types";
 import { PERMISSION_LABELS, PERMISSION_DESCRIPTIONS, shortNodeId } from "../types";
+import { generateInviteLink } from "../hooks";
 
 interface ShareDriveModalProps {
     drive: DriveInfo;
@@ -33,7 +34,7 @@ export function ShareDriveModal({ drive, onClose }: ShareDriveModalProps) {
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={handleKeyDown}
             >
-<div className="modal-header">
+                <div className="modal-header">
                     <h2>Share "{drive.name}"</h2>
                     <button className="modal-close" onClick={onClose}>
                         <X size={16} />
@@ -73,6 +74,8 @@ export function ShareDriveModal({ drive, onClose }: ShareDriveModalProps) {
 // Invite Tab Component
 // ============================================
 
+type CopyType = "token" | "link" | "none";
+
 function InviteTab({ driveId }: { driveId: string }) {
     const [permission, setPermission] = useState<PermissionLevel>("read");
     const [validityHours, setValidityHours] = useState(24);
@@ -80,7 +83,7 @@ function InviteTab({ driveId }: { driveId: string }) {
     const [singleUse, setSingleUse] = useState(false);
     const [loading, setLoading] = useState(false);
     const [invite, setInvite] = useState<InviteInfo | null>(null);
-    const [copied, setCopied] = useState(false);
+    const [copied, setCopied] = useState<CopyType>("none");
     const [error, setError] = useState<string | null>(null);
 
     const handleGenerate = async () => {
@@ -105,13 +108,26 @@ function InviteTab({ driveId }: { driveId: string }) {
         }
     };
 
-    const handleCopy = async () => {
+    const handleCopyToken = async () => {
         if (!invite) return;
 
         try {
             await navigator.clipboard.writeText(invite.token);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
+            setCopied("token");
+            setTimeout(() => setCopied("none"), 2000);
+        } catch (e) {
+            console.error("Failed to copy:", e);
+        }
+    };
+
+    const handleCopyLink = async () => {
+        if (!invite) return;
+
+        try {
+            const deepLink = generateInviteLink(invite.token, driveId);
+            await navigator.clipboard.writeText(deepLink);
+            setCopied("link");
+            setTimeout(() => setCopied("none"), 2000);
         } catch (e) {
             console.error("Failed to copy:", e);
         }
@@ -119,34 +135,73 @@ function InviteTab({ driveId }: { driveId: string }) {
 
     const handleReset = () => {
         setInvite(null);
-        setCopied(false);
+        setCopied("none");
     };
 
     // Show generated invite
     if (invite) {
+        const deepLink = generateInviteLink(invite.token, driveId);
+
         return (
             <div className="invite-result">
-                <div className="invite-token">
-                    <code>{invite.token.slice(0, 40)}...</code>
-                    <button
-                        className={`btn-icon ${copied ? "copied" : ""}`}
-                        onClick={handleCopy}
-                        title="Copy to clipboard"
-                    >
-                        {copied ? <Check size={16} /> : <Copy size={16} />}
-                    </button>
+                <div className="invite-section">
+                    <label className="invite-label">
+                        <ExternalLink size={14} />
+                        Shareable Link
+                    </label>
+                    <div className="invite-link-box">
+                        <code className="invite-link">{deepLink}</code>
+                        <button
+                            className={`btn-icon ${copied === "link" ? "copied" : ""}`}
+                            onClick={handleCopyLink}
+                            title="Copy link to clipboard"
+                        >
+                            {copied === "link" ? <Check size={16} /> : <Copy size={16} />}
+                        </button>
+                    </div>
+                    <p className="invite-hint">Share this link - recipients can click to join directly</p>
+                </div>
+
+                <div className="invite-section">
+                    <label className="invite-label">
+                        <QrCode size={14} />
+                        Token (for manual entry)
+                    </label>
+                    <div className="invite-token">
+                        <code>{invite.token.slice(0, 32)}...</code>
+                        <button
+                            className={`btn-icon ${copied === "token" ? "copied" : ""}`}
+                            onClick={handleCopyToken}
+                            title="Copy token to clipboard"
+                        >
+                            {copied === "token" ? <Check size={16} /> : <Copy size={16} />}
+                        </button>
+                    </div>
                 </div>
 
                 <div className="invite-details">
-                    <p>
-                        <strong>Permission:</strong> {PERMISSION_LABELS[invite.permission]}
-                    </p>
-                    <p>
-                        <strong>Expires:</strong>{" "}
-                        {new Date(invite.expires_at).toLocaleString()}
-                    </p>
+                    <div className="detail-row">
+                        <span className="label">Permission:</span>
+                        <span className={`value permission-badge ${invite.permission}`}>
+                            {PERMISSION_LABELS[invite.permission]}
+                        </span>
+                    </div>
+                    <div className="detail-row">
+                        <span className="label">Expires:</span>
+                        <span className="value">
+                            {new Date(invite.expires_at).toLocaleString()}
+                        </span>
+                    </div>
                     {invite.single_use && (
-                        <p className="single-use-badge">Single use</p>
+                        <div className="detail-row">
+                            <span className="single-use-badge">Single use - expires after first use</span>
+                        </div>
+                    )}
+                    {invite.note && (
+                        <div className="detail-row">
+                            <span className="label">Note:</span>
+                            <span className="value">{invite.note}</span>
+                        </div>
                     )}
                 </div>
 

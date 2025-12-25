@@ -10,14 +10,16 @@
 use crate::core::error::AppError;
 use crate::core::rate_limit::{RateLimitOperation, SharedRateLimiter};
 use crate::core::validation::validate_drive_id;
+use crate::core::{DriveId, SharedDrive};
 use crate::crypto::{
-    AccessControlList, AccessRule, InviteBuilder, InviteToken, Permission, TokenTracker,
+    AccessControlList, AccessRule, InviteBuilder, InviteToken, NodeId, Permission, TokenTracker,
 };
 use crate::state::AppState;
 use crate::storage::Database;
 use chrono::{Duration as ChronoDuration, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tauri::State;
 use tokio::sync::RwLock;
@@ -33,6 +35,8 @@ pub struct SecurityStore {
     acls: RwLock<HashMap<String, AccessControlList>>,
     /// Token trackers keyed by drive ID (hex string)
     token_trackers: RwLock<HashMap<String, TokenTracker>>,
+    /// Revoked token IDs keyed by drive ID (hex string)
+    revoked_tokens: RwLock<HashMap<String, HashSet<String>>>,
 }
 
 impl SecurityStore {
@@ -42,10 +46,11 @@ impl SecurityStore {
             db,
             acls: RwLock::new(HashMap::new()),
             token_trackers: RwLock::new(HashMap::new()),
+            revoked_tokens: RwLock::new(HashMap::new()),
         }
     }
 
-    /// Load all ACLs and token trackers from database
+    /// Load all ACLs, token trackers, and revoked tokens from database
     pub fn load_from_db(&self) -> Result<(), String> {
         // Load ACLs
         let acl_entries = self.db.list_acls().map_err(|e| e.to_string())?;
@@ -80,6 +85,29 @@ impl SecurityStore {
         tracing::info!(
             "Loaded {} token trackers from database",
             trackers_guard.len()
+        );
+
+        // Load revoked tokens
+        let revoked_entries = self.db.list_revoked_tokens().map_err(|e| e.to_string())?;
+        let mut revoked_guard = self.revoked_tokens.blocking_write();
+        for (drive_id, data) in revoked_entries {
+            match serde_json::from_slice::<HashSet<String>>(&data) {
+                Ok(tokens) => {
+                    tracing::debug!(
+                        "Loaded {} revoked tokens for drive {}",
+                        tokens.len(),
+                        drive_id
+                    );
+                    revoked_guard.insert(drive_id, tokens);
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to deserialize revoked tokens: {}", e);
+                }
+            }
+        }
+        tracing::info!(
+            "Loaded revoked tokens for {} drives from database",
+            revoked_guard.len()
         );
 
         Ok(())
@@ -192,6 +220,56 @@ impl SecurityStore {
             tracing::error!("Failed to delete ACL from database: {}", e);
         }
     }
+
+    // ============================================================================
+    // Token Revocation
+    // ============================================================================
+
+    /// Check if a token is revoked
+    pub async fn is_token_revoked(&self, drive_id: &str, token_id: &str) -> bool {
+        let revoked = self.revoked_tokens.read().await;
+        revoked
+            .get(drive_id)
+            .map(|tokens| tokens.contains(token_id))
+            .unwrap_or(false)
+    }
+
+    /// Revoke a token (persists to database)
+    pub async fn revoke_token(&self, drive_id: &str, token_id: &str) {
+        // Update in memory
+        {
+            let mut revoked = self.revoked_tokens.write().await;
+            revoked
+                .entry(drive_id.to_string())
+                .or_default()
+                .insert(token_id.to_string());
+        }
+
+        // Persist to database
+        let revoked = self.revoked_tokens.read().await;
+        if let Some(tokens) = revoked.get(drive_id) {
+            match serde_json::to_vec(&tokens) {
+                Ok(data) => {
+                    if let Err(e) = self.db.save_revoked_tokens(drive_id, &data) {
+                        tracing::error!(
+                            "Failed to persist revoked tokens for drive {}: {}",
+                            drive_id,
+                            e
+                        );
+                    }
+                }
+                Err(e) => {
+                    tracing::error!("Failed to serialize revoked tokens: {}", e);
+                }
+            }
+        }
+    }
+
+    /// Get all revoked token IDs for a drive
+    pub async fn get_revoked_tokens(&self, drive_id: &str) -> HashSet<String> {
+        let revoked = self.revoked_tokens.read().await;
+        revoked.get(drive_id).cloned().unwrap_or_default()
+    }
 }
 
 // ============================================================================
@@ -270,6 +348,7 @@ pub struct InviteInfo {
 pub struct InviteVerification {
     pub valid: bool,
     pub drive_id: Option<String>,
+    pub drive_name: Option<String>,
     pub permission: Option<PermissionLevel>,
     pub inviter: Option<String>,
     pub expires_at: Option<String>,
@@ -338,7 +417,7 @@ pub async fn generate_invite(
     let validity_hours = request.validity_hours.unwrap_or(24).min(168).max(1);
     let validity = ChronoDuration::hours(validity_hours as i64);
 
-    let mut builder = InviteBuilder::new(drive_id)
+    let mut builder = InviteBuilder::new(drive_id, &drive.name)
         .with_permission(request.permission.clone().into())
         .with_validity(validity);
 
@@ -391,10 +470,12 @@ pub async fn generate_invite(
 /// - Validates token format and structure
 /// - Verifies Ed25519 signature against inviter's public key
 /// - Checks expiration time
+/// - Checks if token has been revoked
 #[tauri::command]
 pub async fn verify_invite(
     token_string: String,
     _state: State<'_, AppState>,
+    security: State<'_, Arc<SecurityStore>>,
 ) -> Result<InviteVerification, String> {
     // Parse the token
     let token = match InviteToken::from_string(&token_string) {
@@ -404,6 +485,7 @@ pub async fn verify_invite(
             return Ok(InviteVerification {
                 valid: false,
                 drive_id: None,
+                drive_name: None,
                 permission: None,
                 inviter: None,
                 expires_at: None,
@@ -422,10 +504,32 @@ pub async fn verify_invite(
         return Ok(InviteVerification {
             valid: false,
             drive_id: Some(token.payload.drive_id.clone()),
+            drive_name: Some(token.payload.drive_name.clone()),
             permission: Some(token.payload.permission.into()),
             inviter: Some(token.payload.inviter.clone()),
             expires_at: Some(token.payload.expires_at.to_rfc3339()),
             error: Some("Token has expired".to_string()),
+        });
+    }
+
+    // SECURITY: Check if token has been revoked
+    if security
+        .is_token_revoked(&token.payload.drive_id, token.token_id())
+        .await
+    {
+        tracing::warn!(
+            drive_id = %token.payload.drive_id,
+            token_id = %token.token_id(),
+            "Attempted use of revoked invite token"
+        );
+        return Ok(InviteVerification {
+            valid: false,
+            drive_id: Some(token.payload.drive_id.clone()),
+            drive_name: Some(token.payload.drive_name.clone()),
+            permission: Some(token.payload.permission.into()),
+            inviter: Some(token.payload.inviter.clone()),
+            expires_at: Some(token.payload.expires_at.to_rfc3339()),
+            error: Some("This invite has been revoked".to_string()),
         });
     }
 
@@ -442,6 +546,7 @@ pub async fn verify_invite(
                     return Ok(InviteVerification {
                         valid: false,
                         drive_id: Some(token.payload.drive_id.clone()),
+                        drive_name: Some(token.payload.drive_name.clone()),
                         permission: Some(token.payload.permission.into()),
                         inviter: Some(token.payload.inviter.clone()),
                         expires_at: Some(token.payload.expires_at.to_rfc3339()),
@@ -455,6 +560,7 @@ pub async fn verify_invite(
             return Ok(InviteVerification {
                 valid: false,
                 drive_id: Some(token.payload.drive_id.clone()),
+                drive_name: Some(token.payload.drive_name.clone()),
                 permission: Some(token.payload.permission.into()),
                 inviter: Some(token.payload.inviter.clone()),
                 expires_at: Some(token.payload.expires_at.to_rfc3339()),
@@ -473,6 +579,7 @@ pub async fn verify_invite(
         return Ok(InviteVerification {
             valid: false,
             drive_id: Some(token.payload.drive_id.clone()),
+            drive_name: Some(token.payload.drive_name.clone()),
             permission: Some(token.payload.permission.into()),
             inviter: Some(token.payload.inviter.clone()),
             expires_at: Some(token.payload.expires_at.to_rfc3339()),
@@ -482,6 +589,7 @@ pub async fn verify_invite(
 
     tracing::info!(
         drive_id = %token.payload.drive_id,
+        drive_name = %token.payload.drive_name,
         permission = ?token.payload.permission,
         inviter = %token.payload.inviter,
         "Invite token verified successfully"
@@ -490,6 +598,7 @@ pub async fn verify_invite(
     Ok(InviteVerification {
         valid: true,
         drive_id: Some(token.payload.drive_id.clone()),
+        drive_name: Some(token.payload.drive_name.clone()),
         permission: Some(token.payload.permission.into()),
         inviter: Some(token.payload.inviter.clone()),
         expires_at: Some(token.payload.expires_at.to_rfc3339()),
@@ -511,6 +620,7 @@ pub struct AcceptInviteResult {
 ///
 /// # Security
 /// - Verifies token signature and expiration
+/// - Checks if token has been revoked
 /// - Grants permission from token to caller
 /// - Adds caller to drive's ACL
 #[tauri::command]
@@ -547,6 +657,25 @@ pub async fn accept_invite(
             drive_name: String::new(),
             permission: token.payload.permission.into(),
             error: Some("Token has expired".to_string()),
+        });
+    }
+
+    // SECURITY: Check if token has been revoked
+    if security
+        .is_token_revoked(&token.payload.drive_id, token.token_id())
+        .await
+    {
+        tracing::warn!(
+            drive_id = %token.payload.drive_id,
+            token_id = %token.token_id(),
+            "Attempted acceptance of revoked invite token"
+        );
+        return Ok(AcceptInviteResult {
+            success: false,
+            drive_id: token.payload.drive_id.clone(),
+            drive_name: String::new(),
+            permission: token.payload.permission.into(),
+            error: Some("This invite has been revoked".to_string()),
         });
     }
 
@@ -597,7 +726,7 @@ pub async fn accept_invite(
         });
     }
 
-    // Get the drive
+    // Parse the drive ID from the token
     let drive_id = &token.payload.drive_id;
     let id_arr = match parse_drive_id(drive_id) {
         Ok(arr) => arr,
@@ -612,22 +741,9 @@ pub async fn accept_invite(
         }
     };
 
-    let drives = state.drives.read().await;
-    let drive = match drives.get(&id_arr) {
-        Some(d) => d,
-        None => {
-            return Ok(AcceptInviteResult {
-                success: false,
-                drive_id: drive_id.clone(),
-                drive_name: String::new(),
-                permission: token.payload.permission.into(),
-                error: Some("Drive not found".to_string()),
-            });
-        }
-    };
-
-    let drive_name = drive.name.clone();
-    let owner_hex = drive.owner.to_hex();
+    // Get drive name from token
+    let drive_name = token.payload.drive_name.clone();
+    let owner_hex = token.payload.inviter.clone();
 
     // Get caller's node ID
     let caller = state
@@ -637,14 +753,14 @@ pub async fn accept_invite(
         .ok_or_else(|| "Identity not initialized".to_string())?;
     let caller_hex = caller.to_hex();
 
-    // Don't allow owner to join their own drive
+    // Don't allow inviter to join their own drive
     if caller_hex == owner_hex {
         return Ok(AcceptInviteResult {
             success: false,
             drive_id: drive_id.clone(),
             drive_name,
             permission: token.payload.permission.into(),
-            error: Some("You already own this drive".to_string()),
+            error: Some("You cannot join your own drive".to_string()),
         });
     }
 
@@ -665,6 +781,101 @@ pub async fn accept_invite(
                 error: Some("This single-use invite has already been used".to_string()),
             });
         }
+    }
+
+    // Check if the drive already exists locally
+    let drives = state.drives.read().await;
+    let drive_exists = drives.contains_key(&id_arr);
+    drop(drives);
+
+    if !drive_exists {
+        // Create a local directory for the joined drive
+        let base_dir = dirs::document_dir()
+            .or_else(dirs::home_dir)
+            .unwrap_or_else(|| PathBuf::from("."));
+        let drives_dir = base_dir.join("GixDrives");
+
+        // Create the GixDrives directory if it doesn't exist
+        if let Err(e) = std::fs::create_dir_all(&drives_dir) {
+            tracing::error!(error = %e, "Failed to create GixDrives directory");
+            return Ok(AcceptInviteResult {
+                success: false,
+                drive_id: drive_id.clone(),
+                drive_name,
+                permission: token.payload.permission.into(),
+                error: Some(format!("Failed to create drives directory: {}", e)),
+            });
+        }
+
+        // Create a unique folder name for this drive
+        let safe_name = drive_name
+            .chars()
+            .map(|c| if c.is_alphanumeric() || c == ' ' || c == '-' || c == '_' { c } else { '_' })
+            .collect::<String>();
+        let short_id = &drive_id[..8.min(drive_id.len())];
+        let folder_name = format!("{}_{}", safe_name, short_id);
+        let local_path = drives_dir.join(&folder_name);
+
+        // Create the drive directory
+        if let Err(e) = std::fs::create_dir_all(&local_path) {
+            tracing::error!(error = %e, path = %local_path.display(), "Failed to create drive directory");
+            return Ok(AcceptInviteResult {
+                success: false,
+                drive_id: drive_id.clone(),
+                drive_name,
+                permission: token.payload.permission.into(),
+                error: Some(format!("Failed to create drive directory: {}", e)),
+            });
+        }
+
+        // Parse the owner's NodeId from the inviter hex
+        let owner_bytes = match hex::decode(&owner_hex) {
+            Ok(bytes) if bytes.len() == 32 => {
+                let mut arr = [0u8; 32];
+                arr.copy_from_slice(&bytes);
+                arr
+            }
+            _ => {
+                return Ok(AcceptInviteResult {
+                    success: false,
+                    drive_id: drive_id.clone(),
+                    drive_name,
+                    permission: token.payload.permission.into(),
+                    error: Some("Invalid owner ID in token".to_string()),
+                });
+            }
+        };
+        let owner = NodeId(owner_bytes);
+
+        // Create the SharedDrive entry for this joined drive
+        let drive = SharedDrive {
+            id: DriveId(id_arr),
+            name: drive_name.clone(),
+            local_path: local_path.clone(),
+            owner,
+            created_at: Utc::now(),
+            total_size: 0,
+            file_count: 0,
+        };
+
+        // Save to database
+        let drive_bytes = serde_json::to_vec(&drive).map_err(|e| {
+            format!("Failed to serialize drive: {}", e)
+        })?;
+
+        state.db.save_drive(drive.id.as_bytes(), &drive_bytes).map_err(|e| {
+            format!("Failed to save drive: {}", e)
+        })?;
+
+        // Add to in-memory cache
+        state.drives.write().await.insert(id_arr, drive);
+
+        tracing::info!(
+            drive_id = %drive_id,
+            drive_name = %drive_name,
+            local_path = %local_path.display(),
+            "Created local drive entry for joined drive"
+        );
     }
 
     // Get or create ACL and grant permission
@@ -929,6 +1140,76 @@ pub async fn check_permission(
     let required_perm: Permission = required.into();
 
     Ok(acl.check_permission(&check_node_id, &path, required_perm))
+}
+
+/// Revoke an invite token
+///
+/// # Security
+/// - Requires Manage permission on the drive
+/// - Permanently revokes the token (cannot be undone)
+#[tauri::command]
+pub async fn revoke_invite(
+    drive_id: String,
+    token_id: String,
+    state: State<'_, AppState>,
+    security: State<'_, Arc<SecurityStore>>,
+) -> Result<(), String> {
+    let id_arr = parse_drive_id(&drive_id)?;
+
+    // Get drive to find owner
+    let drives = state.drives.read().await;
+    let drive = drives
+        .get(&id_arr)
+        .ok_or_else(|| "Drive not found".to_string())?;
+
+    let owner_hex = drive.owner.to_hex();
+
+    // Get caller's node ID
+    let caller = state
+        .identity_manager
+        .node_id()
+        .await
+        .ok_or_else(|| "Identity not initialized".to_string())?;
+    let caller_hex = caller.to_hex();
+
+    // Get or create ACL and check permission
+    let acl = security.get_or_create_acl(&drive_id, &owner_hex).await;
+
+    // Check if caller has permission to revoke invites (requires Manage)
+    if !acl.check_permission(&caller_hex, "/", Permission::Manage) {
+        tracing::warn!(
+            drive_id = %drive_id,
+            user = %caller_hex,
+            token_id = %token_id,
+            "Access denied: insufficient permission to revoke invite"
+        );
+        return Err("Insufficient permission to revoke invites".to_string());
+    }
+
+    // Revoke the token
+    security.revoke_token(&drive_id, &token_id).await;
+
+    tracing::info!(
+        drive_id = %drive_id,
+        token_id = %token_id,
+        revoked_by = %caller_hex,
+        "Invite token revoked"
+    );
+
+    Ok(())
+}
+
+/// List all revoked token IDs for a drive
+#[tauri::command]
+pub async fn list_revoked_tokens(
+    drive_id: String,
+    security: State<'_, Arc<SecurityStore>>,
+) -> Result<Vec<String>, String> {
+    // Validate drive ID
+    validate_drive_id(&drive_id).map_err(|e| e.to_string())?;
+
+    let revoked = security.get_revoked_tokens(&drive_id).await;
+    Ok(revoked.into_iter().collect())
 }
 
 // ============================================================================

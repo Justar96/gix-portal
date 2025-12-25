@@ -1,14 +1,17 @@
 //! Tauri commands for file locking
 //!
 //! Provides commands for acquiring, releasing, and querying file locks.
-//! 
+//!
 //! # Security
 //! - Validates drive IDs before any lock operations
 //! - Validates paths to prevent directory traversal attacks
+//! - Enforces ACL permission checks for privileged operations
 
+use crate::commands::security::SecurityStore;
 use crate::core::error::AppError;
 use crate::core::validation::{validate_drive_id, validate_path};
 use crate::core::{DriveEvent, FileLock, FileLockDto, LockManager, LockResult, LockType};
+use crate::crypto::Permission;
 use crate::state::AppState;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -228,28 +231,55 @@ pub async fn extend_lock(
 }
 
 /// Force release a lock (admin only)
-/// 
+///
 /// # Security
-/// - Should only be called by drive admin/owner
+/// - Validates path is within drive root
+/// - Enforces ACL permission check (requires Admin permission)
 #[tauri::command]
 pub async fn force_release_lock(
     drive_id: String,
     path: String,
     state: State<'_, AppState>,
+    security: State<'_, Arc<SecurityStore>>,
     lock_manager: State<'_, Arc<LockManager>>,
 ) -> Result<bool, String> {
     let id = parse_drive_id(&drive_id)?;
-    
+
     // Validate path against drive root
     let drives = state.drives.read().await;
     let drive = drives.get(id.as_bytes()).ok_or_else(|| {
-        AppError::DriveNotFound { drive_id: drive_id.clone() }.to_string()
+        AppError::DriveNotFound {
+            drive_id: drive_id.clone(),
+        }
+        .to_string()
     })?;
     let validated_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
+    let owner_hex = drive.owner.to_hex();
     drop(drives);
-    
-    // TODO: Add ACL check to ensure caller is admin/owner
-    
+
+    // Get caller identity and verify admin permission
+    let caller = state
+        .identity_manager
+        .node_id()
+        .await
+        .ok_or_else(|| AppError::IdentityNotInitialized.to_string())?;
+    let caller_hex = caller.to_hex();
+
+    // Enforce ACL permission check (requires Admin to force release locks)
+    let acl = security.get_or_create_acl(&drive_id, &owner_hex).await;
+    if !acl.check_permission(&caller_hex, "/", Permission::Admin) {
+        tracing::warn!(
+            drive_id = %drive_id,
+            user = %caller_hex,
+            path = %path,
+            "Access denied: insufficient permission to force release lock"
+        );
+        return Err(AppError::AccessDenied {
+            reason: "Only admin can force release locks".to_string(),
+        }
+        .to_string());
+    }
+
     let manager = lock_manager.get_drive_locks(&drive_id).await;
 
     if let Some(released) = manager.force_release(&validated_path).await {

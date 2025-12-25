@@ -14,21 +14,12 @@
     gap: $space-3;
     min-height: $button-height;
     position: relative;
-    transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    
+
     @include respond-to('lg') {
         flex-wrap: wrap;
         padding: $space-2 $space-3;
     }
-    
-    .drive-workspace.panel-open & {
-        padding-right: calc($space-4 + 280px);
-        
-        @include respond-to('lg') {
-            padding-right: $space-3;
-        }
-    }
-    
+
     .sync-status-left {
         @include flex-start;
         gap: $space-3;

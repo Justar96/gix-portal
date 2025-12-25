@@ -1,0 +1,140 @@
+@use "../abstracts" as *;
+
+.toast-container {
+    position: fixed;
+    bottom: $space-5;
+    right: $space-5;
+    z-index: $z-tooltip;
+    display: flex;
+    flex-direction: column;
+    gap: $space-2;
+    max-width: 400px;
+    pointer-events: none;
+}
+
+.toast {
+    display: flex;
+    align-items: flex-start;
+    gap: $space-2;
+    padding: $space-3;
+    background: $bg-card;
+    border: 1px solid $border-primary;
+    border-radius: $radius-md;
+    box-shadow: $shadow-lg;
+    animation: toastSlideIn 0.25s ease;
+    pointer-events: auto;
+
+    &.exiting {
+        animation: toastSlideOut 0.2s ease forwards;
+    }
+
+    &.toast-success {
+        border-left: 3px solid $success;
+
+        .toast-icon {
+            color: $success;
+        }
+    }
+
+    &.toast-error {
+        border-left: 3px solid $error;
+
+        .toast-icon {
+            color: $error;
+        }
+    }
+
+    &.toast-warning {
+        border-left: 3px solid $warning;
+
+        .toast-icon {
+            color: $warning;
+        }
+    }
+
+    &.toast-info {
+        border-left: 3px solid $accent;
+
+        .toast-icon {
+            color: $accent;
+        }
+    }
+}
+
+.toast-icon {
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.toast-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: $space-1;
+}
+
+.toast-message {
+    font-size: $text-sm;
+    color: $text-primary;
+    line-height: 1.4;
+}
+
+.toast-action {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-1;
+    background: none;
+    border: none;
+    color: $accent;
+    font-size: $text-sm;
+    font-weight: $weight-medium;
+    cursor: pointer;
+    padding: 0;
+    align-self: flex-start;
+
+    &:hover {
+        color: $accent-light;
+        text-decoration: underline;
+    }
+}
+
+.toast-close {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: $text-muted;
+    cursor: pointer;
+    padding: $space-1;
+    margin: -$space-1;
+    border-radius: $radius-sm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+        background: $bg-tertiary;
+        color: $text-secondary;
+    }
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes toastSlideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}

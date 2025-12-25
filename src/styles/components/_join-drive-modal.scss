@@ -14,7 +14,7 @@
 
 .join-drive-modal {
     @include modal-container($modal-width-sm);
-    
+
     .modal-close {
         @include modal-close-button;
     }
@@ -30,22 +30,22 @@
     padding: $modal-padding-x;
     padding-right: $space-12;
     border-bottom: none;
-    
+
     .modal-icon {
         flex-shrink: 0;
         color: $accent;
-        
+
         svg {
             width: $icon-lg;
             height: $icon-lg;
         }
     }
-    
+
     .modal-text {
         flex: 1;
         min-width: 0;
     }
-    
+
     h2 {
         font-size: $text-base;
         font-weight: $weight-semibold;
@@ -53,7 +53,7 @@
         margin: 0 0 $space-0-5;
         letter-spacing: $tracking-tight;
     }
-    
+
     .modal-subtitle {
         font-size: $text-xs;
         color: $text-muted;
@@ -79,7 +79,7 @@
         gap: $space-2;
         margin-bottom: $space-4;
     }
-    
+
     .token-input {
         flex: 1;
         padding: $space-2-5 $space-3;
@@ -90,22 +90,22 @@
         font-size: $text-xs;
         font-family: $font-mono;
         transition: border-color $transition-fast, background $transition-fast;
-        
+
         &::placeholder {
             color: $text-muted;
         }
-        
+
         &:hover {
             border-color: $border-hover;
         }
-        
+
         &:focus {
             outline: none;
             border-color: $accent;
             background: $bg-primary;
         }
     }
-    
+
     .paste-btn {
         @include flex-center;
         padding: $space-2-5;
@@ -115,7 +115,7 @@
         color: $text-secondary;
         cursor: pointer;
         transition: all $transition-fast;
-        
+
         &:hover {
             background: $bg-tertiary;
             color: $text-primary;
@@ -131,14 +131,14 @@
     gap: $space-3;
     padding: $space-6 0;
     color: $text-secondary;
-    
+
     .spinning {
         @include spin;
         color: $accent;
         width: $icon-lg;
         height: $icon-lg;
     }
-    
+
     p {
         font-size: $text-xs;
         font-weight: $weight-medium;
@@ -157,29 +157,46 @@
         padding: $space-3;
         margin-bottom: $space-4;
     }
-    
+
     .detail-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding: $space-2 0;
-        
-        &:first-child { padding-top: 0; }
-        &:last-child { padding-bottom: 0; border-bottom: none; }
-        &:not(:last-child) { border-bottom: 1px solid $border-subtle; }
+
+        &:first-child {
+            padding-top: 0;
+        }
+
+        &:last-child {
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        &:not(:last-child) {
+            border-bottom: 1px solid $border-subtle;
+        }
     }
-    
+
     .detail-label {
         @include text-label;
+        display: flex;
+        align-items: center;
+        gap: $space-1-5;
         font-size: $text-2xs;
+
+        svg {
+            color: $text-muted;
+            opacity: 0.8;
+        }
     }
-    
+
     .detail-value {
         font-size: $text-xs;
         color: $text-primary;
         font-weight: $weight-medium;
         font-family: $font-mono;
-        
+
         &.permission-badge {
             background: $accent-soft;
             color: $accent;
@@ -199,27 +216,27 @@
     @include flex-column-center;
     gap: $space-3;
     padding: $space-5 0;
-    
+
     .success-icon {
         @include flex-center;
         width: 40px;
         height: 40px;
         color: $success;
-        
+
         svg {
             width: $icon-xl;
             height: $icon-xl;
             stroke-width: 1.5;
         }
     }
-    
+
     h3 {
         font-size: $text-base;
         font-weight: $weight-semibold;
         color: $text-primary;
         margin: 0;
     }
-    
+
     p {
         font-size: $text-xs;
         color: $text-muted;
@@ -235,7 +252,7 @@
 .error-section {
     @include flex-column;
     gap: $space-4;
-    
+
     .error-content {
         display: flex;
         align-items: center;
@@ -245,14 +262,14 @@
         border: 1px solid $error-border;
         border-radius: $radius-md;
     }
-    
+
     .error-icon {
         color: $error;
         width: $icon-md;
         height: $icon-md;
         flex-shrink: 0;
     }
-    
+
     .error-message {
         font-size: $text-xs;
         color: $error;

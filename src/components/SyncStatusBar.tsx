@@ -13,13 +13,13 @@ import {
 import { invoke } from "@tauri-apps/api/core";
 import type { DriveInfo } from "../types";
 import { useDriveEvents } from "../hooks";
+import { SecurityBadge } from "./SecurityBadge";
 
 interface SyncStatusBarProps {
     drive: DriveInfo;
-    presencePanelOpen?: boolean;
 }
 
-export function SyncStatusBar({ drive, presencePanelOpen = true }: SyncStatusBarProps) {
+export function SyncStatusBar({ drive }: SyncStatusBarProps) {
     const { syncStatus, isSyncing, startSync, stopSync, error } = useDriveEvents({
         driveId: drive.id,
     });
@@ -74,7 +74,7 @@ export function SyncStatusBar({ drive, presencePanelOpen = true }: SyncStatusBar
     };
 
     return (
-        <div className={`sync-status-bar ${presencePanelOpen ? 'panel-open' : 'panel-closed'}`}>
+        <div className="sync-status-bar">
             <div className="sync-status-left">
                 {/* Sync Status Indicator */}
                 <div className={`sync-indicator ${isSyncing ? "syncing" : "offline"}`}>
@@ -117,6 +117,9 @@ export function SyncStatusBar({ drive, presencePanelOpen = true }: SyncStatusBar
             </div>
 
             <div className="sync-status-right">
+                {/* Security Badge */}
+                <SecurityBadge drive={drive} compact />
+
                 {/* File Watching Toggle */}
                 <button
                     className={`btn-status ${isWatching ? "active" : ""}`}
