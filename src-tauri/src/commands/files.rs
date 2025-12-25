@@ -5,13 +5,18 @@
 //! Supports optional E2E encryption via EncryptionManager.
 
 use crate::commands::security::SecurityStore;
-use crate::core::{file, validate_drive_id, validate_path, AppError, FileEntryDto};
+use crate::core::{file, validate_drive_id, validate_path, AppError, DriveId, FileEntryDto};
 use crate::crypto::{EncryptionManager, Permission};
 use crate::state::AppState;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::State;
 
 /// List files in a drive directory
+///
+/// Returns merged view of:
+/// - Local files (is_local = true)
+/// - Synced metadata from peers (is_local = false if not downloaded)
 ///
 /// # Security
 /// - Validates drive ID format
@@ -27,6 +32,7 @@ pub async fn list_files(
 ) -> Result<Vec<FileEntryDto>, String> {
     // Validate drive ID
     let id_arr = validate_drive_id(&drive_id).map_err(|e| e.to_string())?;
+    let drive_id_obj = DriveId(id_arr);
 
     // Get drive
     let drives = state.drives.read().await;
@@ -36,6 +42,9 @@ pub async fn list_files(
         }
         .to_string()
     })?;
+    let local_path = drive.local_path.clone();
+    let owner_hex = drive.owner.to_hex();
+    drop(drives);
 
     // Get caller identity and check permission
     let caller = state
@@ -44,7 +53,6 @@ pub async fn list_files(
         .await
         .ok_or_else(|| AppError::IdentityNotInitialized.to_string())?;
     let caller_hex = caller.to_hex();
-    let owner_hex = drive.owner.to_hex();
 
     // Enforce ACL permission check
     let acl = security.get_or_create_acl(&drive_id, &owner_hex).await;
@@ -61,29 +69,92 @@ pub async fn list_files(
         .to_string());
     }
 
+    // Collect files into a map keyed by path for merging
+    let mut files_map: HashMap<String, FileEntryDto> = HashMap::new();
+
+    // 1. First, get synced metadata from DocsManager (remote files)
+    if let Some(docs_manager) = state.docs_manager.as_ref() {
+        match docs_manager.get_directory_metadata(&drive_id_obj, &path).await {
+            Ok(metadata) => {
+                for meta in metadata {
+                    let dto = FileEntryDto::from_metadata(
+                        meta.name.clone(),
+                        meta.path.clone(),
+                        meta.is_dir,
+                        meta.size,
+                        meta.modified_at.clone(),
+                        meta.content_hash.clone(),
+                    );
+                    files_map.insert(meta.path.clone(), dto);
+                }
+                tracing::debug!(
+                    drive_id = %drive_id,
+                    path = %path,
+                    synced_count = files_map.len(),
+                    "Loaded synced metadata"
+                );
+            }
+            Err(e) => {
+                tracing::debug!(
+                    drive_id = %drive_id,
+                    error = %e,
+                    "No synced metadata available (this is normal for new drives)"
+                );
+            }
+        }
+    }
+
+    // 2. Then, get local files from filesystem and merge (override remote entries)
     // Validate path is safe (prevents directory traversal)
-    let safe_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
+    let safe_path = validate_path(&local_path, &path).map_err(|e| e.to_string())?;
 
-    // Ensure the path exists and is within drive
-    if !safe_path.exists() {
-        return Err(AppError::PathNotFound { path: path.clone() }.to_string());
+    // Check if local directory exists
+    if safe_path.exists() && safe_path.is_dir() {
+        match file::list_directory(&local_path, &path) {
+            Ok(entries) => {
+                for entry in entries {
+                    let entry_path = entry.path.to_string_lossy().to_string();
+                    let mut dto = FileEntryDto::from(&entry);
+                    
+                    // If we have synced metadata for this file, copy the content_hash
+                    if let Some(synced) = files_map.get(&entry_path) {
+                        dto.content_hash = synced.content_hash.clone();
+                    }
+                    
+                    // Local file - is_local is already true from From impl
+                    files_map.insert(entry_path, dto);
+                }
+            }
+            Err(e) => {
+                tracing::warn!(
+                    drive_id = %drive_id,
+                    path = %path,
+                    error = %e,
+                    "Failed to list local directory"
+                );
+            }
+        }
     }
 
-    if !safe_path.is_dir() {
-        return Err(AppError::NotADirectory { path }.to_string());
-    }
-
-    // List directory contents
-    let entries = file::list_directory(&drive.local_path, &path)
-        .map_err(|e| format!("Failed to list directory: {}", e))?;
-
-    let dtos: Vec<FileEntryDto> = entries.iter().map(FileEntryDto::from).collect();
+    // Convert map to sorted vector
+    let mut dtos: Vec<FileEntryDto> = files_map.into_values().collect();
+    
+    // Sort: directories first, then by name (case-insensitive)
+    dtos.sort_by(|a, b| {
+        match (a.is_dir, b.is_dir) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+        }
+    });
 
     tracing::debug!(
         drive_id = %drive_id,
         path = %path,
-        count = dtos.len(),
-        "Listed files"
+        total_count = dtos.len(),
+        local_count = dtos.iter().filter(|f| f.is_local).count(),
+        remote_count = dtos.iter().filter(|f| !f.is_local).count(),
+        "Listed files (merged local + synced)"
     );
 
     Ok(dtos)

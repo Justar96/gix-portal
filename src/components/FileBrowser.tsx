@@ -30,10 +30,12 @@ import {
   Upload,
   Eye,
   Info,
+  Cloud,
+  CloudDownload,
 } from "lucide-react";
 import type { FileEntry, DriveInfo, FileCategory, LockType } from "../types";
 import { formatBytes, formatDate, getFileCategory, shortNodeId, formatLockExpiry, LOCK_TYPE_LABELS, LOCK_TYPE_DESCRIPTIONS } from "../types";
-import { useLocking, useFileTransfer, usePermissions } from "../hooks";
+import { useLocking, usePermissions } from "../hooks";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { FilePreview } from "./FilePreview";
 import { useToast } from "./Toast";
@@ -95,6 +97,7 @@ interface FileRowProps {
   lock: ReturnType<ReturnType<typeof useLocking>["getLockStatus"]>;
   lockedByOther: boolean;
   lockedByMe: boolean;
+  isDownloading: boolean;
   virtualRow: { size: number; start: number };
   onRowClick: (e: React.MouseEvent, index: number) => void;
   onDoubleClick: (file: FileEntry) => void;
@@ -114,6 +117,7 @@ const FileRow = memo(function FileRow({
   lock,
   lockedByOther,
   lockedByMe,
+  isDownloading,
   virtualRow,
   onRowClick,
   onDoubleClick,
@@ -166,6 +170,19 @@ const FileRow = memo(function FileRow({
           ) : (
             <span className="file-name">{file.name}</span>
           )}
+          {/* Remote file indicator - file exists on P2P network but not downloaded locally */}
+          {!file.is_local && !file.is_dir && (
+            <span
+              className={`remote-indicator ${isDownloading ? "downloading" : ""}`}
+              title={isDownloading ? "Downloading..." : "Remote file - click to download"}
+            >
+              {isDownloading ? (
+                <CloudDownload size={12} className="downloading-icon" />
+              ) : (
+                <Cloud size={12} className="remote-icon" />
+              )}
+            </span>
+          )}
           {lock && !file.is_dir && (
             <span
               className={`lock-indicator ${lockedByMe ? "mine" : "other"} ${lock.lock_type}`}
@@ -214,6 +231,7 @@ interface GridItemProps {
   isSelected: boolean;
   lockedByOther: boolean;
   lockedByMe: boolean;
+  isDownloading: boolean;
   lock: ReturnType<ReturnType<typeof useLocking>["getLockStatus"]>;
   onRowClick: (e: React.MouseEvent, index: number) => void;
   onDoubleClick: (file: FileEntry) => void;
@@ -226,6 +244,7 @@ const GridItem = memo(function GridItem({
   isSelected,
   lockedByOther,
   lockedByMe,
+  isDownloading,
   lock,
   onRowClick,
   onDoubleClick,
@@ -251,6 +270,15 @@ const GridItem = memo(function GridItem({
       </div>
       <div className="grid-item-icon">
         {getFileIconComponent(file)}
+        {/* Remote file indicator */}
+        {!file.is_local && !file.is_dir && (
+          <span 
+            className={`grid-remote-badge ${isDownloading ? 'downloading' : ''}`} 
+            title={isDownloading ? "Downloading..." : "Remote file - click to download"}
+          >
+            {isDownloading ? <CloudDownload size={10} /> : <Cloud size={10} />}
+          </span>
+        )}
         {lock && !file.is_dir && (
           <span className={`grid-lock-badge ${lock.lock_type}`} title={LOCK_TYPE_DESCRIPTIONS[lock.lock_type as LockType]}>
             {lock.lock_type === "exclusive" ? <Lock size={10} /> : <LockOpen size={10} />}
@@ -286,6 +314,7 @@ export function FileBrowser({ drive }: FileBrowserProps) {
   const [previewFile, setPreviewFile] = useState<FileEntry | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [downloadingFiles, setDownloadingFiles] = useState<Set<string>>(new Set());
 
   // React 18 concurrent features for smoother UI
   const [isPending, startTransition] = useTransition();
@@ -302,9 +331,6 @@ export function FileBrowser({ drive }: FileBrowserProps) {
     acquireLock,
     releaseLock,
   } = useLocking({ driveId: drive.id });
-
-  // File transfer for uploads
-  const { uploadFile } = useFileTransfer({ driveId: drive.id });
 
   // Permissions for this drive
   const { canPerform } = usePermissions({ driveId: drive.id });
@@ -419,12 +445,52 @@ export function FileBrowser({ drive }: FileBrowserProps) {
     loadFiles("/");
   }, [loadFiles]);
 
-  const navigateTo = (entry: FileEntry) => {
+  const navigateTo = async (entry: FileEntry) => {
     if (entry.is_dir) {
       loadFiles(entry.path);
     } else {
-      // Open preview for files
-      setPreviewFile(entry);
+      // If file is remote (not downloaded locally), download it first
+      if (!entry.is_local && entry.content_hash) {
+        // Check if already downloading
+        if (downloadingFiles.has(entry.path)) {
+          toast?.showInfo(`Already downloading ${entry.name}...`);
+          return;
+        }
+
+        // Start download
+        setDownloadingFiles(prev => new Set(prev).add(entry.path));
+        toast?.showInfo(`Downloading ${entry.name}...`);
+
+        try {
+          await invoke("download_file", {
+            driveId: drive.id,
+            path: entry.path,
+            hash: entry.content_hash,
+          });
+          
+          // Update the file entry to mark as local
+          setFiles(prev => prev.map(f => 
+            f.path === entry.path ? { ...f, is_local: true } : f
+          ));
+          
+          toast?.showSuccess(`Downloaded ${entry.name}`);
+          
+          // Now open preview with the updated entry
+          setPreviewFile({ ...entry, is_local: true });
+        } catch (e) {
+          console.error("Failed to download file:", e);
+          toast?.showError(`Failed to download: ${e}`);
+        } finally {
+          setDownloadingFiles(prev => {
+            const next = new Set(prev);
+            next.delete(entry.path);
+            return next;
+          });
+        }
+      } else {
+        // File is local, open preview directly
+        setPreviewFile(entry);
+      }
     }
   };
 
@@ -670,20 +736,41 @@ export function FileBrowser({ drive }: FileBrowserProps) {
     setIsDragging(false);
     dragCounterRef.current = 0;
 
+    // Check write permission
+    if (!canWrite) {
+      toast?.showError("You don't have permission to upload files to this drive");
+      return;
+    }
+
     const files = Array.from(e.dataTransfer.files);
     if (files.length === 0) return;
 
-    toast?.showInfo(`Uploading ${files.length} file${files.length > 1 ? "s" : ""}...`);
+    toast?.showInfo(`Importing ${files.length} file${files.length > 1 ? "s" : ""}...`);
+
+    // Determine the destination folder (current path, or root if at "/")
+    const destFolder = currentPath === "/" ? null : currentPath;
 
     for (const file of files) {
       try {
-        // For web file API, we need to handle this differently
-        // The file path from dataTransfer is the full path
-        const filePath = (file as any).path || file.name;
-        await uploadFile(drive.id, filePath);
-        toast?.showSuccess(`Uploaded ${file.name}`);
+        // Get the file path from the drag event
+        // In Tauri, dataTransfer.files contains the full path
+        const filePath = (file as any).path;
+        
+        if (!filePath) {
+          toast?.showError(`Cannot import ${file.name}: file path not available`);
+          continue;
+        }
+
+        // Use import_file to copy external file into drive and upload
+        await invoke("import_file", {
+          driveId: drive.id,
+          sourcePath: filePath,
+          destName: null, // Use original filename
+          destFolder: destFolder,
+        });
+        toast?.showSuccess(`Imported ${file.name}`);
       } catch (err) {
-        toast?.showError(`Failed to upload ${file.name}: ${err}`);
+        toast?.showError(`Failed to import ${file.name}: ${err}`);
       }
     }
 
@@ -1025,6 +1112,7 @@ export function FileBrowser({ drive }: FileBrowserProps) {
                     lock={lock}
                     lockedByOther={lockedByOther}
                     lockedByMe={lockedByMe}
+                    isDownloading={downloadingFiles.has(file.path)}
                     virtualRow={virtualRow}
                     onRowClick={handleRowClick}
                     onDoubleClick={navigateTo}
@@ -1081,6 +1169,7 @@ export function FileBrowser({ drive }: FileBrowserProps) {
                         lockedByOther={lockedByOther}
                         lockedByMe={lockedByMe}
                         lock={lock}
+                        isDownloading={downloadingFiles.has(file.path)}
                         onRowClick={handleRowClick}
                         onDoubleClick={navigateTo}
                         onContextMenu={handleContextMenu}

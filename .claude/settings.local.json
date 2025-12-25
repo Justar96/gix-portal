@@ -26,7 +26,15 @@
       "Bash(npm run lint)",
       "Bash(npm run:*)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "Bash(git push:*)",
+      "Bash(git tag:*)",
+      "Bash(git add:*)",
+      "Bash(git restore:*)",
+      "Bash(git commit:*)",
+      "Bash(cargo tree:*)",
+      "Bash(cargo search:*)",
+      "Bash(gh api:*)"
     ]
   }
 }

@@ -12,11 +12,11 @@ use commands::{
     get_audit_count, get_audit_log, get_conflict, get_conflict_count, get_connection_status,
     get_denied_access_log, get_drive, get_drive_audit_log, get_identity, get_lock_status,
     get_online_count, get_online_users, get_recent_activity, get_sync_status, get_transfer,
-    grant_permission, is_watching, join_drive_presence, leave_drive_presence, list_conflicts,
-    list_drives, list_files, list_locks, list_permissions, list_revoked_tokens, list_transfers,
-    presence_heartbeat, read_file, read_file_encrypted, release_lock, rename_drive, rename_path,
-    resolve_conflict, revoke_invite, revoke_permission, start_sync, start_watching, stop_sync,
-    stop_watching, subscribe_drive_events, upload_file, verify_invite, write_file,
+    grant_permission, import_file, is_watching, join_drive_presence, leave_drive_presence,
+    list_conflicts, list_drives, list_files, list_locks, list_permissions, list_revoked_tokens,
+    list_transfers, presence_heartbeat, read_file, read_file_encrypted, release_lock, rename_drive,
+    rename_path, resolve_conflict, revoke_invite, revoke_permission, start_sync, start_watching,
+    stop_sync, stop_watching, subscribe_drive_events, upload_file, verify_invite, write_file,
     write_file_encrypted, SecurityStore,
 };
 use core::{
@@ -268,6 +268,7 @@ pub fn run() {
             list_transfers,
             get_transfer,
             cancel_transfer,
+            import_file,
             // Phase 3: Security commands
             generate_invite,
             verify_invite,

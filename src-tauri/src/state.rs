@@ -82,7 +82,7 @@ impl AppState {
 
         // Initialize Phase 2 components (gossip, docs, sync, watcher, transfer)
         let (sync_engine, event_broadcaster, docs_manager, file_watcher, file_transfer) =
-            Self::initialize_sync_components(&endpoint, &identity_manager, &data_dir).await;
+            Self::initialize_sync_components(&endpoint, &identity_manager, &data_dir, db.clone()).await;
 
         // Initialize EncryptionManager for E2E file encryption
         let encryption_manager = match EncryptionManager::new(db.clone()) {
@@ -118,6 +118,7 @@ impl AppState {
         endpoint: &Arc<P2PEndpoint>,
         identity_manager: &Arc<IdentityManager>,
         data_dir: &std::path::Path,
+        db: Arc<Database>,
     ) -> (
         Option<Arc<SyncEngine>>,
         Option<Arc<EventBroadcaster>>,
@@ -162,7 +163,7 @@ impl AppState {
         };
 
         // Initialize DocsManager
-        let docs_manager = match DocsManager::new(data_dir).await {
+        let docs_manager = match DocsManager::new(data_dir, db).await {
             Ok(dm) => Arc::new(dm),
             Err(e) => {
                 tracing::error!("Failed to initialize DocsManager: {}", e);

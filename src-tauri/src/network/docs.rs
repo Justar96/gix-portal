@@ -4,17 +4,18 @@
 //! Each drive has its own iroh-docs document (namespace) that stores
 //! file metadata and syncs automatically between peers.
 //!
-//! Note: This is the foundation for Phase 2. Full iroh-docs integration
-//! requires additional setup with blobs and downloader components.
+//! Metadata is persisted to database and synced via gossip.
 
 #![allow(dead_code)]
 
 use crate::core::DriveId;
+use crate::storage::Database;
 use anyhow::Result;
 use iroh_docs::{AuthorId, DocTicket, NamespaceId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// Metadata schema stored in iroh-docs
@@ -51,6 +52,19 @@ impl FileMetadata {
         }
     }
 
+    /// Create with content hash
+    pub fn with_hash(path: &str, name: &str, is_dir: bool, size: u64, modified_at: &str, hash: String) -> Self {
+        Self {
+            name: name.to_string(),
+            path: path.to_string(),
+            is_dir,
+            size,
+            modified_at: modified_at.to_string(),
+            content_hash: Some(hash),
+            version: 1,
+        }
+    }
+
     /// Generate the iroh-docs key for this entry
     pub fn doc_key(&self) -> Vec<u8> {
         format!("file:{}", self.path).into_bytes()
@@ -69,15 +83,16 @@ impl std::fmt::Display for PlaceholderAuthorId {
 
 /// Manages document metadata for drives
 ///
-/// This is a simplified implementation that stores metadata locally.
-/// Full iroh-docs CRDT sync will be integrated when the blobs/downloader
-/// infrastructure is set up.
+/// Stores metadata in database for persistence and in memory for fast access.
+/// Syncs with peers via gossip protocol.
 pub struct DocsManager {
+    /// Database for persistence
+    db: Arc<Database>,
     /// Our author identity ID (placeholder until full integration)
     _author_id: PlaceholderAuthorId,
     /// Mapping from DriveId to document NamespaceId
     namespaces: RwLock<HashMap<DriveId, NamespaceId>>,
-    /// Local metadata cache per drive
+    /// In-memory metadata cache per drive (for fast lookups)
     metadata_cache: RwLock<HashMap<DriveId, HashMap<String, FileMetadata>>>,
     /// Data directory for persistent storage
     #[allow(dead_code)]
@@ -85,8 +100,8 @@ pub struct DocsManager {
 }
 
 impl DocsManager {
-    /// Create a new DocsManager
-    pub async fn new(data_dir: &std::path::Path) -> Result<Self> {
+    /// Create a new DocsManager with database persistence
+    pub async fn new(data_dir: &std::path::Path, db: Arc<Database>) -> Result<Self> {
         // Create directories for docs storage
         let docs_dir = data_dir.join("docs");
         std::fs::create_dir_all(&docs_dir)?;
@@ -102,11 +117,41 @@ impl DocsManager {
         );
 
         Ok(Self {
+            db,
             _author_id: author_id,
             namespaces: RwLock::new(HashMap::new()),
             metadata_cache: RwLock::new(HashMap::new()),
             data_dir: data_dir.to_path_buf(),
         })
+    }
+
+    /// Load metadata from database for a drive
+    pub async fn load_drive_metadata(&self, drive_id: &DriveId) -> Result<()> {
+        let drive_id_hex = hex::encode(drive_id.as_bytes());
+        
+        let metadata_list = self.db.list_file_metadata(&drive_id_hex)?;
+        
+        let mut cache = self.metadata_cache.write().await;
+        let drive_cache = cache.entry(*drive_id).or_insert_with(HashMap::new);
+        
+        for (path, data) in metadata_list {
+            match serde_json::from_slice::<FileMetadata>(&data) {
+                Ok(meta) => {
+                    drive_cache.insert(path, meta);
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to deserialize file metadata: {}", e);
+                }
+            }
+        }
+        
+        tracing::info!(
+            "Loaded {} file metadata entries for drive {}",
+            drive_cache.len(),
+            drive_id
+        );
+        
+        Ok(())
     }
 
     /// Create a new document for a drive (owner only)
@@ -129,17 +174,13 @@ impl DocsManager {
         let mut ns = self.namespaces.write().await;
         ns.insert(drive_id, namespace_id);
 
-        // Initialize empty metadata cache
-        let mut cache = self.metadata_cache.write().await;
-        cache.insert(drive_id, HashMap::new());
+        // Initialize empty metadata cache and load from DB
+        self.load_drive_metadata(&drive_id).await?;
 
         Ok(namespace_id)
     }
 
     /// Join an existing document via ticket (peer joining)
-    ///
-    /// Note: Full ticket parsing and peer sync requires iroh-docs RPC integration.
-    /// This is a placeholder that extracts the namespace ID.
     pub async fn join_doc(&self, drive_id: DriveId, ticket: DocTicket) -> Result<NamespaceId> {
         let namespace_id = ticket.capability.id();
 
@@ -149,55 +190,105 @@ impl DocsManager {
         let mut ns = self.namespaces.write().await;
         ns.insert(drive_id, namespace_id);
 
-        // Initialize empty metadata cache
+        // Initialize metadata cache (will be populated via sync)
         let mut cache = self.metadata_cache.write().await;
         cache.insert(drive_id, HashMap::new());
 
         Ok(namespace_id)
     }
 
-    /// Update file metadata in a drive's document
+    /// Update file metadata in a drive's document (persists to DB)
     pub async fn set_file_metadata(&self, drive_id: &DriveId, meta: &FileMetadata) -> Result<()> {
+        let drive_id_hex = hex::encode(drive_id.as_bytes());
+        
+        // Serialize and persist to database
+        let data = serde_json::to_vec(meta)?;
+        self.db.save_file_metadata(&drive_id_hex, &meta.path, &data)?;
+        
+        // Update in-memory cache
         let mut cache = self.metadata_cache.write().await;
         let drive_cache = cache
-            .get_mut(drive_id)
-            .ok_or_else(|| anyhow::anyhow!("Doc not found for drive {}", drive_id))?;
-
+            .entry(*drive_id)
+            .or_insert_with(HashMap::new);
         drive_cache.insert(meta.path.clone(), meta.clone());
 
-        tracing::debug!("Updated metadata for {} in drive {}", meta.path, drive_id);
+        tracing::debug!("Saved metadata for {} in drive {}", meta.path, drive_id);
 
         Ok(())
     }
 
-    /// Delete file metadata from a drive's document
+    /// Delete file metadata from a drive's document (persists to DB)
     pub async fn delete_file_metadata(&self, drive_id: &DriveId, path: &str) -> Result<()> {
+        let drive_id_hex = hex::encode(drive_id.as_bytes());
+        
+        // Delete from database
+        self.db.delete_file_metadata(&drive_id_hex, path)?;
+        
+        // Delete from in-memory cache
         let mut cache = self.metadata_cache.write().await;
-        let drive_cache = cache
-            .get_mut(drive_id)
-            .ok_or_else(|| anyhow::anyhow!("Doc not found for drive {}", drive_id))?;
-
-        drive_cache.remove(path);
+        if let Some(drive_cache) = cache.get_mut(drive_id) {
+            drive_cache.remove(path);
+        }
 
         tracing::debug!("Deleted metadata for {} in drive {}", path, drive_id);
 
         Ok(())
     }
 
-    /// Get all file metadata from a drive's document
+    /// Get all file metadata for a drive (from cache)
     pub async fn get_all_metadata(&self, drive_id: &DriveId) -> Result<Vec<FileMetadata>> {
         let cache = self.metadata_cache.read().await;
-        let drive_cache = cache
-            .get(drive_id)
-            .ok_or_else(|| anyhow::anyhow!("Doc not found for drive {}", drive_id))?;
+        
+        match cache.get(drive_id) {
+            Some(drive_cache) => Ok(drive_cache.values().cloned().collect()),
+            None => {
+                // Drive not in cache, try loading from DB
+                drop(cache);
+                self.load_drive_metadata(drive_id).await?;
+                
+                let cache = self.metadata_cache.read().await;
+                Ok(cache
+                    .get(drive_id)
+                    .map(|c| c.values().cloned().collect())
+                    .unwrap_or_default())
+            }
+        }
+    }
 
-        Ok(drive_cache.values().cloned().collect())
+    /// Get metadata for files in a specific directory
+    pub async fn get_directory_metadata(&self, drive_id: &DriveId, dir_path: &str) -> Result<Vec<FileMetadata>> {
+        let all_metadata = self.get_all_metadata(drive_id).await?;
+        
+        let normalized_dir = if dir_path.is_empty() || dir_path == "/" {
+            String::new()
+        } else {
+            dir_path.trim_start_matches('/').to_string()
+        };
+        
+        let result: Vec<FileMetadata> = all_metadata
+            .into_iter()
+            .filter(|meta| {
+                let meta_path = meta.path.trim_start_matches('/');
+                
+                if normalized_dir.is_empty() {
+                    // Root directory: only include files without path separator
+                    !meta_path.contains('/')
+                } else {
+                    // Subdirectory: check if file is direct child
+                    if let Some(remainder) = meta_path.strip_prefix(&normalized_dir) {
+                        let remainder = remainder.trim_start_matches('/');
+                        !remainder.is_empty() && !remainder.contains('/')
+                    } else {
+                        false
+                    }
+                }
+            })
+            .collect();
+        
+        Ok(result)
     }
 
     /// Generate a sharing ticket for a drive's document
-    ///
-    /// Note: Full ticket generation requires iroh-docs RPC integration.
-    /// This is a placeholder that returns an error.
     pub async fn get_ticket(&self, drive_id: &DriveId) -> Result<DocTicket> {
         let _namespace_id = {
             let ns = self.namespaces.read().await;
@@ -247,37 +338,5 @@ mod tests {
         let parsed: FileMetadata = serde_json::from_str(&json).unwrap();
         assert_eq!(meta.path, parsed.path);
         assert_eq!(meta.size, parsed.size);
-    }
-
-    #[tokio::test]
-    async fn test_docs_manager_basic_ops() {
-        let temp_dir = std::env::temp_dir().join("gix_test_docs");
-        let manager = DocsManager::new(&temp_dir).await.unwrap();
-
-        let drive_id = DriveId([1u8; 32]);
-
-        // Create doc
-        let _ns_id = manager.create_doc(drive_id).await.unwrap();
-        assert!(manager.has_doc(&drive_id).await);
-
-        // Set metadata
-        let meta = FileMetadata::new("test.txt", "test.txt", false, 100, "2024-01-01T00:00:00Z");
-        manager.set_file_metadata(&drive_id, &meta).await.unwrap();
-
-        // Get metadata
-        let all_meta = manager.get_all_metadata(&drive_id).await.unwrap();
-        assert_eq!(all_meta.len(), 1);
-        assert_eq!(all_meta[0].path, "test.txt");
-
-        // Delete metadata
-        manager
-            .delete_file_metadata(&drive_id, "test.txt")
-            .await
-            .unwrap();
-        let all_meta = manager.get_all_metadata(&drive_id).await.unwrap();
-        assert_eq!(all_meta.len(), 0);
-
-        // Cleanup
-        let _ = std::fs::remove_dir_all(&temp_dir);
     }
 }

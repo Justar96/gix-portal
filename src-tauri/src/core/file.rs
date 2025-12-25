@@ -26,6 +26,39 @@ pub struct FileEntryDto {
     pub is_dir: bool,
     pub size: u64,
     pub modified_at: String,
+    /// Whether the file content is available locally (downloaded)
+    /// If false, only metadata is synced - content must be downloaded on-demand
+    #[serde(default = "default_is_local")]
+    pub is_local: bool,
+    /// BLAKE3 content hash for file transfer (None for directories)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_hash: Option<String>,
+}
+
+fn default_is_local() -> bool {
+    true
+}
+
+impl FileEntryDto {
+    /// Create a new FileEntryDto for a remote (not downloaded) file
+    pub fn from_metadata(
+        name: String,
+        path: String,
+        is_dir: bool,
+        size: u64,
+        modified_at: String,
+        content_hash: Option<String>,
+    ) -> Self {
+        Self {
+            name,
+            path,
+            is_dir,
+            size,
+            modified_at,
+            is_local: false,
+            content_hash,
+        }
+    }
 }
 
 impl From<&FileEntry> for FileEntryDto {
@@ -36,6 +69,8 @@ impl From<&FileEntry> for FileEntryDto {
             is_dir: entry.is_dir,
             size: entry.size,
             modified_at: entry.modified_at.to_rfc3339(),
+            is_local: true, // Local files are always available
+            content_hash: None, // Hash computed separately if needed
         }
     }
 }

@@ -341,3 +341,125 @@ pub async fn cancel_transfer(
     tracing::info!(transfer_id = %transfer_id, "Cancelled transfer");
     Ok(())
 }
+
+/// Import an external file into the drive
+///
+/// This copies a file from outside the drive into the drive's local folder,
+/// then uploads it to the blob store for P2P sharing.
+///
+/// # Arguments
+/// * `drive_id` - The drive to import into
+/// * `source_path` - The external file path to import from
+/// * `dest_name` - Optional destination filename (uses source filename if not provided)
+/// * `dest_folder` - Optional destination folder within drive (uses root if not provided)
+#[tauri::command]
+pub async fn import_file(
+    drive_id: String,
+    source_path: String,
+    dest_name: Option<String>,
+    dest_folder: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let id = parse_drive_id(&drive_id)?;
+
+    // Check file transfer is available
+    let file_transfer = state
+        .file_transfer
+        .as_ref()
+        .ok_or_else(|| AppError::TransferNotInitialized.to_string())?;
+
+    // Get drive to determine local path
+    let drives = state.drives.read().await;
+    let drive = drives.get(id.as_bytes()).ok_or_else(|| {
+        AppError::DriveNotFound {
+            drive_id: drive_id.clone(),
+        }
+        .to_string()
+    })?;
+    let drive_local_path = drive.local_path.clone();
+    drop(drives);
+
+    // Parse source path and validate it exists
+    let source = std::path::PathBuf::from(&source_path);
+    if !source.exists() {
+        return Err(format!("Source file does not exist: {}", source_path));
+    }
+    if !source.is_file() {
+        return Err(format!("Source is not a file: {}", source_path));
+    }
+
+    // Determine destination filename
+    let file_name = dest_name.unwrap_or_else(|| {
+        source
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("imported_file")
+            .to_string()
+    });
+
+    // Sanitize the filename to prevent path traversal
+    let safe_name: String = file_name
+        .chars()
+        .filter(|c| c.is_alphanumeric() || *c == '.' || *c == '-' || *c == '_' || *c == ' ')
+        .collect();
+    if safe_name.is_empty() {
+        return Err("Invalid destination filename".to_string());
+    }
+
+    // Build destination path
+    let mut dest_path = drive_local_path.clone();
+    if let Some(folder) = dest_folder {
+        // Sanitize folder path
+        let folder_path = std::path::PathBuf::from(&folder);
+        for component in folder_path.components() {
+            match component {
+                std::path::Component::Normal(name) => {
+                    if let Some(name_str) = name.to_str() {
+                        dest_path.push(name_str);
+                    }
+                }
+                _ => {} // Skip .., /, etc.
+            }
+        }
+    }
+    dest_path.push(&safe_name);
+
+    // Create parent directories if needed
+    if let Some(parent) = dest_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| {
+            format!("Failed to create destination directory: {}", e)
+        })?;
+    }
+
+    // Copy the file
+    std::fs::copy(&source, &dest_path).map_err(|e| {
+        format!("Failed to copy file: {}", e)
+    })?;
+
+    tracing::info!(
+        drive_id = %drive_id,
+        source = %source_path,
+        dest = %dest_path.display(),
+        "Imported file into drive"
+    );
+
+    // Now upload the copied file
+    let relative_path = dest_path
+        .strip_prefix(&drive_local_path)
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|_| std::path::PathBuf::from(&safe_name));
+
+    let hash = file_transfer
+        .upload_file(&id, &dest_path, &relative_path)
+        .await
+        .map_err(|e| AppError::TransferFailed(format!("Upload failed: {}", e)).to_string())?;
+
+    tracing::info!(
+        drive_id = %drive_id,
+        path = %dest_path.display(),
+        hash = %hash.to_hex(),
+        "Uploaded imported file"
+    );
+
+    Ok(hash.to_hex().to_string())
+}

@@ -343,6 +343,53 @@
     &.other { color: $warning; }
 }
 
+// Remote File Indicators
+.remote-indicator {
+    @include flex-center;
+    margin-left: $space-1;
+    flex-shrink: 0;
+    color: $text-muted;
+    
+    .remote-icon {
+        opacity: 0.7;
+    }
+    
+    &.downloading {
+        color: $accent;
+        
+        .downloading-icon {
+            animation: pulse 1.2s ease-in-out infinite;
+        }
+    }
+}
+
+.grid-remote-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 16px;
+    height: 16px;
+    border-radius: $radius-full;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: $bg-secondary;
+    color: $text-muted;
+    border: 1px solid $border-subtle;
+    
+    &.downloading {
+        background: $accent;
+        color: white;
+        border-color: $accent;
+        animation: pulse 1.2s ease-in-out infinite;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
 // Actions
 .action-buttons {
     display: flex;

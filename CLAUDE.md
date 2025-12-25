@@ -22,6 +22,9 @@ bun tauri dev
 
 # Run tests
 cd src-tauri && cargo test
+bun test                    # Frontend tests (vitest)
+bun test:watch              # Watch mode
+bun test:coverage           # With coverage
 
 # Run a single test
 cd src-tauri && cargo test test_name
@@ -29,6 +32,9 @@ cd src-tauri && cargo test test_name
 # Lint
 bun lint
 cd src-tauri && cargo clippy
+
+# Type check and build frontend
+bun run build               # Runs tsc && vite build
 
 # Check Rust code (faster than full build)
 cd src-tauri && cargo check
@@ -56,7 +62,12 @@ src-tauri/src/
 │   ├── locking.rs      # FileLock, LockManager, DriveLockManager
 │   ├── conflict.rs     # FileConflict, ConflictManager
 │   ├── presence.rs     # UserPresence, PresenceManager, ActivityEntry
-│   └── channel.rs      # Async channel utilities
+│   ├── channel.rs      # Async channel utilities
+│   ├── validation.rs   # Input validation utilities
+│   ├── rate_limit.rs   # RateLimiter for abuse prevention
+│   ├── error.rs        # Custom error types
+│   ├── cleanup.rs      # CleanupManager for resource maintenance
+│   └── audit.rs        # AuditLogger for security event tracking
 ├── network/            # P2P networking
 │   ├── endpoint.rs     # Iroh QUIC endpoint setup
 │   ├── gossip.rs       # iroh-gossip event broadcasting
@@ -66,6 +77,7 @@ src-tauri/src/
 ├── crypto/             # Cryptography
 │   ├── keys.rs         # Key generation/management
 │   ├── encryption.rs   # DriveEncryption (ChaCha20-Poly1305)
+│   ├── encryption_manager.rs # E2E encryption key management
 │   ├── key_exchange.rs # X25519 key exchange, KeyRing
 │   ├── access.rs       # AccessControlList, Permission, PathRule
 │   └── invite.rs       # InviteToken, InviteBuilder, TokenTracker
@@ -74,12 +86,13 @@ src-tauri/src/
 └── commands/           # Tauri commands (frontend invoke handlers)
     ├── identity.rs     # get_identity, get_connection_status
     ├── drive.rs        # create_drive, delete_drive, list_drives, etc.
-    ├── files.rs        # list_files
+    ├── files.rs        # list_files, read/write file operations
     ├── sync.rs         # start_sync, file transfers, watching
     ├── security.rs     # invite generation, permissions
     ├── locking.rs      # acquire_lock, release_lock, etc.
     ├── conflict.rs     # list_conflicts, resolve_conflict, etc.
-    └── presence.rs     # presence tracking, activity feed
+    ├── presence.rs     # presence tracking, activity feed
+    └── audit.rs        # audit logging queries
 ```
 
 ### Frontend Structure
@@ -91,21 +104,32 @@ src/
 ├── types.ts                     # Shared TypeScript types
 ├── components/
 │   ├── DriveList.tsx            # Sidebar drive list
+│   ├── DriveWorkspace.tsx       # Main workspace container
 │   ├── FileBrowser.tsx          # File grid with icons, locking UI
+│   ├── FilePreview.tsx          # File preview panel
 │   ├── IdentityBadge.tsx        # Node ID display
 │   ├── CreateDriveModal.tsx     # New drive dialog
+│   ├── JoinDriveModal.tsx       # Join shared drive dialog
 │   ├── ShareDriveModal.tsx      # Invite/permissions tabs
 │   ├── ConflictPanel.tsx        # Conflict resolution UI
 │   ├── PresencePanel.tsx        # Online users & activity
+│   ├── SyncStatusBar.tsx        # Sync status indicator
+│   ├── LockDialog.tsx           # Lock acquisition dialog
+│   ├── SecurityBadge.tsx        # Security status indicator
 │   ├── Titlebar.tsx             # Custom window titlebar
 │   ├── InviteHandler.tsx        # Deep link invite processing
-│   └── UpdateNotification.tsx   # Auto-update UI
+│   ├── UpdateNotification.tsx   # Auto-update UI
+│   ├── WelcomeModal.tsx         # First-run welcome screen
+│   ├── ConfirmDialog.tsx        # Generic confirmation dialog
+│   ├── Toast.tsx                # Toast notifications
+│   └── TransferProgress.tsx     # File transfer progress UI
 └── hooks/
     ├── useDriveEvents.ts        # Subscribe to drive-event Tauri events
     ├── useFileTransfer.ts       # Upload/download progress
     ├── useLocking.ts            # File lock management
     ├── useConflicts.ts          # Conflict state & resolution
     ├── usePresence.ts           # Online users & activity feed
+    ├── usePermissions.ts        # Permission management
     ├── useDeepLink.ts           # Handle gix:// deep links
     └── useUpdater.ts            # App auto-update management
 ```
@@ -117,6 +141,9 @@ src/
 - **EventBroadcaster**: Distributes DriveEvents to frontend via Tauri emit
 - **FileWatcherManager**: Monitors local file changes with debouncing
 - **LockManager/ConflictManager/PresenceManager**: Collaboration state managers
+- **EncryptionManager**: Manages E2E encryption keys with window-blur cache clearing
+- **AuditLogger**: Tracks security events for compliance
+- **CleanupManager**: Background task for resource maintenance (lock expiry, stale presence)
 
 ### Technology Stack
 
@@ -142,6 +169,7 @@ The app uses these Tauri v2 plugins:
 - `tauri-plugin-single-instance` - Prevent multiple instances
 - `tauri-plugin-updater` - Auto-update support
 - `tauri-plugin-deep-link` - Handle `gix://` URL scheme
+- `tauri-plugin-process` - Process control (for updater relaunch)
 
 ## Code Conventions
 
@@ -174,12 +202,14 @@ The app uses these Tauri v2 plugins:
 
 - Find drive operations: Search for `SharedDrive` or `DriveManager`
 - Find sync logic: Search for `SyncEngine` or `DriveEvent`
-- Find encryption: Search for `DriveEncryption` or `ChaCha20`
+- Find encryption: Search for `DriveEncryption` or `EncryptionManager`
 - Find permissions: Search for `AccessControlList` or `Permission`
 - Find Tauri commands: Search for `#[tauri::command]`
 - Find file locking: Search for `LockManager` or `FileLock`
 - Find conflicts: Search for `ConflictManager` or `FileConflict`
 - Find presence: Search for `PresenceManager` or `UserPresence`
+- Find audit logging: Search for `AuditLogger` or `AuditEntry`
+- Find rate limiting: Search for `RateLimiter`
 
 ## Current Tauri Commands
 
@@ -197,6 +227,12 @@ get_drive(id) -> DriveInfo
 
 // Files
 list_files(drive_id, path) -> Vec<FileEntryDto>
+read_file(drive_id, path) -> Vec<u8>
+write_file(drive_id, path, content)
+read_file_encrypted(drive_id, path) -> Vec<u8>
+write_file_encrypted(drive_id, path, content)
+delete_path(drive_id, path)
+rename_path(drive_id, old_path, new_path)
 
 // Sync & Transfers
 start_sync(drive_id)
@@ -210,6 +246,9 @@ list_transfers(drive_id), get_transfer(id), cancel_transfer(id)
 // Security & Invites
 generate_invite(drive_id, permission, expires_in) -> InviteToken
 verify_invite(token) -> InviteInfo
+accept_invite(token) -> DriveInfo
+revoke_invite(token)
+list_revoked_tokens(drive_id) -> Vec<RevokedToken>
 list_permissions(drive_id) -> Vec<PermissionEntry>
 grant_permission(drive_id, user_id, permission)
 revoke_permission(drive_id, user_id)
@@ -237,6 +276,12 @@ get_recent_activity(drive_id, limit) -> Vec<ActivityEntry>
 join_drive_presence(drive_id)
 leave_drive_presence(drive_id)
 presence_heartbeat(drive_id)
+
+// Audit Logging
+get_audit_log(limit, offset) -> Vec<AuditEntry>
+get_audit_count() -> usize
+get_drive_audit_log(drive_id, limit) -> Vec<AuditEntry>
+get_denied_access_log(limit) -> Vec<DeniedAccessEntry>
 ```
 
 ## Tauri Events (Frontend Subscriptions)

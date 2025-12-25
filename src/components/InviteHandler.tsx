@@ -59,6 +59,16 @@ export function InviteHandler({ onDriveJoined }: InviteHandlerProps) {
 
       if (result.success) {
         setSuccess(true);
+        
+        // Start sync and watching for the newly joined drive
+        try {
+          await invoke("start_sync", { driveId: result.drive_id });
+          await invoke("start_watching", { driveId: result.drive_id });
+        } catch (syncErr) {
+          console.warn("Failed to start sync after joining:", syncErr);
+          // Don't fail the join - sync can be started manually
+        }
+        
         onDriveJoined?.(result.drive_id);
 
         // Auto-close after success

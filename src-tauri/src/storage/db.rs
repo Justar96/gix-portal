@@ -12,6 +12,8 @@ const DRIVE_KEYS_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("dri
 const AUDIT_LOG_TABLE: TableDefinition<u64, &[u8]> = TableDefinition::new("audit_log");
 const AUDIT_COUNTER_TABLE: TableDefinition<&str, u64> = TableDefinition::new("audit_counter");
 const REVOKED_TOKENS_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("revoked_tokens");
+/// File metadata table - key: "drive_id:file_path", value: serialized FileMetadata
+const FILE_METADATA_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("file_metadata");
 
 /// Database wrapper for persistent storage using redb
 pub struct Database {
@@ -35,6 +37,7 @@ impl Database {
             let _ = write_txn.open_table(AUDIT_LOG_TABLE)?;
             let _ = write_txn.open_table(AUDIT_COUNTER_TABLE)?;
             let _ = write_txn.open_table(REVOKED_TOKENS_TABLE)?;
+            let _ = write_txn.open_table(FILE_METADATA_TABLE)?;
         }
         write_txn.commit()?;
 
@@ -420,5 +423,101 @@ impl Database {
             tokens.push((key.value().to_string(), value.value().to_vec()));
         }
         Ok(tokens)
+    }
+
+    // ============ File Metadata Operations ============
+
+    /// Generate a key for file metadata: "drive_id:path"
+    fn file_metadata_key(drive_id: &str, path: &str) -> String {
+        format!("{}:{}", drive_id, path)
+    }
+
+    /// Save file metadata for a specific file in a drive
+    pub fn save_file_metadata(&self, drive_id: &str, path: &str, data: &[u8]) -> Result<()> {
+        let key = Self::file_metadata_key(drive_id, path);
+        let write_txn = self.db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(FILE_METADATA_TABLE)?;
+            table.insert(key.as_str(), data)?;
+        }
+        write_txn.commit()?;
+        Ok(())
+    }
+
+    /// Get file metadata for a specific file
+    pub fn get_file_metadata(&self, drive_id: &str, path: &str) -> Result<Option<Vec<u8>>> {
+        let key = Self::file_metadata_key(drive_id, path);
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(FILE_METADATA_TABLE)?;
+
+        match table.get(key.as_str())? {
+            Some(guard) => Ok(Some(guard.value().to_vec())),
+            None => Ok(None),
+        }
+    }
+
+    /// Delete file metadata for a specific file
+    pub fn delete_file_metadata(&self, drive_id: &str, path: &str) -> Result<()> {
+        let key = Self::file_metadata_key(drive_id, path);
+        let write_txn = self.db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(FILE_METADATA_TABLE)?;
+            table.remove(key.as_str())?;
+        }
+        write_txn.commit()?;
+        Ok(())
+    }
+
+    /// List all file metadata for a drive (returns path and serialized metadata)
+    pub fn list_file_metadata(&self, drive_id: &str) -> Result<Vec<(String, Vec<u8>)>> {
+        let prefix = format!("{}:", drive_id);
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(FILE_METADATA_TABLE)?;
+
+        let mut metadata = Vec::new();
+        for entry in table.iter()? {
+            let (key, value) = entry?;
+            let key_str = key.value();
+            if key_str.starts_with(&prefix) {
+                // Extract path from key (remove "drive_id:" prefix)
+                let path = key_str[prefix.len()..].to_string();
+                metadata.push((path, value.value().to_vec()));
+            }
+        }
+        Ok(metadata)
+    }
+
+    /// Delete all file metadata for a drive
+    pub fn delete_drive_metadata(&self, drive_id: &str) -> Result<usize> {
+        let prefix = format!("{}:", drive_id);
+        let write_txn = self.db.begin_write()?;
+        let mut deleted = 0;
+        {
+            let mut table = write_txn.open_table(FILE_METADATA_TABLE)?;
+            
+            // Collect keys to delete
+            let keys_to_delete: Vec<String> = {
+                let read_table = write_txn.open_table(FILE_METADATA_TABLE)?;
+                read_table.iter()?
+                    .filter_map(|entry| {
+                        entry.ok().and_then(|(key, _)| {
+                            let key_str = key.value().to_string();
+                            if key_str.starts_with(&prefix) {
+                                Some(key_str)
+                            } else {
+                                None
+                            }
+                        })
+                    })
+                    .collect()
+            };
+
+            for key in keys_to_delete {
+                table.remove(key.as_str())?;
+                deleted += 1;
+            }
+        }
+        write_txn.commit()?;
+        Ok(deleted)
     }
 }

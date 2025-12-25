@@ -918,6 +918,42 @@ pub async fn accept_invite(
         );
     }
 
+    // Auto-start sync for the joined drive
+    // This ensures files are synced immediately after joining
+    if let Some(sync_engine) = state.sync_engine.as_ref() {
+        let drives = state.drives.read().await;
+        if let Some(drive) = drives.get(&id_arr) {
+            if let Err(e) = sync_engine.init_drive(drive).await {
+                tracing::warn!(
+                    drive_id = %drive_id,
+                    error = %e,
+                    "Failed to auto-start sync after joining drive (can be started manually)"
+                );
+            } else {
+                tracing::info!(drive_id = %drive_id, "Auto-started sync for joined drive");
+            }
+        }
+    }
+
+    // Auto-start file watching for the joined drive
+    if let Some(watcher) = state.file_watcher.as_ref() {
+        let drives = state.drives.read().await;
+        if let Some(drive) = drives.get(&id_arr) {
+            let local_path = drive.local_path.clone();
+            drop(drives); // Release lock before async operation
+            
+            if let Err(e) = watcher.watch(DriveId(id_arr), local_path).await {
+                tracing::warn!(
+                    drive_id = %drive_id,
+                    error = %e,
+                    "Failed to auto-start file watching after joining drive"
+                );
+            } else {
+                tracing::info!(drive_id = %drive_id, "Auto-started file watching for joined drive");
+            }
+        }
+    }
+
     tracing::info!(
         drive_id = %drive_id,
         drive_name = %drive_name,

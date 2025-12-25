@@ -32,6 +32,10 @@ export interface FileEntry {
     is_dir: boolean;
     size: number;
     modified_at: string;
+    /** Whether the file content is available locally (downloaded) */
+    is_local: boolean;
+    /** BLAKE3 content hash for file transfer (undefined for directories) */
+    content_hash?: string;
 }
 
 /** File type categories for icon mapping */
