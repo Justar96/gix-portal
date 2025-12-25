@@ -148,13 +148,9 @@ export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
 
         {/* Header with branding */}
         <div className="welcome-header">
-          <div className="welcome-badge">
-            <Sparkles size={12} />
-            <span>Welcome to Gix</span>
-          </div>
-          <h2 id="welcome-title">P2P Drive Sharing</h2>
+          <h2 id="welcome-title">Welcome to Gix</h2>
           <p className="welcome-subtitle">
-            Secure, decentralized file sharing without limits
+            P2P Drive Sharing — Secure, decentralized file sharing
           </p>
         </div>
 
@@ -163,9 +159,8 @@ export function WelcomeModal({ onClose, onComplete }: WelcomeModalProps) {
           {FEATURES.map((feature, index) => (
             <button
               key={feature.id}
-              className={`step-dot ${index === currentStep ? "active" : ""} ${
-                index < currentStep ? "completed" : ""
-              }`}
+              className={`step-dot ${index === currentStep ? "active" : ""} ${index < currentStep ? "completed" : ""
+                }`}
               onClick={() => handleStepClick(index)}
               aria-label={`Go to ${feature.title}`}
               aria-current={index === currentStep ? "step" : undefined}

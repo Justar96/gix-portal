@@ -51,8 +51,8 @@ jobs:
 
           Write-Host "Signing: $exePath"
 
-          # Write key to temp file
-          $env:TAURI_SIGNING_PRIVATE_KEY | Out-File -FilePath "private.key" -Encoding utf8 -NoNewline
+          # Write key to temp file without BOM
+          [System.IO.File]::WriteAllText("private.key", $env:TAURI_SIGNING_PRIVATE_KEY)
 
           # Sign using tauri CLI
           npx tauri signer sign --private-key private.key --password "$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$exePath"

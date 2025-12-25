@@ -296,6 +296,48 @@
     align-items: center;
     gap: $space-2;
     
+    // Ensure buttons have proper styling
+    .btn-primary,
+    .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: $weight-medium;
+        border-radius: $radius-md;
+        cursor: pointer;
+        transition: all $transition-fast;
+        white-space: nowrap;
+        
+        span {
+            line-height: 1.2;
+        }
+    }
+    
+    .btn-primary {
+        background: $accent;
+        border: 1px solid $accent;
+        color: white;
+        
+        &:hover:not(:disabled) {
+            background: $accent-dark;
+            border-color: $accent-dark;
+        }
+    }
+    
+    .btn-secondary {
+        background: $bg-card;
+        border: 1px solid $border-primary;
+        color: $text-primary;
+        
+        &:hover:not(:disabled) {
+            background: $bg-hover;
+            border-color: $border-hover;
+        }
+    }
+    
     button:disabled {
         opacity: 0.5;
         pointer-events: none;
