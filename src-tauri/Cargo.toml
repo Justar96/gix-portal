@@ -23,6 +23,7 @@ tauri-plugin-autostart = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-deep-link = "2"
+tauri-plugin-process = "2"
 
 # Iroh P2P
 iroh = "0.35"
