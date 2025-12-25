@@ -55,7 +55,7 @@ jobs:
           [System.IO.File]::WriteAllText("private.key", $env:TAURI_SIGNING_PRIVATE_KEY)
 
           # Sign using tauri CLI
-          npx tauri signer sign --private-key private.key --password "$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$exePath"
+          npx tauri signer sign --private-key-path private.key --password "$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD" "$exePath"
 
           # Clean up
           Remove-Item "private.key"
