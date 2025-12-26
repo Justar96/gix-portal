@@ -130,6 +130,7 @@ pub enum RateLimitResult {
 }
 
 impl RateLimitResult {
+    #[allow(dead_code)]
     pub fn is_allowed(&self) -> bool {
         matches!(self, Self::Allowed { .. })
     }
@@ -139,10 +140,15 @@ impl RateLimitResult {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum RateLimitOperation {
     InviteGeneration,
+    #[allow(dead_code)]
     FileUpload,
+    #[allow(dead_code)]
     FileDownload,
+    #[allow(dead_code)]
     DriveCreation,
+    #[allow(dead_code)]
     GeneralApi,
+    #[allow(dead_code)]
     Custom(String),
 }
 

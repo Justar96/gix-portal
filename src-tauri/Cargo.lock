@@ -2405,6 +2405,7 @@ dependencies = [
  "iroh-io",
  "notify",
  "notify-debouncer-mini",
+ "quic-rpc",
  "rand 0.8.5",
  "redb 2.4.0",
  "serde",

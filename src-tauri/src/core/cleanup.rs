@@ -47,6 +47,7 @@ impl CleanupManager {
         }
     }
 
+    #[allow(dead_code)]
     pub fn with_config(config: CleanupConfig) -> Self {
         Self { config }
     }

@@ -68,7 +68,7 @@ impl EncryptionManager {
     /// Generate a new drive key and wrap it for the owner
     ///
     /// Returns the wrapped key that should be stored with the drive.
-    pub fn generate_drive_key(
+    pub async fn generate_drive_key(
         &self,
         drive_id: &str,
         owner_public_key: &[u8; 32],
@@ -78,11 +78,11 @@ impl EncryptionManager {
         // Wrap for owner
         let owner_pk = PublicKey::from(*owner_public_key);
         let wrapped = KeyExchangePair::wrap_key_for(&owner_pk, drive_key.as_bytes())
-            .map_err(|e| EncryptionManagerError::KeyExchangeError(e))?;
+            .map_err(EncryptionManagerError::KeyExchangeError)?;
 
         // Cache the unwrapped key for immediate use
         {
-            let mut cache = self.cached_keys.blocking_write();
+            let mut cache = self.cached_keys.write().await;
             cache.insert(drive_id.to_string(), drive_key);
         }
 
@@ -98,7 +98,7 @@ impl EncryptionManager {
     /// Import a wrapped drive key from an invite
     ///
     /// Unwraps the key using our private key and caches it.
-    pub fn import_drive_key(
+    pub async fn import_drive_key(
         &self,
         drive_id: &str,
         wrapped: &WrappedKey,
@@ -107,13 +107,13 @@ impl EncryptionManager {
         let drive_key_bytes = self
             .exchange_keypair
             .unwrap_key(wrapped)
-            .map_err(|e| EncryptionManagerError::KeyExchangeError(e))?;
+            .map_err(EncryptionManagerError::KeyExchangeError)?;
 
         let drive_key = DriveKey::from_bytes(drive_key_bytes);
 
         // Cache the key
         {
-            let mut cache = self.cached_keys.blocking_write();
+            let mut cache = self.cached_keys.write().await;
             cache.insert(drive_id.to_string(), drive_key);
         }
 
@@ -161,14 +161,14 @@ impl EncryptionManager {
     /// Wrap a drive key for a new user
     ///
     /// Called when granting access to a drive.
-    pub fn wrap_key_for_user(
+    pub async fn wrap_key_for_user(
         &self,
         drive_id: &str,
         user_public_key: &[u8; 32],
     ) -> Result<WrappedKey, EncryptionManagerError> {
         // Get the drive key from cache or database
         let drive_key = {
-            let cache = self.cached_keys.blocking_read();
+            let cache = self.cached_keys.read().await;
             cache.get(drive_id).cloned()
         };
 
@@ -183,12 +183,12 @@ impl EncryptionManager {
                     .ok_or_else(|| EncryptionManagerError::KeyNotFound(drive_id.to_string()))?;
 
                 let wrapped = WrappedKey::from_bytes(&wrapped_bytes)
-                    .map_err(|e| EncryptionManagerError::KeyExchangeError(e))?;
+                    .map_err(EncryptionManagerError::KeyExchangeError)?;
 
                 let key_bytes = self
                     .exchange_keypair
                     .unwrap_key(&wrapped)
-                    .map_err(|e| EncryptionManagerError::KeyExchangeError(e))?;
+                    .map_err(EncryptionManagerError::KeyExchangeError)?;
 
                 DriveKey::from_bytes(key_bytes)
             }
@@ -197,7 +197,7 @@ impl EncryptionManager {
         // Wrap for new user
         let user_pk = PublicKey::from(*user_public_key);
         KeyExchangePair::wrap_key_for(&user_pk, drive_key.as_bytes())
-            .map_err(|e| EncryptionManagerError::KeyExchangeError(e))
+            .map_err(EncryptionManagerError::KeyExchangeError)
     }
 
     /// Encrypt file content for a drive
@@ -214,7 +214,7 @@ impl EncryptionManager {
 
         encryption
             .encrypt(plaintext, path)
-            .map_err(|e| EncryptionManagerError::EncryptionError(e))
+            .map_err(EncryptionManagerError::EncryptionError)
     }
 
     /// Decrypt file content from a drive
@@ -231,7 +231,7 @@ impl EncryptionManager {
 
         encryption
             .decrypt(ciphertext, path)
-            .map_err(|e| EncryptionManagerError::EncryptionError(e))
+            .map_err(EncryptionManagerError::EncryptionError)
     }
 
     /// Check if we have the key for a drive
@@ -297,7 +297,10 @@ mod tests {
 
         // Generate a key for a drive
         let owner_pk = manager.public_key();
-        let _wrapped = manager.generate_drive_key("test-drive", &owner_pk).unwrap();
+        let _wrapped = manager
+            .generate_drive_key("test-drive", &owner_pk)
+            .await
+            .unwrap();
 
         // Encrypt some content
         let plaintext = b"Hello, encrypted world!";

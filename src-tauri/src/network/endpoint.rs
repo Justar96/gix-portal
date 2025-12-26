@@ -187,3 +187,197 @@ impl P2PEndpoint {
         guard.clone()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Test that PeerInfo can be created and serialized correctly
+    #[test]
+    fn test_peer_info_creation() {
+        let now = Utc::now();
+        let peer_info = PeerInfo {
+            node_id: "test_node_id_12345".to_string(),
+            connected_at: now,
+            last_seen: now,
+        };
+
+        assert_eq!(peer_info.node_id, "test_node_id_12345");
+        assert_eq!(peer_info.connected_at, now);
+        assert_eq!(peer_info.last_seen, now);
+    }
+
+    /// Test PeerInfo serialization to JSON
+    #[test]
+    fn test_peer_info_serialization() {
+        let now = Utc::now();
+        let peer_info = PeerInfo {
+            node_id: "abc123".to_string(),
+            connected_at: now,
+            last_seen: now,
+        };
+
+        let json = serde_json::to_string(&peer_info).unwrap();
+        assert!(json.contains("abc123"));
+        assert!(json.contains("node_id"));
+        assert!(json.contains("connected_at"));
+        assert!(json.contains("last_seen"));
+    }
+
+    /// Test ConnectionInfo when offline
+    #[test]
+    fn test_connection_info_offline() {
+        let info = ConnectionInfo {
+            is_online: false,
+            node_id: None,
+            relay_url: None,
+            peer_count: 0,
+        };
+
+        assert!(!info.is_online);
+        assert!(info.node_id.is_none());
+        assert!(info.relay_url.is_none());
+        assert_eq!(info.peer_count, 0);
+    }
+
+    /// Test ConnectionInfo when online
+    #[test]
+    fn test_connection_info_online() {
+        let info = ConnectionInfo {
+            is_online: true,
+            node_id: Some("node123".to_string()),
+            relay_url: Some("https://relay.example.com".to_string()),
+            peer_count: 5,
+        };
+
+        assert!(info.is_online);
+        assert_eq!(info.node_id, Some("node123".to_string()));
+        assert_eq!(info.relay_url, Some("https://relay.example.com".to_string()));
+        assert_eq!(info.peer_count, 5);
+    }
+
+    /// Test ConnectionInfo serialization
+    #[test]
+    fn test_connection_info_serialization() {
+        let info = ConnectionInfo {
+            is_online: true,
+            node_id: Some("node_abc".to_string()),
+            relay_url: None,
+            peer_count: 3,
+        };
+
+        let json = serde_json::to_string(&info).unwrap();
+        assert!(json.contains("is_online"));
+        assert!(json.contains("true"));
+        assert!(json.contains("node_abc"));
+        assert!(json.contains("peer_count"));
+        assert!(json.contains("3"));
+    }
+
+    /// Test P2PEndpoint creation
+    #[tokio::test]
+    async fn test_p2p_endpoint_creation() {
+        let secret_key_bytes = [1u8; 32];
+        let endpoint = P2PEndpoint::new(&secret_key_bytes);
+
+        // Should not be ready before start
+        assert!(!endpoint.is_ready().await);
+        assert!(endpoint.node_id().await.is_none());
+        assert!(endpoint.get_endpoint().await.is_none());
+    }
+
+    /// Test P2PEndpoint initial state
+    #[tokio::test]
+    async fn test_p2p_endpoint_initial_state() {
+        let secret_key_bytes = [42u8; 32];
+        let endpoint = P2PEndpoint::new(&secret_key_bytes);
+
+        let peers = endpoint.get_peers().await;
+        assert!(peers.is_empty());
+
+        let conn_info = endpoint.get_connection_info().await;
+        assert!(!conn_info.is_online);
+        assert!(conn_info.node_id.is_none());
+        assert_eq!(conn_info.peer_count, 0);
+    }
+
+    /// Test peer tracking (add/remove)
+    #[tokio::test]
+    async fn test_peer_tracking() {
+        let secret_key_bytes = [1u8; 32];
+        let endpoint = P2PEndpoint::new(&secret_key_bytes);
+
+        // Create a mock node ID
+        let node_id = iroh::SecretKey::generate(rand::rngs::OsRng).public();
+
+        // Add peer
+        endpoint.add_peer(node_id).await;
+
+        let peers = endpoint.get_peers().await;
+        assert_eq!(peers.len(), 1);
+        assert_eq!(peers[0].node_id, node_id.to_string());
+
+        // Remove peer
+        endpoint.remove_peer(&node_id).await;
+
+        let peers = endpoint.get_peers().await;
+        assert!(peers.is_empty());
+    }
+
+    /// Test multiple peer tracking
+    #[tokio::test]
+    async fn test_multiple_peer_tracking() {
+        let secret_key_bytes = [1u8; 32];
+        let endpoint = P2PEndpoint::new(&secret_key_bytes);
+
+        // Add multiple peers
+        let node_ids: Vec<_> = (0..5)
+            .map(|_| iroh::SecretKey::generate(rand::rngs::OsRng).public())
+            .collect();
+
+        for node_id in &node_ids {
+            endpoint.add_peer(*node_id).await;
+        }
+
+        let peers = endpoint.get_peers().await;
+        assert_eq!(peers.len(), 5);
+
+        // Remove some peers
+        endpoint.remove_peer(&node_ids[0]).await;
+        endpoint.remove_peer(&node_ids[2]).await;
+
+        let peers = endpoint.get_peers().await;
+        assert_eq!(peers.len(), 3);
+    }
+
+    /// Test peer connection info updates peer count
+    /// Note: This test verifies peer tracking via get_peers() since
+    /// get_connection_info() requires an initialized endpoint
+    #[tokio::test]
+    async fn test_connection_info_peer_count() {
+        let secret_key_bytes = [1u8; 32];
+        let endpoint = P2PEndpoint::new(&secret_key_bytes);
+
+        let node_id1 = iroh::SecretKey::generate(rand::rngs::OsRng).public();
+        let node_id2 = iroh::SecretKey::generate(rand::rngs::OsRng).public();
+
+        // Verify peer tracking works correctly
+        endpoint.add_peer(node_id1).await;
+        let peers = endpoint.get_peers().await;
+        assert_eq!(peers.len(), 1);
+
+        endpoint.add_peer(node_id2).await;
+        let peers = endpoint.get_peers().await;
+        assert_eq!(peers.len(), 2);
+
+        endpoint.remove_peer(&node_id1).await;
+        let peers = endpoint.get_peers().await;
+        assert_eq!(peers.len(), 1);
+    }
+
+    /// Test ALPN constant
+    #[test]
+    fn test_alpn_protocol() {
+        assert_eq!(ALPN, b"gix/1");
+    }
+}

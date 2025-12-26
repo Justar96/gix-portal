@@ -209,7 +209,7 @@ pub async fn extend_lock(
     drop(drives);
     
     // Validate duration (1 minute to 24 hours)
-    if duration_mins < 1 || duration_mins > 1440 {
+    if !(1..=1440).contains(&duration_mins) {
         return Err(AppError::ValidationError("Lock duration must be between 1 and 1440 minutes".to_string()).to_string());
     }
     

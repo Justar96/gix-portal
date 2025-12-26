@@ -9,7 +9,7 @@
 
 use crate::core::error::AppError;
 use crate::core::rate_limit::{RateLimitOperation, SharedRateLimiter};
-use crate::core::validation::validate_drive_id;
+use crate::core::validation::{validate_drive_id, validate_node_id};
 use crate::core::{DriveId, SharedDrive};
 use crate::crypto::{
     AccessControlList, AccessRule, InviteBuilder, InviteToken, NodeId, Permission, TokenTracker,
@@ -17,6 +17,7 @@ use crate::crypto::{
 use crate::state::AppState;
 use crate::storage::Database;
 use chrono::{Duration as ChronoDuration, Utc};
+use iroh_docs::DocTicket;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -379,7 +380,7 @@ pub async fn generate_invite(
         .ok_or_else(|| AppError::IdentityNotInitialized.to_string())?;
 
     match rate_limiter
-        .check(&node_id.as_bytes(), RateLimitOperation::InviteGeneration)
+        .check(node_id.as_bytes(), RateLimitOperation::InviteGeneration)
         .await
     {
         crate::core::rate_limit::RateLimitResult::Allowed { remaining } => {
@@ -397,6 +398,7 @@ pub async fn generate_invite(
     let drive_id = &request.drive_id;
     validate_drive_id(drive_id).map_err(|e| e.to_string())?;
     let id_arr = parse_drive_id(drive_id)?;
+    let drive_id_obj = DriveId(id_arr);
 
     let drives = state.drives.read().await;
     let drive = drives.get(&id_arr).ok_or_else(|| {
@@ -417,6 +419,21 @@ pub async fn generate_invite(
     let validity_hours = request.validity_hours.unwrap_or(24).min(168).max(1);
     let validity = ChronoDuration::hours(validity_hours as i64);
 
+    let doc_ticket = if let Some(docs_manager) = state.docs_manager.as_ref() {
+        docs_manager
+            .create_doc(drive_id_obj)
+            .await
+            .map_err(|e| format!("Failed to initialize doc for invite: {}", e))?;
+        let permission: Permission = request.permission.clone().into();
+        let ticket = docs_manager
+            .get_ticket(&drive_id_obj, permission)
+            .await
+            .map_err(|e| format!("Failed to generate doc ticket: {}", e))?;
+        Some(ticket.to_string())
+    } else {
+        return Err(AppError::SyncNotInitialized.to_string());
+    };
+
     let mut builder = InviteBuilder::new(drive_id, &drive.name)
         .with_permission(request.permission.clone().into())
         .with_validity(validity);
@@ -433,6 +450,10 @@ pub async fn generate_invite(
 
     if request.single_use.unwrap_or(false) {
         builder = builder.single_use();
+    }
+
+    if let Some(ticket) = doc_ticket {
+        builder = builder.with_doc_ticket(ticket);
     }
 
     let token = builder
@@ -744,6 +765,33 @@ pub async fn accept_invite(
     // Get drive name from token
     let drive_name = token.payload.drive_name.clone();
     let owner_hex = token.payload.inviter.clone();
+    let drive_id_obj = DriveId(id_arr);
+
+    let doc_ticket = match token.payload.doc_ticket.clone() {
+        Some(ticket) => ticket,
+        None => {
+            return Ok(AcceptInviteResult {
+                success: false,
+                drive_id: drive_id.clone(),
+                drive_name,
+                permission: token.payload.permission.into(),
+                error: Some("Invite is missing sync ticket. Ask the owner to regenerate it.".to_string()),
+            });
+        }
+    };
+
+    let doc_ticket = match doc_ticket.parse::<DocTicket>() {
+        Ok(ticket) => ticket,
+        Err(e) => {
+            return Ok(AcceptInviteResult {
+                success: false,
+                drive_id: drive_id.clone(),
+                drive_name,
+                permission: token.payload.permission.into(),
+                error: Some(format!("Invalid sync ticket in invite: {}", e)),
+            });
+        }
+    };
 
     // Get caller's node ID
     let caller = state
@@ -781,6 +829,47 @@ pub async fn accept_invite(
                 error: Some("This single-use invite has already been used".to_string()),
             });
         }
+    }
+
+    // Join the iroh-docs document before creating local state
+    let sync_engine = match state.sync_engine.as_ref() {
+        Some(engine) => engine,
+        None => {
+            return Ok(AcceptInviteResult {
+                success: false,
+                drive_id: drive_id.clone(),
+                drive_name,
+                permission: token.payload.permission.into(),
+                error: Some(AppError::SyncNotInitialized.to_string()),
+            });
+        }
+    };
+
+    if let Some(docs_manager) = state.docs_manager.as_ref() {
+        if !docs_manager.has_doc(&drive_id_obj).await {
+            if let Err(e) = sync_engine.join_drive(drive_id_obj, doc_ticket).await {
+                tracing::warn!(
+                    drive_id = %drive_id,
+                    error = %e,
+                    "Failed to join drive doc during invite acceptance"
+                );
+                return Ok(AcceptInviteResult {
+                    success: false,
+                    drive_id: drive_id.clone(),
+                    drive_name,
+                    permission: token.payload.permission.into(),
+                    error: Some(format!("Failed to join sync document: {}", e)),
+                });
+            }
+        }
+    } else {
+        return Ok(AcceptInviteResult {
+            success: false,
+            drive_id: drive_id.clone(),
+            drive_name,
+            permission: token.payload.permission.into(),
+            error: Some(AppError::SyncNotInitialized.to_string()),
+        });
     }
 
     // Check if the drive already exists locally
@@ -918,23 +1007,6 @@ pub async fn accept_invite(
         );
     }
 
-    // Auto-start sync for the joined drive
-    // This ensures files are synced immediately after joining
-    if let Some(sync_engine) = state.sync_engine.as_ref() {
-        let drives = state.drives.read().await;
-        if let Some(drive) = drives.get(&id_arr) {
-            if let Err(e) = sync_engine.init_drive(drive).await {
-                tracing::warn!(
-                    drive_id = %drive_id,
-                    error = %e,
-                    "Failed to auto-start sync after joining drive (can be started manually)"
-                );
-            } else {
-                tracing::info!(drive_id = %drive_id, "Auto-started sync for joined drive");
-            }
-        }
-    }
-
     // Auto-start file watching for the joined drive
     if let Some(watcher) = state.file_watcher.as_ref() {
         let drives = state.drives.read().await;
@@ -1033,6 +1105,7 @@ pub async fn grant_permission(
     security: State<'_, Arc<SecurityStore>>,
 ) -> Result<(), String> {
     let id_arr = parse_drive_id(&drive_id)?;
+    validate_node_id_hex(&target_node_id)?;
 
     // Get drive to find owner
     let drives = state.drives.read().await;
@@ -1091,6 +1164,7 @@ pub async fn revoke_permission(
     security: State<'_, Arc<SecurityStore>>,
 ) -> Result<(), String> {
     let id_arr = parse_drive_id(&drive_id)?;
+    validate_node_id_hex(&target_node_id)?;
 
     // Get drive to find owner
     let drives = state.drives.read().await;
@@ -1158,7 +1232,10 @@ pub async fn check_permission(
 
     // Get the node ID to check (default to caller)
     let check_node_id = match node_id {
-        Some(id) => id,
+        Some(id) => {
+            validate_node_id_hex(&id)?;
+            id
+        }
         None => {
             let caller = state
                 .identity_manager
@@ -1263,4 +1340,8 @@ fn parse_drive_id(drive_id: &str) -> Result<[u8; 32], String> {
     let mut id_arr = [0u8; 32];
     id_arr.copy_from_slice(&id_bytes);
     Ok(id_arr)
+}
+
+fn validate_node_id_hex(node_id: &str) -> Result<(), String> {
+    validate_node_id(node_id).map(|_| ()).map_err(|e| e.to_string())
 }

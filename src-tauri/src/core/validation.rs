@@ -137,8 +137,8 @@ fn normalize_path(path: &Path) -> PathBuf {
 pub fn validate_name(name: &str, field_name: &str) -> Result<String, AppError> {
     let trimmed = name.trim();
 
-    // Check empty
-    if trimmed.is_empty() {
+    // Check minimum length
+    if trimmed.len() < MIN_NAME_LENGTH {
         return Err(AppError::NameEmpty);
     }
 
@@ -164,6 +164,13 @@ pub fn validate_name(name: &str, field_name: &str) -> Result<String, AppError> {
         return Err(AppError::ValidationFailed {
             field: field_name.to_string(),
             reason: "Contains control characters".to_string(),
+        });
+    }
+
+    if !is_safe_filename(trimmed) {
+        return Err(AppError::ValidationFailed {
+            field: field_name.to_string(),
+            reason: "Reserved filename".to_string(),
         });
     }
 
@@ -311,6 +318,15 @@ mod tests {
         assert!(result.is_err());
         
         let result = validate_name("file|name", "test");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_name_reserved() {
+        let result = validate_name("CON", "test");
+        assert!(result.is_err());
+
+        let result = validate_name("COM1.txt", "test");
         assert!(result.is_err());
     }
 

@@ -12,8 +12,10 @@ use crate::core::{DriveEvent, DriveId, SharedDrive};
 use crate::network::{DocsManager, EventBroadcaster};
 use anyhow::Result;
 use iroh_docs::DocTicket;
+use chrono::Utc;
+use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, RwLock};
 
 /// Coordinates metadata sync, event broadcasting, and file transfers
 pub struct SyncEngine {
@@ -23,6 +25,8 @@ pub struct SyncEngine {
     event_broadcaster: Arc<EventBroadcaster>,
     /// Internal event channel for coordination
     event_tx: broadcast::Sender<(DriveId, DriveEvent)>,
+    /// Last error seen per drive for diagnostics
+    last_error: RwLock<HashMap<DriveId, SyncErrorInfo>>,
 }
 
 impl SyncEngine {
@@ -39,6 +43,7 @@ impl SyncEngine {
             docs_manager,
             event_broadcaster,
             event_tx,
+            last_error: RwLock::new(HashMap::new()),
         }
     }
 
@@ -51,12 +56,21 @@ impl SyncEngine {
         let drive_id = drive.id;
 
         // 1. Create iroh-doc for this drive
-        let _namespace_id = self.docs_manager.create_doc(drive_id).await?;
+        if let Err(err) = self.docs_manager.create_doc(drive_id).await {
+            self.record_error(drive_id, format!("docs init failed: {}", err))
+                .await;
+            return Err(err);
+        }
 
         // 2. Subscribe to gossip topic
-        self.event_broadcaster.subscribe(drive_id).await?;
+        if let Err(err) = self.event_broadcaster.subscribe(drive_id).await {
+            self.record_error(drive_id, format!("gossip subscribe failed: {}", err))
+                .await;
+            return Err(err);
+        }
 
         tracing::info!("Sync initialized for owned drive: {}", drive_id);
+        self.clear_error(&drive_id).await;
 
         Ok(())
     }
@@ -68,12 +82,21 @@ impl SyncEngine {
     /// 2. Subscribe to the gossip topic
     pub async fn join_drive(&self, drive_id: DriveId, ticket: DocTicket) -> Result<()> {
         // 1. Import doc from ticket
-        let _namespace_id = self.docs_manager.join_doc(drive_id, ticket).await?;
+        if let Err(err) = self.docs_manager.join_doc(drive_id, ticket).await {
+            self.record_error(drive_id, format!("docs join failed: {}", err))
+                .await;
+            return Err(err);
+        }
 
         // 2. Subscribe to gossip topic
-        self.event_broadcaster.subscribe(drive_id).await?;
+        if let Err(err) = self.event_broadcaster.subscribe(drive_id).await {
+            self.record_error(drive_id, format!("gossip subscribe failed: {}", err))
+                .await;
+            return Err(err);
+        }
 
         tracing::info!("Sync initialized for joined drive: {}", drive_id);
+        self.clear_error(&drive_id).await;
 
         Ok(())
     }
@@ -115,12 +138,22 @@ impl SyncEngine {
                     version: 1,
                 };
 
-                self.docs_manager.set_file_metadata(drive_id, &meta).await?;
+                if let Err(err) = self.docs_manager.set_file_metadata(drive_id, &meta).await {
+                    self.record_error(*drive_id, format!("metadata update failed: {}", err))
+                        .await;
+                    return Err(err);
+                }
             }
             DriveEvent::FileDeleted { path, .. } => {
-                self.docs_manager
+                if let Err(err) = self
+                    .docs_manager
                     .delete_file_metadata(drive_id, &path.to_string_lossy())
-                    .await?;
+                    .await
+                {
+                    self.record_error(*drive_id, format!("metadata delete failed: {}", err))
+                        .await;
+                    return Err(err);
+                }
             }
             _ => {
                 // Other events don't need metadata updates
@@ -128,7 +161,11 @@ impl SyncEngine {
         }
 
         // Broadcast event via gossip
-        self.event_broadcaster.broadcast(drive_id, event.clone()).await?;
+        if let Err(err) = self.event_broadcaster.broadcast(drive_id, event.clone()).await {
+            self.record_error(*drive_id, format!("gossip broadcast failed: {}", err))
+                .await;
+            return Err(err);
+        }
 
         // Forward to internal channel
         let _ = self.event_tx.send((*drive_id, event));
@@ -169,14 +206,28 @@ impl SyncEngine {
 
                 // Only update if we have a doc for this drive
                 if self.docs_manager.has_doc(drive_id).await {
-                    self.docs_manager.set_file_metadata(drive_id, &meta).await?;
+                    if let Err(err) = self
+                        .docs_manager
+                        .set_file_metadata_cached(drive_id, &meta)
+                        .await
+                    {
+                        self.record_error(*drive_id, format!("metadata update failed: {}", err))
+                            .await;
+                        return Err(err);
+                    }
                 }
             }
             DriveEvent::FileDeleted { path, .. } => {
                 if self.docs_manager.has_doc(drive_id).await {
-                    self.docs_manager
-                        .delete_file_metadata(drive_id, &path.to_string_lossy())
-                        .await?;
+                    if let Err(err) = self
+                        .docs_manager
+                        .delete_file_metadata_cached(drive_id, &path.to_string_lossy())
+                        .await
+                    {
+                        self.record_error(*drive_id, format!("metadata delete failed: {}", err))
+                            .await;
+                        return Err(err);
+                    }
                 }
             }
             _ => {
@@ -207,8 +258,13 @@ impl SyncEngine {
     pub async fn get_status(&self, drive_id: &DriveId) -> SyncStatus {
         let is_syncing = self.is_syncing(drive_id).await;
         let connected_peers = if is_syncing {
-            // In Phase 2b, we'd query actual connected peers
-            0
+            self.docs_manager
+                .get_sync_peers(drive_id)
+                .await
+                .ok()
+                .flatten()
+                .map(|peers| peers.len())
+                .unwrap_or(0)
         } else {
             0
         };
@@ -229,6 +285,75 @@ impl SyncEngine {
     pub fn event_broadcaster(&self) -> Arc<EventBroadcaster> {
         self.event_broadcaster.clone()
     }
+
+    /// Get sync diagnostics for a drive
+    pub async fn get_diagnostics(&self, drive_id: &DriveId) -> SyncDiagnostics {
+        let has_doc = self.docs_manager.has_doc(drive_id).await;
+        let gossip_subscribed = self.event_broadcaster.is_subscribed(drive_id).await;
+        let namespace = self.docs_manager.namespace_id(drive_id).await;
+        let doc_peers = self
+            .docs_manager
+            .get_sync_peers(drive_id)
+            .await
+            .ok()
+            .flatten()
+            .map(|peers| peers.len());
+        let last_error = self.get_last_error(drive_id).await;
+
+        SyncDiagnostics {
+            is_syncing: has_doc && gossip_subscribed,
+            has_doc,
+            gossip_subscribed,
+            doc_namespace: namespace.map(|id| id.to_string()),
+            doc_peers,
+            last_error,
+        }
+    }
+
+    async fn record_error(&self, drive_id: DriveId, message: String) {
+        let mut errors = self.last_error.write().await;
+        errors.insert(
+            drive_id,
+            SyncErrorInfo {
+                message,
+                timestamp: Utc::now().to_rfc3339(),
+            },
+        );
+    }
+
+    async fn clear_error(&self, drive_id: &DriveId) {
+        let mut errors = self.last_error.write().await;
+        errors.remove(drive_id);
+    }
+
+    async fn get_last_error(&self, drive_id: &DriveId) -> Option<SyncErrorInfo> {
+        let errors = self.last_error.read().await;
+        errors.get(drive_id).cloned()
+    }
+}
+
+/// Diagnostics for sync setup and connectivity
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct SyncDiagnostics {
+    /// Whether sync is active for this drive
+    pub is_syncing: bool,
+    /// Whether a docs replica exists for this drive
+    pub has_doc: bool,
+    /// Whether gossip is subscribed for this drive
+    pub gossip_subscribed: bool,
+    /// Document namespace ID (hex)
+    pub doc_namespace: Option<String>,
+    /// Number of peers reported by docs sync
+    pub doc_peers: Option<usize>,
+    /// Most recent error
+    pub last_error: Option<SyncErrorInfo>,
+}
+
+/// Last error info for diagnostics
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct SyncErrorInfo {
+    pub message: String,
+    pub timestamp: String,
 }
 
 /// Status information for sync operations
@@ -260,5 +385,96 @@ mod tests {
         let json = serde_json::to_string(&status).unwrap();
         assert!(json.contains("is_syncing"));
         assert!(json.contains("connected_peers"));
+    }
+
+    #[test]
+    fn test_sync_status_default_values() {
+        let status = SyncStatus {
+            is_syncing: false,
+            connected_peers: 0,
+            last_sync: None,
+        };
+
+        assert!(!status.is_syncing);
+        assert_eq!(status.connected_peers, 0);
+        assert!(status.last_sync.is_none());
+    }
+
+    #[test]
+    fn test_sync_status_with_last_sync() {
+        let status = SyncStatus {
+            is_syncing: true,
+            connected_peers: 5,
+            last_sync: Some("2024-12-25T10:30:00Z".to_string()),
+        };
+
+        assert!(status.is_syncing);
+        assert_eq!(status.connected_peers, 5);
+        assert_eq!(status.last_sync.as_deref(), Some("2024-12-25T10:30:00Z"));
+    }
+
+    #[test]
+    fn test_sync_status_clone() {
+        let status = SyncStatus {
+            is_syncing: true,
+            connected_peers: 10,
+            last_sync: Some("2024-01-01T00:00:00Z".to_string()),
+        };
+
+        let cloned = status.clone();
+
+        assert_eq!(status.is_syncing, cloned.is_syncing);
+        assert_eq!(status.connected_peers, cloned.connected_peers);
+        assert_eq!(status.last_sync, cloned.last_sync);
+    }
+
+    #[test]
+    fn test_sync_status_debug() {
+        let status = SyncStatus {
+            is_syncing: true,
+            connected_peers: 2,
+            last_sync: None,
+        };
+
+        let debug_str = format!("{:?}", status);
+        assert!(debug_str.contains("SyncStatus"));
+        assert!(debug_str.contains("is_syncing"));
+        assert!(debug_str.contains("connected_peers"));
+    }
+
+    #[test]
+    fn test_sync_status_json_structure() {
+        let status = SyncStatus {
+            is_syncing: false,
+            connected_peers: 0,
+            last_sync: None,
+        };
+
+        let json: serde_json::Value = serde_json::to_value(&status).unwrap();
+        
+        assert!(json.is_object());
+        assert!(json.get("is_syncing").is_some());
+        assert!(json.get("connected_peers").is_some());
+        assert!(json.get("last_sync").is_some());
+    }
+
+    #[test]
+    fn test_sync_diagnostics_serialization() {
+        let diagnostics = SyncDiagnostics {
+            is_syncing: true,
+            has_doc: true,
+            gossip_subscribed: true,
+            doc_namespace: Some("abc123".to_string()),
+            doc_peers: Some(2),
+            last_error: Some(SyncErrorInfo {
+                message: "test error".to_string(),
+                timestamp: "2024-01-01T00:00:00Z".to_string(),
+            }),
+        };
+
+        let json = serde_json::to_string(&diagnostics).unwrap();
+        assert!(json.contains("is_syncing"));
+        assert!(json.contains("doc_namespace"));
+        assert!(json.contains("last_error"));
     }
 }

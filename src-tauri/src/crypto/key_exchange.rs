@@ -295,7 +295,6 @@ mod tests {
 
     #[test]
     fn test_key_wrap_unwrap() {
-        let alice = KeyExchangePair::generate();
         let bob = KeyExchangePair::generate();
 
         let drive_key: [u8; 32] = rand::random();
@@ -311,7 +310,6 @@ mod tests {
 
     #[test]
     fn test_wrong_recipient_cannot_unwrap() {
-        let alice = KeyExchangePair::generate();
         let bob = KeyExchangePair::generate();
         let eve = KeyExchangePair::generate();
 

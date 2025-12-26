@@ -34,7 +34,7 @@ pub fn init<R: Runtime>(app: &tauri::App<R>) -> Result<(), Box<dyn std::error::E
     // Build tray icon
     let icon = app
         .default_window_icon()
-        .ok_or_else(|| "No default window icon available")?
+        .ok_or("No default window icon available")?
         .clone();
         
     let _tray = TrayIconBuilder::new()

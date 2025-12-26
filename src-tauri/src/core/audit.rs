@@ -131,6 +131,7 @@ pub enum AuditEvent {
 
 impl AuditEvent {
     /// Get the event type name
+    #[allow(dead_code)]
     pub fn event_type(&self) -> &'static str {
         match self {
             AuditEvent::IdentityCreated { .. } => "identity_created",
@@ -150,6 +151,7 @@ impl AuditEvent {
     }
 
     /// Get the drive ID if this event is associated with a drive
+    #[allow(dead_code)]
     pub fn drive_id(&self) -> Option<&str> {
         match self {
             AuditEvent::IdentityCreated { .. } => None,
@@ -169,6 +171,7 @@ impl AuditEvent {
     }
 
     /// Get the user ID if this event is associated with a user
+    #[allow(dead_code)]
     pub fn user_id(&self) -> Option<&str> {
         match self {
             AuditEvent::IdentityCreated { node_id } => Some(node_id),
@@ -245,6 +248,7 @@ impl AuditLogger {
     }
 
     /// Log a security event
+    #[allow(dead_code)]
     pub async fn log(&self, event: AuditEvent) -> Result<u64, AuditError> {
         let timestamp = Utc::now();
         let event_type = event.event_type().to_string();
@@ -332,6 +336,7 @@ impl AuditLogger {
     }
 
     /// Get recent security events for a specific user
+    #[allow(dead_code)]
     pub async fn get_user_events(
         &self,
         user_id: &str,

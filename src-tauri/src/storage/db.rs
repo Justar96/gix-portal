@@ -12,6 +12,8 @@ const DRIVE_KEYS_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("dri
 const AUDIT_LOG_TABLE: TableDefinition<u64, &[u8]> = TableDefinition::new("audit_log");
 const AUDIT_COUNTER_TABLE: TableDefinition<&str, u64> = TableDefinition::new("audit_counter");
 const REVOKED_TOKENS_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("revoked_tokens");
+/// Drive namespace table - key: drive_id bytes, value: NamespaceId bytes
+const DOC_NAMESPACE_TABLE: TableDefinition<&[u8], &[u8]> = TableDefinition::new("doc_namespaces");
 /// File metadata table - key: "drive_id:file_path", value: serialized FileMetadata
 const FILE_METADATA_TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("file_metadata");
 
@@ -37,6 +39,7 @@ impl Database {
             let _ = write_txn.open_table(AUDIT_LOG_TABLE)?;
             let _ = write_txn.open_table(AUDIT_COUNTER_TABLE)?;
             let _ = write_txn.open_table(REVOKED_TOKENS_TABLE)?;
+            let _ = write_txn.open_table(DOC_NAMESPACE_TABLE)?;
             let _ = write_txn.open_table(FILE_METADATA_TABLE)?;
         }
         write_txn.commit()?;
@@ -145,6 +148,7 @@ impl Database {
     }
 
     /// Get an ACL for a drive
+    #[allow(dead_code)]
     pub fn get_acl(&self, drive_id: &str) -> Result<Option<Vec<u8>>> {
         let read_txn = self.db.begin_read()?;
         let table = read_txn.open_table(ACLS_TABLE)?;
@@ -299,6 +303,7 @@ impl Database {
     // ============================================================================
 
     /// Append an audit log entry and return the assigned ID
+    #[allow(dead_code)]
     pub fn append_audit_log(&self, data: &[u8]) -> Result<u64> {
         let write_txn = self.db.begin_write()?;
         let id = {
@@ -402,6 +407,7 @@ impl Database {
     }
 
     /// Get revoked tokens for a drive
+    #[allow(dead_code)]
     pub fn get_revoked_tokens(&self, drive_id: &str) -> Result<Option<Vec<u8>>> {
         let read_txn = self.db.begin_read()?;
         let table = read_txn.open_table(REVOKED_TOKENS_TABLE)?;
@@ -425,6 +431,76 @@ impl Database {
         Ok(tokens)
     }
 
+    // ============================================================================
+    // Doc Namespace Operations
+    // ============================================================================
+
+    /// Save a document namespace for a drive
+    pub fn save_doc_namespace(&self, drive_id: &[u8; 32], namespace: &[u8; 32]) -> Result<()> {
+        let write_txn = self.db.begin_write()?;
+        {
+            let mut table = write_txn.open_table(DOC_NAMESPACE_TABLE)?;
+            table.insert(drive_id.as_slice(), namespace.as_slice())?;
+        }
+        write_txn.commit()?;
+        Ok(())
+    }
+
+    /// Get the document namespace for a drive
+    #[allow(dead_code)]
+    pub fn get_doc_namespace(&self, drive_id: &[u8; 32]) -> Result<Option<[u8; 32]>> {
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(DOC_NAMESPACE_TABLE)?;
+
+        match table.get(drive_id.as_slice())? {
+            Some(guard) => {
+                let bytes = guard.value();
+                if bytes.len() == 32 {
+                    let mut arr = [0u8; 32];
+                    arr.copy_from_slice(bytes);
+                    Ok(Some(arr))
+                } else {
+                    Ok(None)
+                }
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// Load all document namespaces from database
+    pub fn list_doc_namespaces(&self) -> Result<Vec<([u8; 32], [u8; 32])>> {
+        let read_txn = self.db.begin_read()?;
+        let table = read_txn.open_table(DOC_NAMESPACE_TABLE)?;
+
+        let mut namespaces = Vec::new();
+        for entry in table.iter()? {
+            let (key, value) = entry?;
+            let key_bytes = key.value();
+            let value_bytes = value.value();
+            if key_bytes.len() == 32 && value_bytes.len() == 32 {
+                let mut drive_id = [0u8; 32];
+                drive_id.copy_from_slice(key_bytes);
+                let mut namespace = [0u8; 32];
+                namespace.copy_from_slice(value_bytes);
+                namespaces.push((drive_id, namespace));
+            }
+        }
+        Ok(namespaces)
+    }
+
+    /// Delete the document namespace for a drive
+    #[allow(dead_code)]
+    pub fn delete_doc_namespace(&self, drive_id: &[u8; 32]) -> Result<bool> {
+        let write_txn = self.db.begin_write()?;
+        let removed = {
+            let mut table = write_txn.open_table(DOC_NAMESPACE_TABLE)?;
+            let result = table.remove(drive_id.as_slice())?;
+            result.is_some()
+        };
+        write_txn.commit()?;
+        Ok(removed)
+    }
+
     // ============ File Metadata Operations ============
 
     /// Generate a key for file metadata: "drive_id:path"
@@ -445,6 +521,7 @@ impl Database {
     }
 
     /// Get file metadata for a specific file
+    #[allow(dead_code)]
     pub fn get_file_metadata(&self, drive_id: &str, path: &str) -> Result<Option<Vec<u8>>> {
         let key = Self::file_metadata_key(drive_id, path);
         let read_txn = self.db.begin_read()?;
@@ -488,6 +565,7 @@ impl Database {
     }
 
     /// Delete all file metadata for a drive
+    #[allow(dead_code)]
     pub fn delete_drive_metadata(&self, drive_id: &str) -> Result<usize> {
         let prefix = format!("{}:", drive_id);
         let write_txn = self.db.begin_write()?;
@@ -519,5 +597,36 @@ impl Database {
         }
         write_txn.commit()?;
         Ok(deleted)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_doc_namespace_roundtrip() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("test.redb");
+        let db = Database::open(db_path).unwrap();
+
+        let drive_id = [1u8; 32];
+        let namespace = [2u8; 32];
+
+        db.save_doc_namespace(&drive_id, &namespace).unwrap();
+
+        let loaded = db.get_doc_namespace(&drive_id).unwrap();
+        assert_eq!(loaded, Some(namespace));
+
+        let list = db.list_doc_namespaces().unwrap();
+        assert!(list
+            .iter()
+            .any(|(drive, ns)| *drive == drive_id && *ns == namespace));
+
+        let removed = db.delete_doc_namespace(&drive_id).unwrap();
+        assert!(removed);
+        let loaded_after = db.get_doc_namespace(&drive_id).unwrap();
+        assert!(loaded_after.is_none());
     }
 }

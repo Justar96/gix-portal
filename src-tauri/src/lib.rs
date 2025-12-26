@@ -11,7 +11,8 @@ use commands::{
     delete_path, dismiss_conflict, download_file, extend_lock, force_release_lock, generate_invite,
     get_audit_count, get_audit_log, get_conflict, get_conflict_count, get_connection_status,
     get_denied_access_log, get_drive, get_drive_audit_log, get_identity, get_lock_status,
-    get_online_count, get_online_users, get_recent_activity, get_sync_status, get_transfer,
+    get_online_count, get_online_users, get_recent_activity, get_sync_diagnostics, get_sync_status,
+    get_transfer,
     grant_permission, import_file, is_watching, join_drive_presence, leave_drive_presence,
     list_conflicts, list_drives, list_files, list_locks, list_permissions, list_revoked_tokens,
     list_transfers, presence_heartbeat, read_file, read_file_encrypted, release_lock, rename_drive,
@@ -205,7 +206,7 @@ pub fn run() {
                         // This protects against cold boot attacks if device is stolen while app is running
                         let em_for_blur = em.clone();
                         if let Some(window) = app_handle.get_webview_window("main") {
-                            let _ = window.on_window_event(move |event| {
+                            window.on_window_event(move |event| {
                                 if let tauri::WindowEvent::Focused(false) = event {
                                     // Window lost focus - clear encryption key cache for security
                                     let em_clone = em_for_blur.clone();
@@ -229,8 +230,7 @@ pub fn run() {
                 }
                 Err(e) => {
                     tracing::error!("Failed to initialize application: {}", e);
-                    return Err(Box::new(std::io::Error::new(
-                        std::io::ErrorKind::Other,
+                    return Err(Box::new(std::io::Error::other(
                         format!("Failed to initialize application: {}", e),
                     )) as Box<dyn std::error::Error>);
                 }
@@ -257,6 +257,7 @@ pub fn run() {
             start_sync,
             stop_sync,
             get_sync_status,
+            get_sync_diagnostics,
             subscribe_drive_events,
             // Phase 2: File watcher commands
             start_watching,

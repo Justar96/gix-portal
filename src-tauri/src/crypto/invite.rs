@@ -53,6 +53,9 @@ pub struct InvitePayload {
     pub single_use: bool,
     /// Unique token ID for tracking usage
     pub token_id: String,
+    /// Optional iroh-docs share ticket for metadata sync
+    #[serde(default)]
+    pub doc_ticket: Option<String>,
 }
 
 impl InvitePayload {
@@ -86,6 +89,7 @@ impl InviteToken {
         validity: Duration,
         note: Option<String>,
         single_use: bool,
+        doc_ticket: Option<String>,
     ) -> Result<Self, InviteError> {
         let now = Utc::now();
         let token_id = generate_token_id();
@@ -101,6 +105,7 @@ impl InviteToken {
             note,
             single_use,
             token_id,
+            doc_ticket,
         };
 
         let payload_bytes = payload.to_bytes()?;
@@ -169,6 +174,7 @@ pub struct InviteBuilder {
     validity: Duration,
     note: Option<String>,
     single_use: bool,
+    doc_ticket: Option<String>,
 }
 
 impl InviteBuilder {
@@ -181,6 +187,7 @@ impl InviteBuilder {
             validity: Duration::days(7), // Default: 1 week
             note: None,
             single_use: false,
+            doc_ticket: None,
         }
     }
 
@@ -208,6 +215,12 @@ impl InviteBuilder {
         self
     }
 
+    /// Attach a doc share ticket for metadata sync
+    pub fn with_doc_ticket(mut self, ticket: impl Into<String>) -> Self {
+        self.doc_ticket = Some(ticket.into());
+        self
+    }
+
     /// Build and sign the token
     pub fn build(self, signing_key: &SigningKey) -> Result<InviteToken, InviteError> {
         InviteToken::create(
@@ -218,6 +231,7 @@ impl InviteBuilder {
             self.validity,
             self.note,
             self.single_use,
+            self.doc_ticket,
         )
     }
 }
@@ -346,6 +360,24 @@ mod tests {
         assert_eq!(token.payload.drive_id, restored.payload.drive_id);
         assert_eq!(token.payload.drive_name, restored.payload.drive_name);
         assert_eq!(token.payload.permission, restored.payload.permission);
+        assert!(restored.verify(&key.verifying_key()).is_ok());
+    }
+
+    #[test]
+    fn test_invite_doc_ticket_roundtrip() {
+        let key = generate_signing_key();
+        let token = InviteBuilder::new("drive123", "Doc Ticket Test")
+            .with_permission(Permission::Read)
+            .with_doc_ticket("doc-ticket-123")
+            .build(&key)
+            .unwrap();
+
+        assert_eq!(token.payload.doc_ticket.as_deref(), Some("doc-ticket-123"));
+
+        let token_string = token.to_string().unwrap();
+        let restored = InviteToken::from_string(&token_string).unwrap();
+
+        assert_eq!(restored.payload.doc_ticket.as_deref(), Some("doc-ticket-123"));
         assert!(restored.verify(&key.verifying_key()).is_ok());
     }
 

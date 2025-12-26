@@ -146,6 +146,11 @@ impl EventBroadcaster {
         tracing::info!("ACL checker configured for gossip sender authorization");
     }
 
+    /// Get the underlying gossip instance (if initialized)
+    pub async fn gossip(&self) -> Option<Arc<Gossip>> {
+        self.get_gossip().await
+    }
+
     /// Get a reference to the gossip instance for operations
     /// Returns None if shutdown has been called
     async fn get_gossip(&self) -> Option<Arc<Gossip>> {
@@ -455,6 +460,10 @@ impl Drop for EventBroadcaster {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::crypto::Identity;
+    use crate::core::DriveEvent;
+    use std::path::PathBuf;
+    use chrono::Utc;
 
     #[test]
     fn test_drive_to_topic_deterministic() {
@@ -467,5 +476,227 @@ mod tests {
         let topic2 = TopicId::from_bytes(*drive_id2.as_bytes());
 
         assert_eq!(topic1.as_bytes(), topic2.as_bytes());
+    }
+
+    #[test]
+    fn test_drive_to_topic_unique_for_different_drives() {
+        let bytes1 = [1u8; 32];
+        let bytes2 = [2u8; 32];
+        let drive_id1 = DriveId(bytes1);
+        let drive_id2 = DriveId(bytes2);
+
+        let topic1 = TopicId::from_bytes(*drive_id1.as_bytes());
+        let topic2 = TopicId::from_bytes(*drive_id2.as_bytes());
+
+        assert_ne!(topic1.as_bytes(), topic2.as_bytes());
+    }
+
+    #[test]
+    fn test_peer_rate_limiter_creation() {
+        let limiter = PeerRateLimiter::new(100, 1);
+        assert_eq!(limiter.max_per_window, 100);
+        assert_eq!(limiter.window_secs, 1);
+    }
+
+    #[tokio::test]
+    async fn test_peer_rate_limiter_allows_within_limit() {
+        let limiter = PeerRateLimiter::new(5, 1);
+
+        for _ in 0..5 {
+            assert!(limiter.check("peer1").await);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_peer_rate_limiter_blocks_over_limit() {
+        let limiter = PeerRateLimiter::new(3, 1);
+
+        // First 3 should pass
+        assert!(limiter.check("peer1").await);
+        assert!(limiter.check("peer1").await);
+        assert!(limiter.check("peer1").await);
+
+        // 4th should be blocked
+        assert!(!limiter.check("peer1").await);
+        assert!(!limiter.check("peer1").await);
+    }
+
+    #[tokio::test]
+    async fn test_peer_rate_limiter_independent_per_peer() {
+        let limiter = PeerRateLimiter::new(2, 1);
+
+        // Each peer gets their own limit
+        assert!(limiter.check("peer1").await);
+        assert!(limiter.check("peer1").await);
+        assert!(!limiter.check("peer1").await);
+
+        // peer2 has a fresh limit
+        assert!(limiter.check("peer2").await);
+        assert!(limiter.check("peer2").await);
+        assert!(!limiter.check("peer2").await);
+    }
+
+    #[tokio::test]
+    async fn test_peer_rate_limiter_window_reset() {
+        let limiter = PeerRateLimiter::new(2, 0); // 0 second window = immediate reset
+
+        assert!(limiter.check("peer1").await);
+        assert!(limiter.check("peer1").await);
+        
+        // Window should reset since window_secs is 0
+        assert!(limiter.check("peer1").await);
+    }
+
+    #[tokio::test]
+    async fn test_peer_rate_limiter_cleanup() {
+        let limiter = PeerRateLimiter::new(10, 1);
+
+        // Add some entries
+        limiter.check("peer1").await;
+        limiter.check("peer2").await;
+        limiter.check("peer3").await;
+
+        // Check entries exist
+        {
+            let limits = limiter.limits.lock().await;
+            assert_eq!(limits.len(), 3);
+        }
+
+        // Cleanup should not remove recent entries
+        limiter.cleanup().await;
+
+        {
+            let limits = limiter.limits.lock().await;
+            assert_eq!(limits.len(), 3);
+        }
+    }
+
+    #[test]
+    fn test_max_message_age_constant() {
+        assert_eq!(MAX_MESSAGE_AGE_MS, 5 * 60 * 1000);
+    }
+
+    #[test]
+    fn test_rate_limit_constants() {
+        assert_eq!(PEER_RATE_LIMIT_PER_SEC, 100);
+        assert_eq!(RATE_LIMIT_WINDOW_SECS, 1);
+    }
+
+    #[test]
+    fn test_signed_gossip_message_creation() {
+        let identity = Identity::generate();
+        let node_id = identity.node_id();
+
+        let event = DriveEvent::UserJoined {
+            user: node_id,
+            timestamp: Utc::now(),
+        };
+
+        let signed_msg = SignedGossipMessage::new(event.clone(), &identity);
+
+        assert_eq!(signed_msg.sender, node_id);
+        assert!(!signed_msg.signature.is_empty());
+        assert!(signed_msg.timestamp_ms > 0);
+    }
+
+    #[test]
+    fn test_signed_gossip_message_verification() {
+        let identity = Identity::generate();
+        
+        let event = DriveEvent::FileChanged {
+            path: PathBuf::from("/test/file.txt"),
+            hash: "abc123".to_string(),
+            size: 1024,
+            modified_by: identity.node_id(),
+            timestamp: Utc::now(),
+        };
+
+        let signed_msg = SignedGossipMessage::new(event, &identity);
+        
+        // Should verify successfully
+        assert!(signed_msg.verify().is_ok());
+    }
+
+    #[test]
+    fn test_signed_gossip_message_tamper_detection() {
+        let identity = Identity::generate();
+        
+        let event = DriveEvent::FileDeleted {
+            path: PathBuf::from("/test/deleted.txt"),
+            deleted_by: identity.node_id(),
+            timestamp: Utc::now(),
+        };
+
+        let mut signed_msg = SignedGossipMessage::new(event, &identity);
+        
+        // Tamper with the signature
+        if !signed_msg.signature.is_empty() {
+            signed_msg.signature[0] ^= 0xFF;
+        }
+        
+        // Should fail verification
+        assert!(signed_msg.verify().is_err());
+    }
+
+    #[test]
+    fn test_signed_gossip_message_stale_detection() {
+        let identity = Identity::generate();
+        
+        let event = DriveEvent::UserLeft {
+            user: identity.node_id(),
+            timestamp: Utc::now(),
+        };
+
+        let mut signed_msg = SignedGossipMessage::new(event, &identity);
+        
+        // Fresh message should not be stale
+        assert!(!signed_msg.is_stale(MAX_MESSAGE_AGE_MS));
+
+        // Make message old
+        signed_msg.timestamp_ms -= MAX_MESSAGE_AGE_MS + 1000;
+        
+        // Now it should be stale
+        assert!(signed_msg.is_stale(MAX_MESSAGE_AGE_MS));
+    }
+
+    #[tokio::test]
+    async fn test_rate_limiter_many_peers() {
+        let limiter = PeerRateLimiter::new(10, 1);
+
+        // Simulate 100 different peers
+        for i in 0..100 {
+            let peer_id = format!("peer_{}", i);
+            assert!(limiter.check(&peer_id).await);
+        }
+
+        {
+            let limits = limiter.limits.lock().await;
+            assert_eq!(limits.len(), 100);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_rate_limiter_concurrent_access() {
+        use std::sync::Arc;
+
+        let limiter = Arc::new(PeerRateLimiter::new(1000, 1));
+        let mut handles = Vec::new();
+
+        for i in 0..10 {
+            let limiter = limiter.clone();
+            handles.push(tokio::spawn(async move {
+                let peer_id = format!("peer_{}", i);
+                for _ in 0..100 {
+                    limiter.check(&peer_id).await;
+                }
+            }));
+        }
+
+        for handle in handles {
+            handle.await.unwrap();
+        }
+
+        let limits = limiter.limits.lock().await;
+        assert_eq!(limits.len(), 10);
     }
 }

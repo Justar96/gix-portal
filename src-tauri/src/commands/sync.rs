@@ -4,7 +4,7 @@
 //! All commands include proper input validation and error handling.
 
 use crate::core::{validate_drive_id, validate_path, AppError, DriveId};
-use crate::network::SyncStatus;
+use crate::network::{SyncDiagnostics, SyncStatus};
 use crate::state::AppState;
 use tauri::State;
 
@@ -85,6 +85,24 @@ pub async fn get_sync_status(
 
     let status = sync_engine.get_status(&id).await;
     Ok(status)
+}
+
+/// Get sync diagnostics for a drive
+#[tauri::command]
+pub async fn get_sync_diagnostics(
+    drive_id: String,
+    state: State<'_, AppState>,
+) -> Result<SyncDiagnostics, String> {
+    let id = parse_drive_id(&drive_id)?;
+
+    // Check if sync engine is available
+    let sync_engine = state
+        .sync_engine
+        .as_ref()
+        .ok_or_else(|| AppError::SyncNotInitialized.to_string())?;
+
+    let diagnostics = sync_engine.get_diagnostics(&id).await;
+    Ok(diagnostics)
 }
 
 /// Subscribe to drive events (returns immediately, events come via Tauri events)

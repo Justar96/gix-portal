@@ -14,7 +14,7 @@ pub mod keys;
 // Re-export commonly used types
 pub use access::{AccessControlList, AccessRule, Permission};
 pub use encryption::{DriveEncryption, DriveKey, EncryptionError};
-pub use encryption_manager::{EncryptionManager, EncryptionManagerError};
+pub use encryption_manager::EncryptionManager;
 pub use invite::{InviteBuilder, InviteToken, TokenTracker};
 pub use key_exchange::{KeyExchangeError, KeyExchangePair, WrappedKey};
 pub use keys::{Identity, NodeId};

@@ -155,6 +155,22 @@ export interface SyncStatus {
     last_sync: string | null;
 }
 
+/** Last sync error info */
+export interface SyncErrorInfo {
+    message: string;
+    timestamp: string;
+}
+
+/** Sync diagnostics for troubleshooting */
+export interface SyncDiagnostics {
+    is_syncing: boolean;
+    has_doc: boolean;
+    gossip_subscribed: boolean;
+    doc_namespace: string | null;
+    doc_peers: number | null;
+    last_error: SyncErrorInfo | null;
+}
+
 /** Drive event types from backend */
 export type DriveEventType =
     | "FileChanged"
@@ -663,4 +679,3 @@ export function formatRelativeTime(timestamp: string): string {
         return "-";
     }
 }
-

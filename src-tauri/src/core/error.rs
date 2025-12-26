@@ -194,6 +194,7 @@ impl AppError {
 }
 
 /// Serializable error response for frontend
+#[allow(dead_code)]
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
     pub code: String,

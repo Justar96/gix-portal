@@ -162,21 +162,6 @@ impl AppState {
             }
         };
 
-        // Initialize DocsManager
-        let docs_manager = match DocsManager::new(data_dir, db).await {
-            Ok(dm) => Arc::new(dm),
-            Err(e) => {
-                tracing::error!("Failed to initialize DocsManager: {}", e);
-                return (None, Some(event_broadcaster), None, None, None);
-            }
-        };
-
-        // Initialize SyncEngine
-        let sync_engine = Arc::new(SyncEngine::new(
-            docs_manager.clone(),
-            event_broadcaster.clone(),
-        ));
-
         // Initialize FileWatcherManager
         let file_watcher = {
             let watcher = FileWatcherManager::new(node_id);
@@ -197,12 +182,39 @@ impl AppState {
             }
         };
 
+        // Initialize DocsManager
+        let docs_manager = match (event_broadcaster.gossip().await, file_transfer.as_ref()) {
+            (Some(gossip), Some(transfer)) => match DocsManager::new(
+                data_dir,
+                db,
+                transfer.blobs(),
+                gossip,
+            )
+            .await
+            {
+                Ok(dm) => Some(Arc::new(dm)),
+                Err(e) => {
+                    tracing::error!("Failed to initialize DocsManager: {}", e);
+                    None
+                }
+            },
+            _ => {
+                tracing::warn!("DocsManager unavailable: gossip or blobs not initialized");
+                None
+            }
+        };
+
+        // Initialize SyncEngine
+        let sync_engine = docs_manager
+            .as_ref()
+            .map(|dm| Arc::new(SyncEngine::new(dm.clone(), event_broadcaster.clone())));
+
         tracing::info!("Phase 2 sync components initialized successfully");
 
         (
-            Some(sync_engine),
+            sync_engine,
             Some(event_broadcaster),
-            Some(docs_manager),
+            docs_manager,
             file_watcher,
             file_transfer,
         )

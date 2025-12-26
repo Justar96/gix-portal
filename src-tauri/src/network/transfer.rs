@@ -135,6 +135,11 @@ impl FileTransferManager {
         self.event_tx.subscribe()
     }
 
+    /// Get a clone of the underlying blobs protocol
+    pub fn blobs(&self) -> Arc<Blobs<BlobStore>> {
+        self.blobs.clone()
+    }
+
     /// Upload a file to the blob store
     ///
     /// This imports a local file into iroh-blobs, making it available to peers.
@@ -536,6 +541,18 @@ mod tests {
     }
 
     #[test]
+    fn test_generate_transfer_id_format() {
+        let id = generate_transfer_id();
+        
+        // Should start with xfer_
+        assert!(id.starts_with("xfer_"));
+        
+        // Should contain hex characters after prefix
+        let hex_part = &id[5..];
+        assert!(hex_part.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
     fn test_transfer_state_serialization() {
         let state = TransferState {
             id: "xfer_123".to_string(),
@@ -553,5 +570,192 @@ mod tests {
         assert!(json.contains("xfer_123"));
         assert!(json.contains("Upload"));
         assert!(json.contains("Completed"));
+    }
+
+    #[test]
+    fn test_transfer_direction_serialization() {
+        let upload = TransferDirection::Upload;
+        let download = TransferDirection::Download;
+
+        let upload_json = serde_json::to_string(&upload).unwrap();
+        let download_json = serde_json::to_string(&download).unwrap();
+
+        assert!(upload_json.contains("Upload"));
+        assert!(download_json.contains("Download"));
+    }
+
+    #[test]
+    fn test_transfer_direction_equality() {
+        assert_eq!(TransferDirection::Upload, TransferDirection::Upload);
+        assert_eq!(TransferDirection::Download, TransferDirection::Download);
+        assert_ne!(TransferDirection::Upload, TransferDirection::Download);
+    }
+
+    #[test]
+    fn test_transfer_status_serialization() {
+        let statuses = vec![
+            TransferStatus::Pending,
+            TransferStatus::InProgress,
+            TransferStatus::Completed,
+            TransferStatus::Failed,
+            TransferStatus::Cancelled,
+        ];
+
+        for status in statuses {
+            let json = serde_json::to_string(&status).unwrap();
+            assert!(!json.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_transfer_status_equality() {
+        assert_eq!(TransferStatus::Pending, TransferStatus::Pending);
+        assert_eq!(TransferStatus::InProgress, TransferStatus::InProgress);
+        assert_eq!(TransferStatus::Completed, TransferStatus::Completed);
+        assert_eq!(TransferStatus::Failed, TransferStatus::Failed);
+        assert_eq!(TransferStatus::Cancelled, TransferStatus::Cancelled);
+        
+        assert_ne!(TransferStatus::Pending, TransferStatus::Completed);
+    }
+
+    #[test]
+    fn test_transfer_state_with_error() {
+        let state = TransferState {
+            id: "xfer_error".to_string(),
+            drive_id: "drive123".to_string(),
+            path: "error/file.txt".to_string(),
+            direction: TransferDirection::Download,
+            status: TransferStatus::Failed,
+            bytes_transferred: 500,
+            total_bytes: 1000,
+            hash: None,
+            error: Some("Connection timeout".to_string()),
+        };
+
+        let json = serde_json::to_string(&state).unwrap();
+        assert!(json.contains("Failed"));
+        assert!(json.contains("Connection timeout"));
+    }
+
+    #[test]
+    fn test_transfer_state_clone() {
+        let state = TransferState {
+            id: "xfer_clone".to_string(),
+            drive_id: "drive123".to_string(),
+            path: "clone/file.txt".to_string(),
+            direction: TransferDirection::Upload,
+            status: TransferStatus::InProgress,
+            bytes_transferred: 512,
+            total_bytes: 1024,
+            hash: None,
+            error: None,
+        };
+
+        let cloned = state.clone();
+
+        assert_eq!(state.id, cloned.id);
+        assert_eq!(state.drive_id, cloned.drive_id);
+        assert_eq!(state.bytes_transferred, cloned.bytes_transferred);
+        assert_eq!(state.total_bytes, cloned.total_bytes);
+    }
+
+    #[test]
+    fn test_transfer_progress_serialization() {
+        let progress = TransferProgress {
+            transfer_id: "xfer_progress".to_string(),
+            drive_id: "drive456".to_string(),
+            path: "progress/file.bin".to_string(),
+            direction: TransferDirection::Upload,
+            bytes_transferred: 4096,
+            total_bytes: 8192,
+            status: TransferStatus::InProgress,
+        };
+
+        let json = serde_json::to_string(&progress).unwrap();
+        assert!(json.contains("xfer_progress"));
+        assert!(json.contains("4096"));
+        assert!(json.contains("8192"));
+        assert!(json.contains("InProgress"));
+    }
+
+    #[test]
+    fn test_transfer_state_debug() {
+        let state = TransferState {
+            id: "xfer_debug".to_string(),
+            drive_id: "drive789".to_string(),
+            path: "debug/test.txt".to_string(),
+            direction: TransferDirection::Download,
+            status: TransferStatus::Pending,
+            bytes_transferred: 0,
+            total_bytes: 2048,
+            hash: Some("abc123".to_string()),
+            error: None,
+        };
+
+        let debug_str = format!("{:?}", state);
+        assert!(debug_str.contains("TransferState"));
+        assert!(debug_str.contains("xfer_debug"));
+    }
+
+    #[test]
+    fn test_transfer_progress_clone() {
+        let progress = TransferProgress {
+            transfer_id: "xfer_clone_progress".to_string(),
+            drive_id: "drive_clone".to_string(),
+            path: "clone/progress.bin".to_string(),
+            direction: TransferDirection::Upload,
+            bytes_transferred: 100,
+            total_bytes: 200,
+            status: TransferStatus::InProgress,
+        };
+
+        let cloned = progress.clone();
+
+        assert_eq!(progress.transfer_id, cloned.transfer_id);
+        assert_eq!(progress.bytes_transferred, cloned.bytes_transferred);
+        assert_eq!(progress.total_bytes, cloned.total_bytes);
+    }
+
+    #[test]
+    fn test_transfer_state_json_structure() {
+        let state = TransferState {
+            id: "xfer_structure".to_string(),
+            drive_id: "drive_st".to_string(),
+            path: "structure/file.dat".to_string(),
+            direction: TransferDirection::Download,
+            status: TransferStatus::Completed,
+            bytes_transferred: 5000,
+            total_bytes: 5000,
+            hash: Some("finalhash".to_string()),
+            error: None,
+        };
+
+        let json: serde_json::Value = serde_json::to_value(&state).unwrap();
+
+        // Verify JSON structure contains all expected fields
+        assert!(json.is_object());
+        assert_eq!(json.get("id").and_then(|v| v.as_str()), Some("xfer_structure"));
+        assert_eq!(json.get("drive_id").and_then(|v| v.as_str()), Some("drive_st"));
+        assert_eq!(json.get("path").and_then(|v| v.as_str()), Some("structure/file.dat"));
+        assert_eq!(json.get("bytes_transferred").and_then(|v| v.as_u64()), Some(5000));
+        assert_eq!(json.get("total_bytes").and_then(|v| v.as_u64()), Some(5000));
+        assert!(json.get("direction").is_some());
+        assert!(json.get("status").is_some());
+        assert!(json.get("hash").is_some());
+    }
+
+    #[test]
+    fn test_transfer_id_uniqueness() {
+        let mut ids = std::collections::HashSet::new();
+        
+        for _ in 0..100 {
+            let id = generate_transfer_id();
+            ids.insert(id);
+            // Small delay to ensure different timestamps
+            std::thread::sleep(std::time::Duration::from_nanos(1));
+        }
+        
+        // Should have generated unique IDs
+        assert!(ids.len() > 90, "Expected mostly unique IDs, got {}", ids.len());
     }
 }

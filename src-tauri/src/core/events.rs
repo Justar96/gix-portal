@@ -234,8 +234,10 @@ pub enum GossipAuthError {
     /// Signature verification failed
     SignatureVerificationFailed,
     /// Message is too old (possible replay attack)
+    #[allow(dead_code)]
     StaleMessage,
     /// Sender is not authorized for this action
+    #[allow(dead_code)]
     Unauthorized,
 }
 

@@ -17,7 +17,7 @@ pub mod rate_limit;
 pub mod validation;
 pub mod watcher;
 
-pub use audit::{AuditEntry, AuditEntryDto, AuditEvent, AuditFilter, AuditLogger};
+pub use audit::{AuditEntryDto, AuditFilter, AuditLogger};
 pub use channel::send_with_backpressure;
 pub use cleanup::CleanupManager;
 pub use conflict::{ConflictManager, FileConflictDto, ResolutionStrategy};

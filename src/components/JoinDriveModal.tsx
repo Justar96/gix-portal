@@ -70,9 +70,19 @@ export function JoinDriveModal({ onClose, onJoined }: JoinDriveModalProps) {
                 setJoinedDriveName(result.drive_name);
                 setState("success");
 
+                // Start sync and watching for the newly joined drive
+                try {
+                    await invoke("start_sync", { driveId: result.drive_id });
+                    await invoke("start_watching", { driveId: result.drive_id });
+                } catch (syncErr) {
+                    console.warn("Failed to start sync after joining:", syncErr);
+                    // Don't fail the join - sync can be started manually
+                }
+
+                onJoined(result.drive_id);
+
                 // Auto-close after 2 seconds
                 setTimeout(() => {
-                    onJoined(result.drive_id);
                     onClose();
                 }, 2000);
             } else {

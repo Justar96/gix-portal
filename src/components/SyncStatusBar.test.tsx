@@ -13,6 +13,11 @@ vi.mock('../hooks', () => ({
         stopSync: vi.fn(),
         error: null,
     })),
+    usePermissions: vi.fn(() => ({
+        permissionLevel: 'read',
+        isOwner: false,
+        isLoading: false,
+    })),
 }));
 
 describe('SyncStatusBar', () => {

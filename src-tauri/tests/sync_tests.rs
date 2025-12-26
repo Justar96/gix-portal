@@ -18,10 +18,6 @@ impl DriveId {
         id[0] = seed;
         DriveId(id)
     }
-
-    fn as_bytes(&self) -> &[u8; 32] {
-        &self.0
-    }
 }
 
 /// Mock SyncStatus
@@ -29,7 +25,6 @@ impl DriveId {
 struct SyncStatus {
     is_syncing: bool,
     connected_peers: usize,
-    last_sync: Option<String>,
 }
 
 /// Mock SyncEngine for testing sync operations
@@ -54,7 +49,6 @@ impl MockSyncEngine {
             SyncStatus {
                 is_syncing: true,
                 connected_peers: 0,
-                last_sync: None,
             },
         );
         let _ = self.event_tx.send((drive_id, "SyncStarted".to_string()));
@@ -290,10 +284,6 @@ struct MockTransferManager {
 
 #[derive(Clone, Debug)]
 struct TransferState {
-    id: String,
-    drive_id: DriveId,
-    path: String,
-    direction: String,
     status: String,
     bytes_transferred: u64,
     total_bytes: u64,
@@ -307,16 +297,12 @@ impl MockTransferManager {
         }
     }
 
-    async fn start_upload(&self, drive_id: DriveId, path: &str, size: u64) -> String {
+    async fn start_upload(&self, _drive_id: DriveId, _path: &str, size: u64) -> String {
         let mut next_id = self.next_id.write().await;
         let id = format!("transfer-{}", *next_id);
         *next_id += 1;
 
         let transfer = TransferState {
-            id: id.clone(),
-            drive_id,
-            path: path.to_string(),
-            direction: "Upload".to_string(),
             status: "InProgress".to_string(),
             bytes_transferred: 0,
             total_bytes: size,
