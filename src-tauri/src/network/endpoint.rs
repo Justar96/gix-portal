@@ -252,7 +252,10 @@ mod tests {
 
         assert!(info.is_online);
         assert_eq!(info.node_id, Some("node123".to_string()));
-        assert_eq!(info.relay_url, Some("https://relay.example.com".to_string()));
+        assert_eq!(
+            info.relay_url,
+            Some("https://relay.example.com".to_string())
+        );
         assert_eq!(info.peer_count, 5);
     }
 

@@ -34,7 +34,7 @@ pub struct AcquireLockResult {
 }
 
 /// Acquire a lock on a file
-/// 
+///
 /// # Security
 /// - Validates path is within drive root
 #[tauri::command]
@@ -46,21 +46,26 @@ pub async fn acquire_lock(
     lock_manager: State<'_, Arc<LockManager>>,
 ) -> Result<AcquireLockResult, String> {
     let id = parse_drive_id(&drive_id)?;
-    
+
     // Validate path against drive root
     let drives = state.drives.read().await;
     let drive = drives.get(id.as_bytes()).ok_or_else(|| {
-        AppError::DriveNotFound { drive_id: drive_id.clone() }.to_string()
+        AppError::DriveNotFound {
+            drive_id: drive_id.clone(),
+        }
+        .to_string()
     })?;
     let validated_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
     drop(drives);
-    
+
     let lock_type = match lock_type.as_str() {
         "exclusive" => LockType::Exclusive,
         _ => LockType::Advisory,
     };
 
-    let result = lock_manager.acquire_lock(&drive_id, validated_path.clone(), lock_type).await;
+    let result = lock_manager
+        .acquire_lock(&drive_id, validated_path.clone(), lock_type)
+        .await;
     let node_id = lock_manager.node_id();
 
     match result {
@@ -74,7 +79,7 @@ pub async fn acquire_lock(
                 lock_type = ?lock_type,
                 "Lock acquired"
             );
-            
+
             Ok(AcquireLockResult {
                 success: true,
                 lock: Some(FileLockDto::from_lock(&lock, node_id)),
@@ -91,7 +96,7 @@ pub async fn acquire_lock(
                 warning = %warning,
                 "Lock acquired with warning"
             );
-            
+
             Ok(AcquireLockResult {
                 success: true,
                 lock: Some(FileLockDto::from_lock(&lock, node_id)),
@@ -99,14 +104,17 @@ pub async fn acquire_lock(
                 warning: Some(warning),
             })
         }
-        LockResult::Denied { existing_lock, reason } => {
+        LockResult::Denied {
+            existing_lock,
+            reason,
+        } => {
             tracing::debug!(
                 drive_id = %drive_id,
                 path = %path,
                 reason = %reason,
                 "Lock denied"
             );
-            
+
             Ok(AcquireLockResult {
                 success: false,
                 lock: Some(FileLockDto::from_lock(&existing_lock, node_id)),
@@ -126,11 +134,14 @@ pub async fn release_lock(
     lock_manager: State<'_, Arc<LockManager>>,
 ) -> Result<bool, String> {
     let id = parse_drive_id(&drive_id)?;
-    
+
     // Validate path against drive root
     let drives = state.drives.read().await;
     let drive = drives.get(id.as_bytes()).ok_or_else(|| {
-        AppError::DriveNotFound { drive_id: drive_id.clone() }.to_string()
+        AppError::DriveNotFound {
+            drive_id: drive_id.clone(),
+        }
+        .to_string()
     })?;
     let validated_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
     drop(drives);
@@ -154,15 +165,18 @@ pub async fn get_lock_status(
     lock_manager: State<'_, Arc<LockManager>>,
 ) -> Result<Option<FileLockDto>, String> {
     let id = parse_drive_id(&drive_id)?;
-    
+
     // Validate path against drive root
     let drives = state.drives.read().await;
     let drive = drives.get(id.as_bytes()).ok_or_else(|| {
-        AppError::DriveNotFound { drive_id: drive_id.clone() }.to_string()
+        AppError::DriveNotFound {
+            drive_id: drive_id.clone(),
+        }
+        .to_string()
     })?;
     let validated_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
     drop(drives);
-    
+
     let node_id = lock_manager.node_id();
 
     Ok(lock_manager
@@ -179,7 +193,7 @@ pub async fn list_locks(
 ) -> Result<Vec<FileLockDto>, String> {
     // Validate drive_id format
     validate_drive_id(&drive_id).map_err(|e| e.to_string())?;
-    
+
     let node_id = lock_manager.node_id();
     let locks = lock_manager.list_locks(&drive_id).await;
 
@@ -199,23 +213,32 @@ pub async fn extend_lock(
     lock_manager: State<'_, Arc<LockManager>>,
 ) -> Result<Option<FileLockDto>, String> {
     let id = parse_drive_id(&drive_id)?;
-    
+
     // Validate path against drive root
     let drives = state.drives.read().await;
     let drive = drives.get(id.as_bytes()).ok_or_else(|| {
-        AppError::DriveNotFound { drive_id: drive_id.clone() }.to_string()
+        AppError::DriveNotFound {
+            drive_id: drive_id.clone(),
+        }
+        .to_string()
     })?;
     let validated_path = validate_path(&drive.local_path, &path).map_err(|e| e.to_string())?;
     drop(drives);
-    
+
     // Validate duration (1 minute to 24 hours)
     if !(1..=1440).contains(&duration_mins) {
-        return Err(AppError::ValidationError("Lock duration must be between 1 and 1440 minutes".to_string()).to_string());
+        return Err(AppError::ValidationError(
+            "Lock duration must be between 1 and 1440 minutes".to_string(),
+        )
+        .to_string());
     }
-    
+
     let node_id = lock_manager.node_id();
 
-    if let Some(lock) = lock_manager.extend_lock(&drive_id, &validated_path, duration_mins).await {
+    if let Some(lock) = lock_manager
+        .extend_lock(&drive_id, &validated_path, duration_mins)
+        .await
+    {
         // Broadcast updated lock
         broadcast_lock_acquired(&state, &drive_id, &lock).await;
         tracing::info!(

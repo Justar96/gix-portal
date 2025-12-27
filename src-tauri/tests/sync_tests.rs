@@ -213,7 +213,9 @@ impl MockFileWatcher {
     async fn simulate_file_change(&self, drive_id: DriveId, path: &str) {
         let watching = self.watching.read().await;
         if watching.contains_key(&drive_id) {
-            let _ = self.event_tx.send((drive_id, "FileChanged".to_string(), path.to_string()));
+            let _ = self
+                .event_tx
+                .send((drive_id, "FileChanged".to_string(), path.to_string()));
         }
     }
 
@@ -231,7 +233,10 @@ async fn test_file_watcher_start_stop() {
     assert!(!watcher.is_watching(&drive_id).await);
 
     // Start watching
-    watcher.watch(drive_id, "/home/user/drive".to_string()).await.unwrap();
+    watcher
+        .watch(drive_id, "/home/user/drive".to_string())
+        .await
+        .unwrap();
     assert!(watcher.is_watching(&drive_id).await);
 
     // Stop watching
@@ -244,17 +249,23 @@ async fn test_file_watcher_events() {
     let watcher = MockFileWatcher::new();
     let drive_id = DriveId::new(1);
 
-    watcher.watch(drive_id, "/home/user/drive".to_string()).await.unwrap();
+    watcher
+        .watch(drive_id, "/home/user/drive".to_string())
+        .await
+        .unwrap();
 
     let mut rx = watcher.subscribe_events();
 
     // Simulate file change
-    watcher.simulate_file_change(drive_id, "/home/user/drive/test.txt").await;
+    watcher
+        .simulate_file_change(drive_id, "/home/user/drive/test.txt")
+        .await;
 
-    let (received_id, event_type, path) = tokio::time::timeout(Duration::from_millis(100), rx.recv())
-        .await
-        .expect("Timeout waiting for event")
-        .expect("Channel closed");
+    let (received_id, event_type, path) =
+        tokio::time::timeout(Duration::from_millis(100), rx.recv())
+            .await
+            .expect("Timeout waiting for event")
+            .expect("Channel closed");
 
     assert_eq!(received_id, drive_id);
     assert_eq!(event_type, "FileChanged");
@@ -270,10 +281,15 @@ async fn test_file_watcher_ignores_unwatched_drives() {
     let mut rx = watcher.subscribe_events();
 
     // Simulate file change - should not emit event
-    watcher.simulate_file_change(drive_id, "/home/user/drive/test.txt").await;
+    watcher
+        .simulate_file_change(drive_id, "/home/user/drive/test.txt")
+        .await;
 
     let result = tokio::time::timeout(Duration::from_millis(50), rx.recv()).await;
-    assert!(result.is_err(), "Should not receive event for unwatched drive");
+    assert!(
+        result.is_err(),
+        "Should not receive event for unwatched drive"
+    );
 }
 
 /// Mock TransferManager for testing file transfers
@@ -401,9 +417,15 @@ async fn test_transfer_manager_list() {
     let drive_id = DriveId::new(1);
 
     // Start multiple transfers
-    manager.start_upload(drive_id, "/test/file1.txt", 1024).await;
-    manager.start_upload(drive_id, "/test/file2.txt", 2048).await;
-    manager.start_upload(drive_id, "/test/file3.txt", 4096).await;
+    manager
+        .start_upload(drive_id, "/test/file1.txt", 1024)
+        .await;
+    manager
+        .start_upload(drive_id, "/test/file2.txt", 2048)
+        .await;
+    manager
+        .start_upload(drive_id, "/test/file3.txt", 4096)
+        .await;
 
     let transfers = manager.list_transfers().await;
     assert_eq!(transfers.len(), 3);
@@ -465,7 +487,9 @@ async fn test_transfer_manager_load() {
         let manager = manager.clone();
         handles.push(tokio::spawn(async move {
             let path = format!("/test/file{}.txt", i);
-            let transfer_id = manager.start_upload(drive_id, &path, 1024 * (i + 1) as u64).await;
+            let transfer_id = manager
+                .start_upload(drive_id, &path, 1024 * (i + 1) as u64)
+                .await;
 
             // Simulate progress updates
             for progress in (0..=100).step_by(25) {

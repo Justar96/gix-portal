@@ -13,8 +13,8 @@ use crate::crypto::Permission;
 use crate::storage::Database;
 use anyhow::{anyhow, Result};
 use futures_lite::StreamExt;
-use iroh_blobs::{net_protocol::Blobs, store::fs::Store as BlobStore, Hash};
 use iroh_blobs::store::Map;
+use iroh_blobs::{net_protocol::Blobs, store::fs::Store as BlobStore, Hash};
 use iroh_docs::protocol::Docs;
 use iroh_docs::rpc::client::docs::{Doc, MemClient, ShareMode};
 use iroh_docs::rpc::proto::{Request as DocsRequest, Response as DocsResponse};
@@ -202,7 +202,10 @@ impl DocsManager {
         let namespace_id = doc.id();
 
         self.store_namespace_mapping(drive_id, namespace_id).await?;
-        self.docs_by_drive.write().await.insert(drive_id, doc.clone());
+        self.docs_by_drive
+            .write()
+            .await
+            .insert(drive_id, doc.clone());
 
         self.load_drive_metadata(&drive_id).await?;
         self.sync_cache_to_doc(&drive_id, &doc).await?;
@@ -270,7 +273,8 @@ impl DocsManager {
 
         // Serialize and persist to database
         let data = serde_json::to_vec(meta)?;
-        self.db.save_file_metadata(&drive_id_hex, &meta.path, &data)?;
+        self.db
+            .save_file_metadata(&drive_id_hex, &meta.path, &data)?;
 
         // Update in-memory cache
         let mut cache = self.metadata_cache.write().await;
@@ -281,11 +285,7 @@ impl DocsManager {
     }
 
     /// Delete metadata cache and DB without touching the docs replica
-    pub async fn delete_file_metadata_cached(
-        &self,
-        drive_id: &DriveId,
-        path: &str,
-    ) -> Result<()> {
+    pub async fn delete_file_metadata_cached(&self, drive_id: &DriveId, path: &str) -> Result<()> {
         let drive_id_hex = hex::encode(drive_id.as_bytes());
 
         // Delete from database
@@ -359,7 +359,11 @@ impl DocsManager {
     }
 
     /// Generate a sharing ticket for a drive's document
-    pub async fn get_ticket(&self, drive_id: &DriveId, permission: Permission) -> Result<DocTicket> {
+    pub async fn get_ticket(
+        &self,
+        drive_id: &DriveId,
+        permission: Permission,
+    ) -> Result<DocTicket> {
         let doc = self
             .get_or_open_doc(drive_id)
             .await?
@@ -390,10 +394,7 @@ impl DocsManager {
     }
 
     /// Get sync peers for a drive document
-    pub async fn get_sync_peers(
-        &self,
-        drive_id: &DriveId,
-    ) -> Result<Option<Vec<PeerIdBytes>>> {
+    pub async fn get_sync_peers(&self, drive_id: &DriveId) -> Result<Option<Vec<PeerIdBytes>>> {
         let Some(doc) = self.get_or_open_doc(drive_id).await? else {
             return Ok(None);
         };

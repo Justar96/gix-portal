@@ -12,13 +12,12 @@ use commands::{
     get_audit_count, get_audit_log, get_conflict, get_conflict_count, get_connection_status,
     get_denied_access_log, get_drive, get_drive_audit_log, get_identity, get_lock_status,
     get_online_count, get_online_users, get_recent_activity, get_sync_diagnostics, get_sync_status,
-    get_transfer,
-    grant_permission, import_file, is_watching, join_drive_presence, leave_drive_presence,
-    list_conflicts, list_drives, list_files, list_locks, list_permissions, list_revoked_tokens,
-    list_transfers, presence_heartbeat, read_file, read_file_encrypted, release_lock, rename_drive,
-    rename_path, resolve_conflict, revoke_invite, revoke_permission, start_sync, start_watching,
-    stop_sync, stop_watching, subscribe_drive_events, upload_file, verify_invite, write_file,
-    write_file_encrypted, SecurityStore,
+    get_transfer, grant_permission, import_file, is_watching, join_drive_presence,
+    leave_drive_presence, list_conflicts, list_drives, list_files, list_locks, list_permissions,
+    list_revoked_tokens, list_transfers, presence_heartbeat, read_file, read_file_encrypted,
+    release_lock, rename_drive, rename_path, resolve_conflict, revoke_invite, revoke_permission,
+    start_sync, start_watching, stop_sync, stop_watching, subscribe_drive_events, upload_file,
+    verify_invite, write_file, write_file_encrypted, SecurityStore,
 };
 use core::{
     AuditLogger, ConflictManager, DriveEvent, DriveEventDto, DriveId, LockManager, PresenceManager,
@@ -155,9 +154,8 @@ pub fn run() {
                                 // Use block_in_place to properly block within tokio runtime context
                                 // This moves the current thread out of the worker pool during the blocking call
                                 let acl = tokio::task::block_in_place(|| {
-                                    tokio::runtime::Handle::current().block_on(
-                                        security_for_acl.get_or_create_acl(drive_id, ""),
-                                    )
+                                    tokio::runtime::Handle::current()
+                                        .block_on(security_for_acl.get_or_create_acl(drive_id, ""))
                                 });
                                 use crate::crypto::Permission;
                                 acl.check_permission(sender_id, "/", Permission::Read)
@@ -230,9 +228,10 @@ pub fn run() {
                 }
                 Err(e) => {
                     tracing::error!("Failed to initialize application: {}", e);
-                    return Err(Box::new(std::io::Error::other(
-                        format!("Failed to initialize application: {}", e),
-                    )) as Box<dyn std::error::Error>);
+                    return Err(Box::new(std::io::Error::other(format!(
+                        "Failed to initialize application: {}",
+                        e
+                    ))) as Box<dyn std::error::Error>);
                 }
             }
 

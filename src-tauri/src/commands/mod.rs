@@ -31,6 +31,6 @@ pub use security::{
 };
 pub use sync::{
     cancel_transfer, download_file, get_sync_diagnostics, get_sync_status, get_transfer,
-    import_file, is_watching, list_transfers, start_sync, start_watching, stop_sync,
-    stop_watching, subscribe_drive_events, upload_file,
+    import_file, is_watching, list_transfers, start_sync, start_watching, stop_sync, stop_watching,
+    subscribe_drive_events, upload_file,
 };

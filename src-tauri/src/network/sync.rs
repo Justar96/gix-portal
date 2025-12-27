@@ -11,8 +11,8 @@
 use crate::core::{DriveEvent, DriveId, SharedDrive};
 use crate::network::{DocsManager, EventBroadcaster};
 use anyhow::Result;
-use iroh_docs::DocTicket;
 use chrono::Utc;
+use iroh_docs::DocTicket;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
@@ -31,10 +31,7 @@ pub struct SyncEngine {
 
 impl SyncEngine {
     /// Create a new SyncEngine
-    pub fn new(
-        docs_manager: Arc<DocsManager>,
-        event_broadcaster: Arc<EventBroadcaster>,
-    ) -> Self {
+    pub fn new(docs_manager: Arc<DocsManager>, event_broadcaster: Arc<EventBroadcaster>) -> Self {
         let (event_tx, _) = broadcast::channel(512);
 
         tracing::info!("SyncEngine initialized");
@@ -79,7 +76,8 @@ impl SyncEngine {
     ///
     /// This sets up:
     /// 1. Import the iroh-doc from the ticket
-    /// 2. Subscribe to the gossip topic
+    /// 2. Wait for initial peer discovery
+    /// 3. Subscribe to the gossip topic with discovered peers
     pub async fn join_drive(&self, drive_id: DriveId, ticket: DocTicket) -> Result<()> {
         // 1. Import doc from ticket
         if let Err(err) = self.docs_manager.join_doc(drive_id, ticket).await {
@@ -88,8 +86,41 @@ impl SyncEngine {
             return Err(err);
         }
 
-        // 2. Subscribe to gossip topic
-        if let Err(err) = self.event_broadcaster.subscribe(drive_id).await {
+        // 2. Wait briefly for docs to discover initial peers
+        // This gives iroh-docs time to connect to peers from the ticket
+        tracing::debug!("Waiting for peer discovery for drive {}", drive_id);
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+        // 3. Get discovered peers from docs to use as gossip bootstrap peers
+        let bootstrap_peers =
+            if let Ok(Some(peers)) = self.docs_manager.get_sync_peers(&drive_id).await {
+                tracing::info!(
+                    "Discovered {} peers for drive {} - using for gossip bootstrap",
+                    peers.len(),
+                    drive_id
+                );
+                // Convert PeerIdBytes to NodeId for gossip
+                peers
+                    .into_iter()
+                    .filter_map(|peer_bytes| {
+                        // PeerIdBytes is [u8; 32], NodeId can be constructed from it
+                        iroh::NodeId::from_bytes(&peer_bytes).ok()
+                    })
+                    .collect()
+            } else {
+                tracing::warn!(
+                    "No peers discovered for drive {} - gossip will rely on network discovery",
+                    drive_id
+                );
+                vec![]
+            };
+
+        // 4. Subscribe to gossip topic with bootstrap peers
+        if let Err(err) = self
+            .event_broadcaster
+            .subscribe_with_peers(drive_id, bootstrap_peers)
+            .await
+        {
             self.record_error(drive_id, format!("gossip subscribe failed: {}", err))
                 .await;
             return Err(err);
@@ -161,7 +192,11 @@ impl SyncEngine {
         }
 
         // Broadcast event via gossip
-        if let Err(err) = self.event_broadcaster.broadcast(drive_id, event.clone()).await {
+        if let Err(err) = self
+            .event_broadcaster
+            .broadcast(drive_id, event.clone())
+            .await
+        {
             self.record_error(*drive_id, format!("gossip broadcast failed: {}", err))
                 .await;
             return Err(err);
@@ -451,7 +486,7 @@ mod tests {
         };
 
         let json: serde_json::Value = serde_json::to_value(&status).unwrap();
-        
+
         assert!(json.is_object());
         assert!(json.get("is_syncing").is_some());
         assert!(json.get("connected_peers").is_some());

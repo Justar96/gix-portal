@@ -443,6 +443,9 @@ mod tests {
 
         let activities = manager.recent_activities(10).await;
         assert_eq!(activities.len(), 1);
-        assert!(matches!(activities[0].activity_type, ActivityType::FileCreated));
+        assert!(matches!(
+            activities[0].activity_type,
+            ActivityType::FileCreated
+        ));
     }
 }

@@ -119,10 +119,7 @@ pub enum LockResult {
         reason: String,
     },
     /// Lock acquired but with a warning (e.g., advisory lock exists)
-    AcquiredWithWarning {
-        lock: FileLock,
-        warning: String,
-    },
+    AcquiredWithWarning { lock: FileLock, warning: String },
 }
 
 /// Manages file locks for a single drive
@@ -140,12 +137,7 @@ impl DriveLockManager {
     }
 
     /// Attempt to acquire a lock
-    pub async fn acquire(
-        &self,
-        path: PathBuf,
-        holder: NodeId,
-        lock_type: LockType,
-    ) -> LockResult {
+    pub async fn acquire(&self, path: PathBuf, holder: NodeId, lock_type: LockType) -> LockResult {
         let mut locks = self.locks.write().await;
 
         // Clean up expired locks first
@@ -262,7 +254,7 @@ impl DriveLockManager {
         }
 
         let mut locks = self.locks.write().await;
-        
+
         // Only apply if no existing lock or existing lock is expired
         if let Some(existing) = locks.get(&lock.path) {
             if !existing.is_expired() && existing.acquired_at < lock.acquired_at {
@@ -277,7 +269,7 @@ impl DriveLockManager {
     /// Remove a remote lock (from gossip)
     pub async fn remove_remote_lock(&self, path: &PathBuf, holder: &NodeId) {
         let mut locks = self.locks.write().await;
-        
+
         if let Some(existing) = locks.get(path) {
             if existing.holder == *holder {
                 locks.remove(path);
@@ -374,7 +366,9 @@ impl LockManager {
         duration_mins: i64,
     ) -> Option<FileLock> {
         let manager = self.get_drive_locks(drive_id).await;
-        manager.extend_lock(path, &self.node_id, duration_mins).await
+        manager
+            .extend_lock(path, &self.node_id, duration_mins)
+            .await
     }
 
     /// Apply a lock received from gossip
@@ -413,7 +407,9 @@ mod tests {
         let path = PathBuf::from("test/file.txt");
 
         // Acquire lock
-        let result = manager.acquire(path.clone(), node_id, LockType::Advisory).await;
+        let result = manager
+            .acquire(path.clone(), node_id, LockType::Advisory)
+            .await;
         assert!(matches!(result, LockResult::Acquired(_)));
 
         // Release lock
@@ -434,11 +430,15 @@ mod tests {
         let path = PathBuf::from("test/file.txt");
 
         // User 1 acquires exclusive lock
-        let result = manager.acquire(path.clone(), node1, LockType::Exclusive).await;
+        let result = manager
+            .acquire(path.clone(), node1, LockType::Exclusive)
+            .await;
         assert!(matches!(result, LockResult::Acquired(_)));
 
         // User 2 cannot acquire any lock
-        let result = manager.acquire(path.clone(), node2, LockType::Advisory).await;
+        let result = manager
+            .acquire(path.clone(), node2, LockType::Advisory)
+            .await;
         assert!(matches!(result, LockResult::Denied { .. }));
     }
 

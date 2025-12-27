@@ -775,7 +775,9 @@ pub async fn accept_invite(
                 drive_id: drive_id.clone(),
                 drive_name,
                 permission: token.payload.permission.into(),
-                error: Some("Invite is missing sync ticket. Ask the owner to regenerate it.".to_string()),
+                error: Some(
+                    "Invite is missing sync ticket. Ask the owner to regenerate it.".to_string(),
+                ),
             });
         }
     };
@@ -899,7 +901,13 @@ pub async fn accept_invite(
         // Create a unique folder name for this drive
         let safe_name = drive_name
             .chars()
-            .map(|c| if c.is_alphanumeric() || c == ' ' || c == '-' || c == '_' { c } else { '_' })
+            .map(|c| {
+                if c.is_alphanumeric() || c == ' ' || c == '-' || c == '_' {
+                    c
+                } else {
+                    '_'
+                }
+            })
             .collect::<String>();
         let short_id = &drive_id[..8.min(drive_id.len())];
         let folder_name = format!("{}_{}", safe_name, short_id);
@@ -948,13 +956,13 @@ pub async fn accept_invite(
         };
 
         // Save to database
-        let drive_bytes = serde_json::to_vec(&drive).map_err(|e| {
-            format!("Failed to serialize drive: {}", e)
-        })?;
+        let drive_bytes =
+            serde_json::to_vec(&drive).map_err(|e| format!("Failed to serialize drive: {}", e))?;
 
-        state.db.save_drive(drive.id.as_bytes(), &drive_bytes).map_err(|e| {
-            format!("Failed to save drive: {}", e)
-        })?;
+        state
+            .db
+            .save_drive(drive.id.as_bytes(), &drive_bytes)
+            .map_err(|e| format!("Failed to save drive: {}", e))?;
 
         // Add to in-memory cache
         state.drives.write().await.insert(id_arr, drive);
@@ -1013,7 +1021,7 @@ pub async fn accept_invite(
         if let Some(drive) = drives.get(&id_arr) {
             let local_path = drive.local_path.clone();
             drop(drives); // Release lock before async operation
-            
+
             if let Err(e) = watcher.watch(DriveId(id_arr), local_path).await {
                 tracing::warn!(
                     drive_id = %drive_id,
@@ -1343,5 +1351,7 @@ fn parse_drive_id(drive_id: &str) -> Result<[u8; 32], String> {
 }
 
 fn validate_node_id_hex(node_id: &str) -> Result<(), String> {
-    validate_node_id(node_id).map(|_| ()).map_err(|e| e.to_string())
+    validate_node_id(node_id)
+        .map(|_| ())
+        .map_err(|e| e.to_string())
 }

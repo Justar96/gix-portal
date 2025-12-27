@@ -16,7 +16,7 @@ use iroh::Endpoint;
 use iroh_blobs::{
     net_protocol::Blobs,
     store::{fs::Store as BlobStore, Map, MapEntry, Store as StoreExt},
-    Hash, BlobFormat,
+    BlobFormat, Hash,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -97,11 +97,7 @@ impl FileTransferManager {
     /// * `endpoint` - The Iroh endpoint for P2P connections
     /// * `data_dir` - Directory to store blob data
     /// * `node_id` - Our node ID for event attribution
-    pub async fn new(
-        endpoint: &Endpoint,
-        data_dir: &Path,
-        node_id: NodeId,
-    ) -> Result<Self> {
+    pub async fn new(endpoint: &Endpoint, data_dir: &Path, node_id: NodeId) -> Result<Self> {
         let blobs_dir = data_dir.join("blobs");
         std::fs::create_dir_all(&blobs_dir)?;
 
@@ -173,7 +169,10 @@ impl FileTransferManager {
         };
 
         // Store transfer state
-        self.transfers.write().await.insert(transfer_id.clone(), state);
+        self.transfers
+            .write()
+            .await
+            .insert(transfer_id.clone(), state);
 
         // Emit initial progress
         self.emit_progress(&transfer_id).await;
@@ -226,10 +225,7 @@ impl FileTransferManager {
 
         // Get blob size for progress tracking
         let store = self.blobs.store();
-        let entry = store
-            .get(&hash)
-            .await?
-            .context("Blob not found in store")?;
+        let entry = store.get(&hash).await?.context("Blob not found in store")?;
         let total_bytes = entry.size().value();
 
         // Create transfer state
@@ -245,7 +241,10 @@ impl FileTransferManager {
             error: None,
         };
 
-        self.transfers.write().await.insert(transfer_id.clone(), state);
+        self.transfers
+            .write()
+            .await
+            .insert(transfer_id.clone(), state);
         self.emit_progress(&transfer_id).await;
 
         // Create parent directories if needed
@@ -339,7 +338,10 @@ impl FileTransferManager {
             error: None,
         };
 
-        self.transfers.write().await.insert(transfer_id.clone(), state);
+        self.transfers
+            .write()
+            .await
+            .insert(transfer_id.clone(), state);
         self.emit_progress(&transfer_id).await;
 
         // Check if blob already exists in local store
@@ -347,7 +349,9 @@ impl FileTransferManager {
         if let Some(entry) = store.get(&hash).await? {
             if entry.is_complete() {
                 // Blob already available locally, just export it
-                return self.download_file(drive_id, hash, local_path, relative_path).await;
+                return self
+                    .download_file(drive_id, hash, local_path, relative_path)
+                    .await;
             }
         }
 
@@ -458,7 +462,8 @@ impl FileTransferManager {
     pub async fn cancel_transfer(&self, transfer_id: &str) -> Result<()> {
         let mut transfers = self.transfers.write().await;
         if let Some(state) = transfers.get_mut(transfer_id) {
-            if state.status == TransferStatus::InProgress || state.status == TransferStatus::Pending {
+            if state.status == TransferStatus::InProgress || state.status == TransferStatus::Pending
+            {
                 state.status = TransferStatus::Cancelled;
                 tracing::info!("Cancelled transfer: {}", transfer_id);
             }
@@ -543,10 +548,10 @@ mod tests {
     #[test]
     fn test_generate_transfer_id_format() {
         let id = generate_transfer_id();
-        
+
         // Should start with xfer_
         assert!(id.starts_with("xfer_"));
-        
+
         // Should contain hex characters after prefix
         let hex_part = &id[5..];
         assert!(hex_part.chars().all(|c| c.is_ascii_hexdigit()));
@@ -614,7 +619,7 @@ mod tests {
         assert_eq!(TransferStatus::Completed, TransferStatus::Completed);
         assert_eq!(TransferStatus::Failed, TransferStatus::Failed);
         assert_eq!(TransferStatus::Cancelled, TransferStatus::Cancelled);
-        
+
         assert_ne!(TransferStatus::Pending, TransferStatus::Completed);
     }
 
@@ -734,10 +739,22 @@ mod tests {
 
         // Verify JSON structure contains all expected fields
         assert!(json.is_object());
-        assert_eq!(json.get("id").and_then(|v| v.as_str()), Some("xfer_structure"));
-        assert_eq!(json.get("drive_id").and_then(|v| v.as_str()), Some("drive_st"));
-        assert_eq!(json.get("path").and_then(|v| v.as_str()), Some("structure/file.dat"));
-        assert_eq!(json.get("bytes_transferred").and_then(|v| v.as_u64()), Some(5000));
+        assert_eq!(
+            json.get("id").and_then(|v| v.as_str()),
+            Some("xfer_structure")
+        );
+        assert_eq!(
+            json.get("drive_id").and_then(|v| v.as_str()),
+            Some("drive_st")
+        );
+        assert_eq!(
+            json.get("path").and_then(|v| v.as_str()),
+            Some("structure/file.dat")
+        );
+        assert_eq!(
+            json.get("bytes_transferred").and_then(|v| v.as_u64()),
+            Some(5000)
+        );
         assert_eq!(json.get("total_bytes").and_then(|v| v.as_u64()), Some(5000));
         assert!(json.get("direction").is_some());
         assert!(json.get("status").is_some());
@@ -747,15 +764,19 @@ mod tests {
     #[test]
     fn test_transfer_id_uniqueness() {
         let mut ids = std::collections::HashSet::new();
-        
+
         for _ in 0..100 {
             let id = generate_transfer_id();
             ids.insert(id);
             // Small delay to ensure different timestamps
             std::thread::sleep(std::time::Duration::from_nanos(1));
         }
-        
+
         // Should have generated unique IDs
-        assert!(ids.len() > 90, "Expected mostly unique IDs, got {}", ids.len());
+        assert!(
+            ids.len() > 90,
+            "Expected mostly unique IDs, got {}",
+            ids.len()
+        );
     }
 }

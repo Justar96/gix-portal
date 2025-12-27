@@ -31,7 +31,7 @@ const TRAVERSAL_PATTERNS: &[&str] = &[
     "..%2f",
     "%2e%2e%5c", // URL encoded ..\
     "..%5c",
-    "%252e",     // Double URL encoded
+    "%252e", // Double URL encoded
 ];
 
 /// Validate and sanitize a path to prevent directory traversal attacks
@@ -104,7 +104,7 @@ pub fn validate_path(base_path: &Path, user_path: &str) -> Result<PathBuf, AppEr
 /// Normalize a path without requiring it to exist
 fn normalize_path(path: &Path) -> PathBuf {
     let mut normalized = PathBuf::new();
-    
+
     for component in path.components() {
         match component {
             std::path::Component::ParentDir => {
@@ -121,7 +121,7 @@ fn normalize_path(path: &Path) -> PathBuf {
             }
         }
     }
-    
+
     normalized
 }
 
@@ -249,7 +249,7 @@ pub fn is_safe_filename(name: &str) -> bool {
         "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8",
         "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
     ];
-    
+
     let name_without_ext = upper.split('.').next().unwrap_or(&upper);
     if reserved.contains(&name_without_ext) {
         return false;
@@ -273,7 +273,7 @@ mod tests {
     #[test]
     fn test_validate_path_traversal() {
         let base = Path::new("/home/user/drive");
-        
+
         // Test various traversal attempts
         let attacks = vec![
             "../etc/passwd",
@@ -316,7 +316,7 @@ mod tests {
     fn test_validate_name_forbidden_chars() {
         let result = validate_name("file<name", "test");
         assert!(result.is_err());
-        
+
         let result = validate_name("file|name", "test");
         assert!(result.is_err());
     }

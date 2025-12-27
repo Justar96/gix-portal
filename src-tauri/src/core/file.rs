@@ -69,7 +69,7 @@ impl From<&FileEntry> for FileEntryDto {
             is_dir: entry.is_dir,
             size: entry.size,
             modified_at: entry.modified_at.to_rfc3339(),
-            is_local: true, // Local files are always available
+            is_local: true,     // Local files are always available
             content_hash: None, // Hash computed separately if needed
         }
     }
@@ -116,7 +116,11 @@ pub fn index_directory(root: &std::path::Path) -> anyhow::Result<Vec<FileEntry>>
             name: entry.file_name().to_string_lossy().to_string(),
             path: relative_path,
             is_dir: metadata.is_dir(),
-            size: if metadata.is_file() { metadata.len() } else { 0 },
+            size: if metadata.is_file() {
+                metadata.len()
+            } else {
+                0
+            },
             modified_at: modified,
         });
     }
@@ -174,7 +178,11 @@ pub fn list_directory(root: &std::path::Path, subpath: &str) -> anyhow::Result<V
             name,
             path: relative_path,
             is_dir: metadata.is_dir(),
-            size: if metadata.is_file() { metadata.len() } else { 0 },
+            size: if metadata.is_file() {
+                metadata.len()
+            } else {
+                0
+            },
             modified_at: modified,
         });
     }

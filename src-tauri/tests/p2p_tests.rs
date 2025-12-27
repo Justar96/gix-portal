@@ -126,7 +126,7 @@ impl MockP2PEndpoint {
     async fn stop(&self) {
         let mut running = self.is_running.write().await;
         *running = false;
-        
+
         // Disconnect all peers
         let mut peers = self.connected_peers.write().await;
         peers.clear();
@@ -167,7 +167,6 @@ impl MockP2PEndpoint {
         let peers = self.connected_peers.read().await;
         peers.len()
     }
-
 }
 
 #[tokio::test]
@@ -193,19 +192,19 @@ async fn test_endpoint_lifecycle() {
 #[tokio::test]
 async fn test_peer_connection() {
     let identity2 = MockIdentity::generate();
-    
+
     let endpoint = MockP2PEndpoint::new();
     endpoint.start().await.unwrap();
 
     // Connect to peer
     endpoint.connect(identity2.node_id()).await.unwrap();
-    
+
     assert!(endpoint.is_connected(&identity2.node_id()).await);
     assert_eq!(endpoint.get_peer_count().await, 1);
 
     // Disconnect
     endpoint.disconnect(&identity2.node_id()).await;
-    
+
     assert!(!endpoint.is_connected(&identity2.node_id()).await);
     assert_eq!(endpoint.get_peer_count().await, 0);
 }
@@ -218,7 +217,7 @@ async fn test_multiple_peer_connections() {
     // Connect multiple peers
     let peer_count = 10;
     let mut peer_ids = Vec::new();
-    
+
     for i in 0..peer_count {
         let peer_id = MockNodeId::new(i as u8);
         endpoint.connect(peer_id).await.unwrap();
@@ -276,9 +275,17 @@ async fn test_stop_disconnects_all_peers() {
 /// Mock drive event for testing
 #[derive(Clone, Debug, PartialEq)]
 enum MockDriveEvent {
-    FileChanged { path: String, hash: String, size: u64 },
-    FileDeleted { path: String },
-    UserJoined { user: MockNodeId },
+    FileChanged {
+        path: String,
+        hash: String,
+        size: u64,
+    },
+    FileDeleted {
+        path: String,
+    },
+    UserJoined {
+        user: MockNodeId,
+    },
 }
 
 impl MockDriveEvent {
@@ -332,7 +339,11 @@ impl SignedMessage {
         now_ms - self.timestamp_ms > max_age_ms
     }
 
-    fn create_signing_payload(event: &MockDriveEvent, sender: &MockNodeId, timestamp_ms: i64) -> Vec<u8> {
+    fn create_signing_payload(
+        event: &MockDriveEvent,
+        sender: &MockNodeId,
+        timestamp_ms: i64,
+    ) -> Vec<u8> {
         let mut payload = event.to_bytes();
         payload.extend_from_slice(sender.as_bytes());
         payload.extend_from_slice(&timestamp_ms.to_le_bytes());
@@ -343,7 +354,7 @@ impl SignedMessage {
 #[tokio::test]
 async fn test_signed_message_creation_and_verification() {
     let identity = MockIdentity::generate();
-    
+
     let event = MockDriveEvent::FileChanged {
         path: "/test/file.txt".to_string(),
         hash: "abc123".to_string(),
@@ -366,7 +377,7 @@ async fn test_signed_message_creation_and_verification() {
 async fn test_signed_message_rejects_wrong_identity() {
     let identity1 = MockIdentity::generate();
     let identity2 = MockIdentity::generate();
-    
+
     let event = MockDriveEvent::UserJoined {
         user: identity1.node_id(),
     };
@@ -380,13 +391,13 @@ async fn test_signed_message_rejects_wrong_identity() {
 #[tokio::test]
 async fn test_signed_message_stale_detection() {
     let identity = MockIdentity::generate();
-    
+
     let event = MockDriveEvent::FileDeleted {
         path: "/test/old.txt".to_string(),
     };
 
     let mut signed_msg = SignedMessage::new(event, &identity);
-    
+
     // Fresh message should not be stale
     assert!(!signed_msg.is_stale(5 * 60 * 1000)); // 5 minutes
 
@@ -514,7 +525,7 @@ impl MockEventBroadcaster {
 
     async fn subscribe(&self, drive_id: MockDriveId) -> broadcast::Receiver<SignedMessage> {
         let mut subs = self.subscriptions.write().await;
-        
+
         if let Some(tx) = subs.get(&drive_id) {
             return tx.subscribe();
         }
@@ -536,10 +547,11 @@ impl MockEventBroadcaster {
 
     async fn broadcast(&self, drive_id: &MockDriveId, event: MockDriveEvent) -> Result<(), String> {
         let signed_msg = SignedMessage::new(event, &self.identity);
-        
+
         let subs = self.subscriptions.read().await;
         if let Some(tx) = subs.get(drive_id) {
-            tx.send(signed_msg).map_err(|_| "No subscribers".to_string())?;
+            tx.send(signed_msg)
+                .map_err(|_| "No subscribers".to_string())?;
         }
         Ok(())
     }
@@ -576,7 +588,8 @@ impl MockEventBroadcaster {
         // Forward to subscribers
         let subs = self.subscriptions.read().await;
         if let Some(tx) = subs.get(drive_id) {
-            tx.send(signed_msg).map_err(|_| "No subscribers".to_string())?;
+            tx.send(signed_msg)
+                .map_err(|_| "No subscribers".to_string())?;
         }
 
         Ok(())
@@ -620,7 +633,10 @@ async fn test_broadcaster_broadcast_receives_events() {
         size: 512,
     };
 
-    broadcaster.broadcast(&drive_id, event.clone()).await.unwrap();
+    broadcaster
+        .broadcast(&drive_id, event.clone())
+        .await
+        .unwrap();
 
     let received = tokio::time::timeout(Duration::from_millis(100), rx.recv())
         .await
@@ -644,7 +660,10 @@ async fn test_broadcaster_multiple_subscribers() {
         user: MockNodeId::new(1),
     };
 
-    broadcaster.broadcast(&drive_id, event.clone()).await.unwrap();
+    broadcaster
+        .broadcast(&drive_id, event.clone())
+        .await
+        .unwrap();
 
     // All subscribers should receive the event
     for rx in [&mut rx1, &mut rx2, &mut rx3] {
@@ -673,7 +692,9 @@ async fn test_broadcaster_rejects_invalid_signature() {
     // Corrupt the signature
     signed_msg.signature[0] ^= 0xFF;
 
-    let result = broadcaster.receive_external(&drive_id, signed_msg, &identity2).await;
+    let result = broadcaster
+        .receive_external(&drive_id, signed_msg, &identity2)
+        .await;
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Invalid signature"));
 }
@@ -696,10 +717,16 @@ async fn test_broadcaster_rejects_stale_messages() {
     // Make message 10 minutes old
     signed_msg.timestamp_ms -= 10 * 60 * 1000;
     // Re-sign with correct timestamp (simulate replay attack)
-    let payload = SignedMessage::create_signing_payload(&signed_msg.event, &signed_msg.sender, signed_msg.timestamp_ms);
+    let payload = SignedMessage::create_signing_payload(
+        &signed_msg.event,
+        &signed_msg.sender,
+        signed_msg.timestamp_ms,
+    );
     signed_msg.signature = identity.sign(&payload);
 
-    let result = broadcaster.receive_external(&drive_id, signed_msg, &identity).await;
+    let result = broadcaster
+        .receive_external(&drive_id, signed_msg, &identity)
+        .await;
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Stale message"));
 }
@@ -720,7 +747,9 @@ async fn test_broadcaster_acl_enforcement() {
     };
     let signed_msg = SignedMessage::new(event, &identity);
 
-    let result = broadcaster.receive_external(&drive_id, signed_msg, &identity).await;
+    let result = broadcaster
+        .receive_external(&drive_id, signed_msg, &identity)
+        .await;
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Unauthorized"));
 }
@@ -744,14 +773,18 @@ impl MockP2PNetwork {
     async fn add_node(&self, identity: MockIdentity) -> MockNodeId {
         let node_id = identity.node_id();
         let broadcaster = MockEventBroadcaster::new(identity);
-        
+
         let mut nodes = self.nodes.write().await;
         nodes.insert(node_id, broadcaster);
-        
+
         node_id
     }
 
-    async fn subscribe_node(&self, node_id: &MockNodeId, drive_id: MockDriveId) -> Option<broadcast::Receiver<SignedMessage>> {
+    async fn subscribe_node(
+        &self,
+        node_id: &MockNodeId,
+        drive_id: MockDriveId,
+    ) -> Option<broadcast::Receiver<SignedMessage>> {
         let nodes = self.nodes.read().await;
         if let Some(broadcaster) = nodes.get(node_id) {
             Some(broadcaster.subscribe(drive_id).await)
@@ -760,10 +793,15 @@ impl MockP2PNetwork {
         }
     }
 
-    async fn broadcast_from(&self, sender_id: &MockNodeId, drive_id: MockDriveId, event: MockDriveEvent) -> Result<(), String> {
+    async fn broadcast_from(
+        &self,
+        sender_id: &MockNodeId,
+        drive_id: MockDriveId,
+        event: MockDriveEvent,
+    ) -> Result<(), String> {
         let nodes = self.nodes.read().await;
         let sender = nodes.get(sender_id).ok_or("Sender not found")?;
-        
+
         sender.broadcast(&drive_id, event).await
     }
 
@@ -807,14 +845,17 @@ async fn test_network_broadcast_to_all_subscribers() {
 
     // Sender subscribes and broadcasts
     let _sender_rx = network.subscribe_node(&sender_id, drive_id).await.unwrap();
-    
+
     let event = MockDriveEvent::FileChanged {
         path: "/shared/doc.txt".to_string(),
         hash: "newhash".to_string(),
         size: 2048,
     };
 
-    network.broadcast_from(&sender_id, drive_id, event.clone()).await.unwrap();
+    network
+        .broadcast_from(&sender_id, drive_id, event.clone())
+        .await
+        .unwrap();
 
     // Note: In real implementation, message would propagate to all subscribers
     // This test verifies the broadcasting mechanism
@@ -848,11 +889,14 @@ impl MockSyncEngine {
 
     async fn init_drive(&self, drive_id: MockDriveId) -> Result<(), String> {
         let mut drives = self.syncing_drives.write().await;
-        drives.insert(drive_id, SyncState {
-            is_syncing: true,
-            connected_peers: Vec::new(),
-            last_sync_ms: None,
-        });
+        drives.insert(
+            drive_id,
+            SyncState {
+                is_syncing: true,
+                connected_peers: Vec::new(),
+                last_sync_ms: None,
+            },
+        );
         Ok(())
     }
 
@@ -879,22 +923,29 @@ impl MockSyncEngine {
 
     async fn get_peer_count(&self, drive_id: &MockDriveId) -> usize {
         let drives = self.syncing_drives.read().await;
-        drives.get(drive_id).map(|s| s.connected_peers.len()).unwrap_or(0)
+        drives
+            .get(drive_id)
+            .map(|s| s.connected_peers.len())
+            .unwrap_or(0)
     }
 
-    async fn on_local_change(&self, drive_id: &MockDriveId, event: MockDriveEvent) -> Result<(), String> {
+    async fn on_local_change(
+        &self,
+        drive_id: &MockDriveId,
+        event: MockDriveEvent,
+    ) -> Result<(), String> {
         if !self.is_syncing(drive_id).await {
             return Err("Drive not syncing".to_string());
         }
 
         let _ = self.event_tx.send((*drive_id, event));
-        
+
         // Update last sync time
         let now_ms = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_millis() as i64;
-        
+
         let mut drives = self.syncing_drives.write().await;
         if let Some(state) = drives.get_mut(drive_id) {
             state.last_sync_ms = Some(now_ms);
@@ -939,12 +990,16 @@ async fn test_sync_engine_local_changes() {
         size: 4096,
     };
 
-    engine.on_local_change(&drive_id, event.clone()).await.unwrap();
-
-    let (received_drive, received_event) = tokio::time::timeout(Duration::from_millis(100), rx.recv())
+    engine
+        .on_local_change(&drive_id, event.clone())
         .await
-        .expect("Timeout")
-        .expect("Channel error");
+        .unwrap();
+
+    let (received_drive, received_event) =
+        tokio::time::timeout(Duration::from_millis(100), rx.recv())
+            .await
+            .expect("Timeout")
+            .expect("Channel error");
 
     assert_eq!(received_drive, drive_id);
     assert_eq!(received_event, event);
@@ -1046,7 +1101,7 @@ async fn test_rate_limiter_under_load() {
         let limiter = limiter.clone();
         let blocked = blocked_count.clone();
         let allowed = allowed_count.clone();
-        
+
         handles.push(tokio::spawn(async move {
             if limiter.check("burst_peer").await {
                 allowed.fetch_add(1, Ordering::Relaxed);
@@ -1075,16 +1130,19 @@ async fn test_endpoint_rapid_restart() {
 
     for iteration in 0..50 {
         endpoint.start().await.unwrap();
-        
+
         // Add some peers
         for i in 0..3 {
-            endpoint.connect(MockNodeId::new((iteration * 3 + i) as u8)).await.unwrap();
+            endpoint
+                .connect(MockNodeId::new((iteration * 3 + i) as u8))
+                .await
+                .unwrap();
         }
-        
+
         assert_eq!(endpoint.get_peer_count().await, 3);
-        
+
         endpoint.stop().await;
-        
+
         assert!(!endpoint.is_running().await);
         assert_eq!(endpoint.get_peer_count().await, 0);
     }
@@ -1102,12 +1160,12 @@ async fn test_broadcaster_subscription_stress() {
         let broadcaster = broadcaster.clone();
         handles.push(tokio::spawn(async move {
             let drive_id = MockDriveId::new(i as u8);
-            
+
             let _rx = broadcaster.subscribe(drive_id).await;
             assert!(broadcaster.is_subscribed(&drive_id).await);
-            
+
             tokio::time::sleep(Duration::from_millis(1)).await;
-            
+
             broadcaster.unsubscribe(&drive_id).await;
             assert!(!broadcaster.is_subscribed(&drive_id).await);
         }));
@@ -1125,7 +1183,7 @@ async fn test_broadcaster_subscription_stress() {
 #[tokio::test]
 async fn test_message_signing_throughput() {
     let identity = MockIdentity::generate();
-    
+
     let start = Instant::now();
     const MESSAGE_COUNT: usize = 10_000;
 
@@ -1154,7 +1212,7 @@ async fn test_message_signing_throughput() {
 #[tokio::test]
 async fn test_rate_limiter_throughput() {
     let limiter = MockRateLimiter::new(1_000_000, Duration::from_secs(60));
-    
+
     let start = Instant::now();
     const CHECK_COUNT: usize = 100_000;
 

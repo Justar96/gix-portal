@@ -71,9 +71,10 @@ pub async fn create_drive(
         AppError::SerializationError(format!("Failed to serialize drive: {}", e)).to_string()
     })?;
 
-    state.db.save_drive(drive.id.as_bytes(), &drive_bytes).map_err(|e| {
-        AppError::DatabaseError(format!("Failed to save drive: {}", e)).to_string()
-    })?;
+    state
+        .db
+        .save_drive(drive.id.as_bytes(), &drive_bytes)
+        .map_err(|e| AppError::DatabaseError(format!("Failed to save drive: {}", e)).to_string())?;
 
     // Add to in-memory cache
     state
@@ -99,7 +100,7 @@ pub async fn create_drive(
 pub async fn list_drives(state: State<'_, AppState>) -> Result<Vec<DriveInfo>, String> {
     let drives = state.drives.read().await;
     let infos: Vec<DriveInfo> = drives.values().map(DriveInfo::from).collect();
-    
+
     tracing::debug!(count = infos.len(), "Listed drives");
     Ok(infos)
 }
@@ -179,9 +180,10 @@ pub async fn rename_drive(
         AppError::SerializationError(format!("Failed to serialize drive: {}", e)).to_string()
     })?;
 
-    state.db.save_drive(&id_arr, &drive_bytes).map_err(|e| {
-        AppError::DatabaseError(format!("Failed to save drive: {}", e)).to_string()
-    })?;
+    state
+        .db
+        .save_drive(&id_arr, &drive_bytes)
+        .map_err(|e| AppError::DatabaseError(format!("Failed to save drive: {}", e)).to_string())?;
 
     tracing::info!(
         drive_id = %drive_id,

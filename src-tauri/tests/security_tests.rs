@@ -99,7 +99,9 @@ impl AccessRule {
     }
 
     fn is_expired(&self) -> bool {
-        self.expires_at.map(|exp| exp < Instant::now()).unwrap_or(false)
+        self.expires_at
+            .map(|exp| exp < Instant::now())
+            .unwrap_or(false)
     }
 
     fn is_valid(&self) -> bool {
@@ -184,11 +186,17 @@ impl AccessControlList {
         };
 
         // Owner always has admin rights
-        acl.user_rules.insert(owner, AccessRule::new(Permission::Admin, owner));
+        acl.user_rules
+            .insert(owner, AccessRule::new(Permission::Admin, owner));
         acl
     }
 
-    fn grant(&mut self, user: MockNodeId, permission: Permission, granted_by: MockNodeId) -> Result<(), String> {
+    fn grant(
+        &mut self,
+        user: MockNodeId,
+        permission: Permission,
+        granted_by: MockNodeId,
+    ) -> Result<(), String> {
         // Only admin or manage can grant permissions
         let granter_perm = self.get_user_permission(&granted_by);
         if !granter_perm.satisfies(Permission::Manage) {
@@ -200,7 +208,8 @@ impl AccessControlList {
             return Err("Cannot grant permission higher than your own".to_string());
         }
 
-        self.user_rules.insert(user, AccessRule::new(permission, granted_by));
+        self.user_rules
+            .insert(user, AccessRule::new(permission, granted_by));
         Ok(())
     }
 
@@ -228,7 +237,12 @@ impl AccessControlList {
             .unwrap_or(Permission::None)
     }
 
-    fn add_path_rule(&mut self, user: MockNodeId, rule: PathRule, added_by: MockNodeId) -> Result<(), String> {
+    fn add_path_rule(
+        &mut self,
+        user: MockNodeId,
+        rule: PathRule,
+        added_by: MockNodeId,
+    ) -> Result<(), String> {
         let adder_perm = self.get_user_permission(&added_by);
         if !adder_perm.satisfies(Permission::Manage) {
             return Err("Insufficient permissions to add path rule".to_string());
@@ -241,7 +255,7 @@ impl AccessControlList {
     fn check_path_access(&self, user: &MockNodeId, path: &str, required: Permission) -> bool {
         // First check user-level permission
         let user_perm = self.get_user_permission(user);
-        
+
         // Check path-specific rules (deny takes precedence)
         for (rule_user, rule) in &self.path_rules {
             if rule_user == user && rule.matches(path) {
@@ -323,9 +337,8 @@ fn test_access_rule_creation() {
 fn test_access_rule_with_expiry() {
     let owner = MockNodeId::new(1);
     let future = Instant::now() + Duration::from_secs(3600);
-    
-    let rule = AccessRule::new(Permission::Write, owner)
-        .with_expiry(future);
+
+    let rule = AccessRule::new(Permission::Write, owner).with_expiry(future);
 
     assert!(rule.expires_at.is_some());
     assert!(!rule.is_expired());
@@ -336,9 +349,8 @@ fn test_access_rule_with_expiry() {
 fn test_access_rule_expired() {
     let owner = MockNodeId::new(1);
     let past = Instant::now() - Duration::from_secs(1);
-    
-    let rule = AccessRule::new(Permission::Write, owner)
-        .with_expiry(past);
+
+    let rule = AccessRule::new(Permission::Write, owner).with_expiry(past);
 
     assert!(rule.is_expired());
     assert!(!rule.is_valid());
@@ -347,8 +359,7 @@ fn test_access_rule_expired() {
 #[test]
 fn test_access_rule_with_note() {
     let owner = MockNodeId::new(1);
-    let rule = AccessRule::new(Permission::Manage, owner)
-        .with_note("Temporary access for project");
+    let rule = AccessRule::new(Permission::Manage, owner).with_note("Temporary access for project");
 
     assert_eq!(rule.note, Some("Temporary access for project".to_string()));
 }
@@ -460,7 +471,7 @@ fn test_acl_cannot_grant_higher_than_own() {
     let mut acl = AccessControlList::new(drive, owner);
 
     acl.grant(manager, Permission::Manage, owner).unwrap();
-    
+
     // Manager cannot grant Admin
     let result = acl.grant(user, Permission::Admin, manager);
     assert!(result.is_err());
@@ -488,7 +499,7 @@ fn test_acl_cannot_revoke_owner() {
     let mut acl = AccessControlList::new(drive, owner);
 
     acl.grant(admin, Permission::Admin, owner).unwrap();
-    
+
     let result = acl.revoke(owner, admin);
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("owner"));
@@ -503,7 +514,7 @@ fn test_acl_read_user_cannot_grant() {
     let mut acl = AccessControlList::new(drive, owner);
 
     acl.grant(reader, Permission::Read, owner).unwrap();
-    
+
     let result = acl.grant(other, Permission::Read, reader);
     assert!(result.is_err());
 }
@@ -530,7 +541,7 @@ fn test_acl_path_rule_allows_specific_path() {
     let mut acl = AccessControlList::new(drive, owner);
 
     acl.grant(user, Permission::Read, owner).unwrap();
-    
+
     // Add write access for specific path
     let rule = PathRule::allow("/upload", Permission::Write);
     acl.add_path_rule(user, rule, owner).unwrap();
@@ -547,7 +558,7 @@ fn test_acl_path_rule_deny_overrides() {
     let mut acl = AccessControlList::new(drive, owner);
 
     acl.grant(user, Permission::Write, owner).unwrap();
-    
+
     // Deny access to private folder
     let rule = PathRule::deny("/private");
     acl.add_path_rule(user, rule, owner).unwrap();
@@ -661,9 +672,8 @@ fn test_invite_token_with_expiry() {
     let drive = MockDriveId::new(1);
     let owner = MockNodeId::new(1);
     let future = Instant::now() + Duration::from_secs(3600);
-    
-    let token = InviteToken::new(drive, Permission::Write, owner)
-        .with_expiry(future);
+
+    let token = InviteToken::new(drive, Permission::Write, owner).with_expiry(future);
 
     assert!(token.is_valid());
 }
@@ -673,9 +683,8 @@ fn test_invite_token_expired() {
     let drive = MockDriveId::new(1);
     let owner = MockNodeId::new(1);
     let past = Instant::now() - Duration::from_secs(1);
-    
-    let token = InviteToken::new(drive, Permission::Write, owner)
-        .with_expiry(past);
+
+    let token = InviteToken::new(drive, Permission::Write, owner).with_expiry(past);
 
     assert!(!token.is_valid());
 }
@@ -684,21 +693,20 @@ fn test_invite_token_expired() {
 fn test_invite_token_max_uses() {
     let drive = MockDriveId::new(1);
     let owner = MockNodeId::new(1);
-    
-    let mut token = InviteToken::new(drive, Permission::Read, owner)
-        .with_max_uses(3);
+
+    let mut token = InviteToken::new(drive, Permission::Read, owner).with_max_uses(3);
 
     assert!(token.is_valid());
-    
+
     token.use_once().unwrap();
     assert!(token.is_valid());
-    
+
     token.use_once().unwrap();
     assert!(token.is_valid());
-    
+
     token.use_once().unwrap();
     assert!(!token.is_valid());
-    
+
     assert!(token.use_once().is_err());
 }
 
@@ -706,10 +714,10 @@ fn test_invite_token_max_uses() {
 fn test_invite_token_revocation() {
     let drive = MockDriveId::new(1);
     let owner = MockNodeId::new(1);
-    
+
     let mut token = InviteToken::new(drive, Permission::Manage, owner);
     assert!(token.is_valid());
-    
+
     token.revoke();
     assert!(!token.is_valid());
     assert!(token.use_once().is_err());
@@ -764,12 +772,12 @@ fn test_token_tracker_add_and_get() {
     let mut tracker = TokenTracker::new();
     let drive = MockDriveId::new(1);
     let owner = MockNodeId::new(1);
-    
+
     let token = InviteToken::new(drive, Permission::Read, owner);
     let token_id = token.token.clone();
-    
+
     tracker.add(token);
-    
+
     let retrieved = tracker.get(&token_id);
     assert!(retrieved.is_some());
     assert_eq!(retrieved.unwrap().permission, Permission::Read);
@@ -780,13 +788,13 @@ fn test_token_tracker_revoke() {
     let mut tracker = TokenTracker::new();
     let drive = MockDriveId::new(1);
     let owner = MockNodeId::new(1);
-    
+
     let token = InviteToken::new(drive, Permission::Write, owner);
     let token_id = token.token.clone();
-    
+
     tracker.add(token);
     tracker.revoke(&token_id).unwrap();
-    
+
     assert!(tracker.is_revoked(&token_id));
     assert!(!tracker.get(&token_id).unwrap().is_valid());
 }
@@ -796,7 +804,7 @@ fn test_token_tracker_list_valid() {
     let mut tracker = TokenTracker::new();
     let drive = MockDriveId::new(1);
     let owner = MockNodeId::new(1);
-    
+
     let token1 = InviteToken::new(drive, Permission::Read, owner);
     let token2 = InviteToken::new(drive, Permission::Write, owner);
     {
@@ -804,10 +812,10 @@ fn test_token_tracker_list_valid() {
         token3.revoke();
         tracker.add(token3);
     }
-    
+
     tracker.add(token1);
     tracker.add(token2);
-    
+
     let valid = tracker.list_valid();
     assert_eq!(valid.len(), 2);
 }
@@ -849,7 +857,7 @@ async fn test_concurrent_access_checks() {
     let drive = MockDriveId::new(1);
     let mut acl = AccessControlList::new(drive, owner);
     acl.grant(user, Permission::Read, owner).unwrap();
-    
+
     let acl = Arc::new(RwLock::new(acl));
 
     let mut handles = Vec::new();
@@ -950,7 +958,7 @@ async fn test_encryption_manager_clear_cache() {
 #[tokio::test]
 async fn test_encryption_manager_multiple_drives() {
     let manager = MockEncryptionManager::new();
-    
+
     let mut keys = HashMap::new();
     for i in 0..10 {
         let drive = MockDriveId::new(i);

@@ -108,9 +108,35 @@ impl FileConflict {
 
         matches!(
             ext.as_str(),
-            "txt" | "md" | "json" | "yaml" | "yml" | "toml" | "xml" | "html" | "css" | "js"
-                | "ts" | "jsx" | "tsx" | "rs" | "py" | "go" | "java" | "c" | "cpp" | "h"
-                | "hpp" | "sh" | "bash" | "zsh" | "ps1" | "bat" | "cmd" | "sql" | "csv"
+            "txt"
+                | "md"
+                | "json"
+                | "yaml"
+                | "yml"
+                | "toml"
+                | "xml"
+                | "html"
+                | "css"
+                | "js"
+                | "ts"
+                | "jsx"
+                | "tsx"
+                | "rs"
+                | "py"
+                | "go"
+                | "java"
+                | "c"
+                | "cpp"
+                | "h"
+                | "hpp"
+                | "sh"
+                | "bash"
+                | "zsh"
+                | "ps1"
+                | "bat"
+                | "cmd"
+                | "sql"
+                | "csv"
         )
     }
 

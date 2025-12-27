@@ -34,16 +34,10 @@ pub enum DriveEvent {
     },
 
     /// A file is being edited (advisory lock)
-    FileEditStarted {
-        path: PathBuf,
-        editor: NodeId,
-    },
+    FileEditStarted { path: PathBuf, editor: NodeId },
 
     /// A file edit session ended
-    FileEditEnded {
-        path: PathBuf,
-        editor: NodeId,
-    },
+    FileEditEnded { path: PathBuf, editor: NodeId },
 
     /// A file lock was acquired
     FileLockAcquired {
@@ -81,10 +75,7 @@ pub enum DriveEvent {
     },
 
     /// Sync completed for a file (Phase 2b)
-    SyncComplete {
-        path: PathBuf,
-        hash: String,
-    },
+    SyncComplete { path: PathBuf, hash: String },
 }
 
 impl DriveEvent {
@@ -134,10 +125,7 @@ pub struct DriveEventDto {
 impl DriveEventDto {
     /// Create DTO from drive ID and event
     pub fn from_event(drive_id: &str, event: &DriveEvent) -> Self {
-        let timestamp = event
-            .timestamp()
-            .unwrap_or_else(Utc::now)
-            .to_rfc3339();
+        let timestamp = event.timestamp().unwrap_or_else(Utc::now).to_rfc3339();
 
         Self {
             drive_id: drive_id.to_string(),
@@ -169,11 +157,11 @@ impl SignedGossipMessage {
     pub fn new(event: DriveEvent, identity: &Identity) -> Self {
         let sender = identity.node_id();
         let timestamp_ms = Utc::now().timestamp_millis();
-        
+
         // Create the message to sign: serialized event + sender bytes + timestamp
         let message_bytes = Self::create_signing_payload(&event, &sender, timestamp_ms);
         let signature = identity.sign(&message_bytes);
-        
+
         Self {
             event,
             sender,
@@ -181,38 +169,40 @@ impl SignedGossipMessage {
             signature: signature.to_bytes().to_vec(),
         }
     }
-    
+
     /// Verify the signature of this message
     pub fn verify(&self) -> Result<(), GossipAuthError> {
         // Reconstruct the signed payload
-        let message_bytes = Self::create_signing_payload(&self.event, &self.sender, self.timestamp_ms);
-        
+        let message_bytes =
+            Self::create_signing_payload(&self.event, &self.sender, self.timestamp_ms);
+
         // Parse the signature
-        let signature_bytes: [u8; 64] = self.signature
+        let signature_bytes: [u8; 64] = self
+            .signature
             .clone()
             .try_into()
             .map_err(|_| GossipAuthError::InvalidSignature)?;
         let signature = Signature::from_bytes(&signature_bytes);
-        
+
         // Parse the sender's public key
         let verifying_key = VerifyingKey::from_bytes(self.sender.as_bytes())
             .map_err(|_| GossipAuthError::InvalidSenderKey)?;
-        
+
         // Verify the signature
         verifying_key
             .verify(&message_bytes, &signature)
             .map_err(|_| GossipAuthError::SignatureVerificationFailed)?;
-        
+
         Ok(())
     }
-    
+
     /// Check if the message is too old (replay attack prevention)
     /// Messages older than max_age_ms are considered stale
     pub fn is_stale(&self, max_age_ms: i64) -> bool {
         let now_ms = Utc::now().timestamp_millis();
         now_ms - self.timestamp_ms > max_age_ms
     }
-    
+
     /// Create the payload that is signed
     fn create_signing_payload(event: &DriveEvent, sender: &NodeId, timestamp_ms: i64) -> Vec<u8> {
         let event_json = serde_json::to_vec(event).unwrap_or_default();
@@ -246,7 +236,9 @@ impl std::fmt::Display for GossipAuthError {
         match self {
             GossipAuthError::InvalidSignature => write!(f, "Invalid signature format"),
             GossipAuthError::InvalidSenderKey => write!(f, "Invalid sender public key"),
-            GossipAuthError::SignatureVerificationFailed => write!(f, "Signature verification failed"),
+            GossipAuthError::SignatureVerificationFailed => {
+                write!(f, "Signature verification failed")
+            }
             GossipAuthError::StaleMessage => write!(f, "Message is too old"),
             GossipAuthError::Unauthorized => write!(f, "Sender is not authorized"),
         }

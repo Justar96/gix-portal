@@ -572,11 +572,12 @@ impl Database {
         let mut deleted = 0;
         {
             let mut table = write_txn.open_table(FILE_METADATA_TABLE)?;
-            
+
             // Collect keys to delete
             let keys_to_delete: Vec<String> = {
                 let read_table = write_txn.open_table(FILE_METADATA_TABLE)?;
-                read_table.iter()?
+                read_table
+                    .iter()?
                     .filter_map(|entry| {
                         entry.ok().and_then(|(key, _)| {
                             let key_str = key.value().to_string();

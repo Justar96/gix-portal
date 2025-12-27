@@ -181,12 +181,12 @@ impl IdentityRateLimiter {
         operation: &RateLimitOperation,
         custom_config: Option<&RateLimitConfig>,
     ) -> &mut TokenBucket {
-        self.buckets.entry(operation.clone()).or_insert_with(|| {
-            match custom_config {
+        self.buckets
+            .entry(operation.clone())
+            .or_insert_with(|| match custom_config {
                 Some(config) => TokenBucket::new(config),
                 None => TokenBucket::new(&operation.default_config()),
-            }
-        })
+            })
     }
 }
 
@@ -249,7 +249,9 @@ impl RateLimiter {
         tokens: u32,
     ) -> RateLimitResult {
         if !self.enabled {
-            return RateLimitResult::Allowed { remaining: u32::MAX };
+            return RateLimitResult::Allowed {
+                remaining: u32::MAX,
+            };
         }
 
         // Get custom config if any
@@ -287,7 +289,9 @@ impl RateLimiter {
         drop(configs);
 
         let mut limiters = self.limiters.write().await;
-        let limiter = limiters.entry(*identity).or_insert_with(IdentityRateLimiter::new);
+        let limiter = limiters
+            .entry(*identity)
+            .or_insert_with(IdentityRateLimiter::new);
         let bucket = limiter.get_or_create_bucket(&operation, custom_config.as_ref());
         bucket.available_tokens()
     }
@@ -325,7 +329,9 @@ mod tests {
         let identity = [0u8; 32];
 
         // Should allow first request
-        let result = limiter.check(&identity, RateLimitOperation::GeneralApi).await;
+        let result = limiter
+            .check(&identity, RateLimitOperation::GeneralApi)
+            .await;
         assert!(result.is_allowed());
     }
 
@@ -360,7 +366,10 @@ mod tests {
 
         // Should always allow when disabled
         for _ in 0..1000 {
-            assert!(limiter.check(&identity, RateLimitOperation::InviteGeneration).await.is_allowed());
+            assert!(limiter
+                .check(&identity, RateLimitOperation::InviteGeneration)
+                .await
+                .is_allowed());
         }
     }
 

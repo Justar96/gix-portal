@@ -26,16 +26,20 @@ fn bench_blake3_streaming(c: &mut Criterion) {
         let data = generate_test_data(size);
 
         group.throughput(Throughput::Bytes(size as u64));
-        group.bench_with_input(BenchmarkId::from_parameter(format_size(size)), &data, |b, data| {
-            b.iter(|| {
-                let mut hasher = blake3::Hasher::new();
-                // Simulate streaming with 64KB chunks
-                for chunk in data.chunks(64 * 1024) {
-                    hasher.update(black_box(chunk));
-                }
-                hasher.finalize()
-            });
-        });
+        group.bench_with_input(
+            BenchmarkId::from_parameter(format_size(size)),
+            &data,
+            |b, data| {
+                b.iter(|| {
+                    let mut hasher = blake3::Hasher::new();
+                    // Simulate streaming with 64KB chunks
+                    for chunk in data.chunks(64 * 1024) {
+                        hasher.update(black_box(chunk));
+                    }
+                    hasher.finalize()
+                });
+            },
+        );
     }
 
     group.finish();
@@ -54,9 +58,13 @@ fn bench_blake3_full(c: &mut Criterion) {
         let data = generate_test_data(size);
 
         group.throughput(Throughput::Bytes(size as u64));
-        group.bench_with_input(BenchmarkId::from_parameter(format_size(size)), &data, |b, data| {
-            b.iter(|| blake3::hash(black_box(data)));
-        });
+        group.bench_with_input(
+            BenchmarkId::from_parameter(format_size(size)),
+            &data,
+            |b, data| {
+                b.iter(|| blake3::hash(black_box(data)));
+            },
+        );
     }
 
     group.finish();
@@ -121,8 +129,8 @@ fn bench_encryption_streaming(c: &mut Criterion) {
     let cipher = ChaCha20Poly1305::new_from_slice(&key).unwrap();
 
     for size in [
-        64 * 1024,        // 64 KB chunk (our chunk size)
-        1024 * 1024,      // 1 MB
+        64 * 1024,   // 64 KB chunk (our chunk size)
+        1024 * 1024, // 1 MB
     ] {
         let data = generate_test_data(size);
         let nonce = chacha20poly1305::Nonce::from_slice(&[0u8; 12]);

@@ -377,7 +377,10 @@ mod tests {
         let token_string = token.to_string().unwrap();
         let restored = InviteToken::from_string(&token_string).unwrap();
 
-        assert_eq!(restored.payload.doc_ticket.as_deref(), Some("doc-ticket-123"));
+        assert_eq!(
+            restored.payload.doc_ticket.as_deref(),
+            Some("doc-ticket-123")
+        );
         assert!(restored.verify(&key.verifying_key()).is_ok());
     }
 
@@ -410,7 +413,9 @@ mod tests {
     #[test]
     fn test_invite_builder_defaults() {
         let key = generate_signing_key();
-        let token = InviteBuilder::new("drive123", "Default Test").build(&key).unwrap();
+        let token = InviteBuilder::new("drive123", "Default Test")
+            .build(&key)
+            .unwrap();
 
         // Default permission is Read
         assert_eq!(token.payload.permission, Permission::Read);

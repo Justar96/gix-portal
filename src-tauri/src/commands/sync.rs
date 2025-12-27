@@ -444,15 +444,12 @@ pub async fn import_file(
 
     // Create parent directories if needed
     if let Some(parent) = dest_path.parent() {
-        std::fs::create_dir_all(parent).map_err(|e| {
-            format!("Failed to create destination directory: {}", e)
-        })?;
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create destination directory: {}", e))?;
     }
 
     // Copy the file
-    std::fs::copy(&source, &dest_path).map_err(|e| {
-        format!("Failed to copy file: {}", e)
-    })?;
+    std::fs::copy(&source, &dest_path).map_err(|e| format!("Failed to copy file: {}", e))?;
 
     tracing::info!(
         drive_id = %drive_id,

@@ -46,9 +46,7 @@ pub async fn get_audit_log(
 
 /// Get the total count of audit log entries
 #[tauri::command]
-pub async fn get_audit_count(
-    audit_logger: State<'_, Arc<AuditLogger>>,
-) -> Result<u64, String> {
+pub async fn get_audit_count(audit_logger: State<'_, Arc<AuditLogger>>) -> Result<u64, String> {
     audit_logger
         .count()
         .await

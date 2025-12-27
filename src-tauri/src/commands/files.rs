@@ -74,7 +74,10 @@ pub async fn list_files(
 
     // 1. First, get synced metadata from DocsManager (remote files)
     if let Some(docs_manager) = state.docs_manager.as_ref() {
-        match docs_manager.get_directory_metadata(&drive_id_obj, &path).await {
+        match docs_manager
+            .get_directory_metadata(&drive_id_obj, &path)
+            .await
+        {
             Ok(metadata) => {
                 for meta in metadata {
                     let dto = FileEntryDto::from_metadata(
@@ -115,12 +118,12 @@ pub async fn list_files(
                 for entry in entries {
                     let entry_path = entry.path.to_string_lossy().to_string();
                     let mut dto = FileEntryDto::from(&entry);
-                    
+
                     // If we have synced metadata for this file, copy the content_hash
                     if let Some(synced) = files_map.get(&entry_path) {
                         dto.content_hash = synced.content_hash.clone();
                     }
-                    
+
                     // Local file - is_local is already true from From impl
                     files_map.insert(entry_path, dto);
                 }
@@ -138,14 +141,12 @@ pub async fn list_files(
 
     // Convert map to sorted vector
     let mut dtos: Vec<FileEntryDto> = files_map.into_values().collect();
-    
+
     // Sort: directories first, then by name (case-insensitive)
-    dtos.sort_by(|a, b| {
-        match (a.is_dir, b.is_dir) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-        }
+    dtos.sort_by(|a, b| match (a.is_dir, b.is_dir) {
+        (true, false) => std::cmp::Ordering::Less,
+        (false, true) => std::cmp::Ordering::Greater,
+        _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
     });
 
     tracing::debug!(
@@ -606,8 +607,8 @@ pub async fn read_file_encrypted(
     }
 
     // Read encrypted file content
-    let encrypted_content = std::fs::read(&safe_path)
-        .map_err(|e| format!("Failed to read file: {}", e))?;
+    let encrypted_content =
+        std::fs::read(&safe_path).map_err(|e| format!("Failed to read file: {}", e))?;
 
     // Decrypt the content
     let content = encryption

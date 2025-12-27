@@ -82,7 +82,8 @@ impl AppState {
 
         // Initialize Phase 2 components (gossip, docs, sync, watcher, transfer)
         let (sync_engine, event_broadcaster, docs_manager, file_watcher, file_transfer) =
-            Self::initialize_sync_components(&endpoint, &identity_manager, &data_dir, db.clone()).await;
+            Self::initialize_sync_components(&endpoint, &identity_manager, &data_dir, db.clone())
+                .await;
 
         // Initialize EncryptionManager for E2E file encryption
         let encryption_manager = match EncryptionManager::new(db.clone()) {
@@ -184,20 +185,15 @@ impl AppState {
 
         // Initialize DocsManager
         let docs_manager = match (event_broadcaster.gossip().await, file_transfer.as_ref()) {
-            (Some(gossip), Some(transfer)) => match DocsManager::new(
-                data_dir,
-                db,
-                transfer.blobs(),
-                gossip,
-            )
-            .await
-            {
-                Ok(dm) => Some(Arc::new(dm)),
-                Err(e) => {
-                    tracing::error!("Failed to initialize DocsManager: {}", e);
-                    None
+            (Some(gossip), Some(transfer)) => {
+                match DocsManager::new(data_dir, db, transfer.blobs(), gossip).await {
+                    Ok(dm) => Some(Arc::new(dm)),
+                    Err(e) => {
+                        tracing::error!("Failed to initialize DocsManager: {}", e);
+                        None
+                    }
                 }
-            },
+            }
             _ => {
                 tracing::warn!("DocsManager unavailable: gossip or blobs not initialized");
                 None

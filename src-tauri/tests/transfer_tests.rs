@@ -66,7 +66,10 @@ struct TransferState {
 
 impl TransferState {
     fn is_complete(&self) -> bool {
-        matches!(self.status, TransferStatus::Completed | TransferStatus::Cancelled)
+        matches!(
+            self.status,
+            TransferStatus::Completed | TransferStatus::Cancelled
+        )
     }
 }
 
@@ -105,14 +108,9 @@ impl MockTransferManager {
         self.progress_tx.subscribe()
     }
 
-    async fn start_upload(
-        &self,
-        drive_id: MockDriveId,
-        path: &str,
-        total_bytes: u64,
-    ) -> String {
+    async fn start_upload(&self, drive_id: MockDriveId, path: &str, total_bytes: u64) -> String {
         let id = format!("upload-{}", self.next_id.fetch_add(1, Ordering::Relaxed));
-        
+
         let state = TransferState {
             id: id.clone(),
             drive_id,
@@ -138,7 +136,7 @@ impl MockTransferManager {
         total_bytes: u64,
     ) -> String {
         let id = format!("download-{}", self.next_id.fetch_add(1, Ordering::Relaxed));
-        
+
         let state = TransferState {
             id: id.clone(),
             drive_id,
@@ -190,7 +188,7 @@ impl MockTransferManager {
             if state.bytes_transferred >= state.total_bytes {
                 state.status = TransferStatus::Completed;
                 state.completed_at = Some(Instant::now());
-                
+
                 // Generate hash if upload
                 if state.direction == TransferDirection::Upload {
                     let mut hasher = blake3::Hasher::new();
@@ -283,7 +281,9 @@ async fn test_upload_large_file() {
     let drive_id = MockDriveId::new(1);
 
     let file_size = 100 * 1024 * 1024; // 100 MB
-    let transfer_id = manager.start_upload(drive_id, "/large/video.mp4", file_size).await;
+    let transfer_id = manager
+        .start_upload(drive_id, "/large/video.mp4", file_size)
+        .await;
 
     let start = Instant::now();
     let hash = manager.process_transfer(&transfer_id).await.unwrap();
@@ -319,8 +319,10 @@ async fn test_upload_progress_tracking() {
     let manager = MockTransferManager::new().with_speed(256); // Small chunks for more progress events
     let drive_id = MockDriveId::new(1);
 
-    let transfer_id = manager.start_upload(drive_id, "/progress/test.bin", 1024).await;
-    
+    let transfer_id = manager
+        .start_upload(drive_id, "/progress/test.bin", 1024)
+        .await;
+
     let mut rx = manager.subscribe_progress();
     let received_progress = Arc::new(AtomicUsize::new(0));
     let progress_clone = received_progress.clone();
@@ -338,7 +340,10 @@ async fn test_upload_progress_tracking() {
     receiver.abort();
 
     let progress_count = received_progress.load(Ordering::Relaxed);
-    assert!(progress_count > 1, "Should have received multiple progress events");
+    assert!(
+        progress_count > 1,
+        "Should have received multiple progress events"
+    );
     println!("Received {} progress events", progress_count);
 }
 
@@ -401,7 +406,9 @@ async fn test_cancel_pending_transfer() {
     let manager = MockTransferManager::new();
     let drive_id = MockDriveId::new(1);
 
-    let transfer_id = manager.start_upload(drive_id, "/cancel/test.txt", 10 * 1024 * 1024).await;
+    let transfer_id = manager
+        .start_upload(drive_id, "/cancel/test.txt", 10 * 1024 * 1024)
+        .await;
 
     // Cancel before processing
     manager.cancel_transfer(&transfer_id).await.unwrap();
@@ -415,15 +422,16 @@ async fn test_cancel_in_progress_transfer() {
     let manager = Arc::new(MockTransferManager::new().with_speed(1024)); // Slow transfer
     let drive_id = MockDriveId::new(1);
 
-    let transfer_id = manager.start_upload(drive_id, "/slow/file.bin", 1024 * 1024).await;
+    let transfer_id = manager
+        .start_upload(drive_id, "/slow/file.bin", 1024 * 1024)
+        .await;
 
     let manager_clone = manager.clone();
     let id_clone = transfer_id.clone();
 
     // Start processing in background
-    let process_handle = tokio::spawn(async move {
-        manager_clone.process_transfer(&id_clone).await
-    });
+    let process_handle =
+        tokio::spawn(async move { manager_clone.process_transfer(&id_clone).await });
 
     // Wait a bit then cancel
     tokio::time::sleep(Duration::from_millis(10)).await;
@@ -468,7 +476,7 @@ async fn test_concurrent_uploads() {
         handles.push(tokio::spawn(async move {
             let path = format!("/concurrent/file{}.txt", i);
             let size = (i + 1) as u64 * 1024;
-            
+
             let transfer_id = manager.start_upload(drive_id, &path, size).await;
             manager.process_transfer(&transfer_id).await
         }));
@@ -526,8 +534,14 @@ async fn test_concurrent_uploads_and_downloads() {
     let all_transfers = manager.list_transfers(None).await;
     assert_eq!(all_transfers.len(), 20);
 
-    let uploads: Vec<_> = all_transfers.iter().filter(|t| t.direction == TransferDirection::Upload).collect();
-    let downloads: Vec<_> = all_transfers.iter().filter(|t| t.direction == TransferDirection::Download).collect();
+    let uploads: Vec<_> = all_transfers
+        .iter()
+        .filter(|t| t.direction == TransferDirection::Upload)
+        .collect();
+    let downloads: Vec<_> = all_transfers
+        .iter()
+        .filter(|t| t.direction == TransferDirection::Download)
+        .collect();
 
     assert_eq!(uploads.len(), 10);
     assert_eq!(downloads.len(), 10);
@@ -544,9 +558,15 @@ async fn test_list_transfers_by_drive() {
     let drive2 = MockDriveId::new(2);
 
     // Add transfers to different drives
-    manager.start_upload(drive1, "/drive1/file1.txt", 1024).await;
-    manager.start_upload(drive1, "/drive1/file2.txt", 1024).await;
-    manager.start_upload(drive2, "/drive2/file1.txt", 1024).await;
+    manager
+        .start_upload(drive1, "/drive1/file1.txt", 1024)
+        .await;
+    manager
+        .start_upload(drive1, "/drive1/file2.txt", 1024)
+        .await;
+    manager
+        .start_upload(drive2, "/drive2/file1.txt", 1024)
+        .await;
 
     let drive1_transfers = manager.list_transfers(Some(drive1)).await;
     let drive2_transfers = manager.list_transfers(Some(drive2)).await;
@@ -625,12 +645,12 @@ async fn test_progress_percent_calculation() {
 
     let values = progress_values.read().await;
     assert!(!values.is_empty());
-    
+
     // Verify progress increases monotonically
     for window in values.windows(2) {
         assert!(window[1] >= window[0], "Progress should not decrease");
     }
-    
+
     // Last value should be 100%
     if let Some(&last) = values.last() {
         assert!((last - 100.0).abs() < 0.1, "Final progress should be 100%");
@@ -702,7 +722,7 @@ async fn test_transfer_timestamps() {
 
     let before = Instant::now();
     let transfer_id = manager.start_upload(drive_id, "/timestamp.txt", 1024).await;
-    
+
     let state = manager.get_transfer(&transfer_id).await.unwrap();
     assert!(state.created_at >= before);
     assert!(state.completed_at.is_none());

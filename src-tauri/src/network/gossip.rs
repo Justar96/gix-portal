@@ -163,6 +163,18 @@ impl EventBroadcaster {
     /// This starts receiving events from other peers for the given drive.
     /// Events are automatically forwarded to the frontend channel.
     pub async fn subscribe(&self, drive_id: DriveId) -> Result<()> {
+        self.subscribe_with_peers(drive_id, vec![]).await
+    }
+
+    /// Subscribe to a drive's gossip topic with optional bootstrap peers
+    ///
+    /// This starts receiving events from other peers for the given drive.
+    /// Bootstrap peers help with initial connectivity for joined drives.
+    pub async fn subscribe_with_peers(
+        &self,
+        drive_id: DriveId,
+        bootstrap_peers: Vec<iroh::NodeId>,
+    ) -> Result<()> {
         let topic_id = self.drive_to_topic(&drive_id);
 
         // Check if already subscribed
@@ -180,9 +192,16 @@ impl EventBroadcaster {
             .await
             .ok_or_else(|| anyhow::anyhow!("EventBroadcaster has been shut down"))?;
 
-        // Subscribe to the topic with no bootstrap peers initially
-        // Peers will be added when we connect to them
-        let topic = gossip.subscribe(topic_id, vec![])?;
+        // Subscribe to the topic with bootstrap peers
+        // For joined drives, these should be peers from the doc ticket
+        if !bootstrap_peers.is_empty() {
+            tracing::info!(
+                "Subscribing to gossip topic for drive {} with {} bootstrap peers",
+                drive_id,
+                bootstrap_peers.len()
+            );
+        }
+        let topic = gossip.subscribe(topic_id, bootstrap_peers)?;
         let (_sender, mut receiver) = topic.split();
 
         // Clone ACL checker for the spawned task
@@ -460,10 +479,10 @@ impl Drop for EventBroadcaster {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::crypto::Identity;
     use crate::core::DriveEvent;
-    use std::path::PathBuf;
+    use crate::crypto::Identity;
     use chrono::Utc;
+    use std::path::PathBuf;
 
     #[test]
     fn test_drive_to_topic_deterministic() {
@@ -542,7 +561,7 @@ mod tests {
 
         assert!(limiter.check("peer1").await);
         assert!(limiter.check("peer1").await);
-        
+
         // Window should reset since window_secs is 0
         assert!(limiter.check("peer1").await);
     }
@@ -602,7 +621,7 @@ mod tests {
     #[test]
     fn test_signed_gossip_message_verification() {
         let identity = Identity::generate();
-        
+
         let event = DriveEvent::FileChanged {
             path: PathBuf::from("/test/file.txt"),
             hash: "abc123".to_string(),
@@ -612,7 +631,7 @@ mod tests {
         };
 
         let signed_msg = SignedGossipMessage::new(event, &identity);
-        
+
         // Should verify successfully
         assert!(signed_msg.verify().is_ok());
     }
@@ -620,7 +639,7 @@ mod tests {
     #[test]
     fn test_signed_gossip_message_tamper_detection() {
         let identity = Identity::generate();
-        
+
         let event = DriveEvent::FileDeleted {
             path: PathBuf::from("/test/deleted.txt"),
             deleted_by: identity.node_id(),
@@ -628,12 +647,12 @@ mod tests {
         };
 
         let mut signed_msg = SignedGossipMessage::new(event, &identity);
-        
+
         // Tamper with the signature
         if !signed_msg.signature.is_empty() {
             signed_msg.signature[0] ^= 0xFF;
         }
-        
+
         // Should fail verification
         assert!(signed_msg.verify().is_err());
     }
@@ -641,20 +660,20 @@ mod tests {
     #[test]
     fn test_signed_gossip_message_stale_detection() {
         let identity = Identity::generate();
-        
+
         let event = DriveEvent::UserLeft {
             user: identity.node_id(),
             timestamp: Utc::now(),
         };
 
         let mut signed_msg = SignedGossipMessage::new(event, &identity);
-        
+
         // Fresh message should not be stale
         assert!(!signed_msg.is_stale(MAX_MESSAGE_AGE_MS));
 
         // Make message old
         signed_msg.timestamp_ms -= MAX_MESSAGE_AGE_MS + 1000;
-        
+
         // Now it should be stale
         assert!(signed_msg.is_stale(MAX_MESSAGE_AGE_MS));
     }
